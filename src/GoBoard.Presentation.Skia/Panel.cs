@@ -15,8 +15,8 @@ internal static class Panel
     private static readonly SKColor KeyFace = new(0x14, 0x20, 0x2a);
     private static readonly SKColor Border = new(0x1c, 0x30, 0x3e);
     private static readonly SKColor Text = new(0xf1, 0xf6, 0xfc);
-    private static readonly SKColor Accent = new(0x70, 0xdb, 0xff);
-    private static readonly SKColor Pressed = new(0x65, 0xc9, 0xf5);
+    private static readonly SKColor Accent = new(0x66, 0xc0, 0xf4);
+    private static readonly SKColor Pressed = new(0x66, 0xc0, 0xf4);
     private static readonly SKColor Ink = new(0x09, 0x19, 0x23);
 
     public static SKBitmap Render(KeyboardState keyboard = null, bool shift = false, string status = null, bool altGr = false, bool caps = false, bool scrollLock = false)

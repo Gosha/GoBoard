@@ -17,7 +17,7 @@ internal static class SettingsPanel
         using var label = new SKFont(face, 25);
         using var small = new SKFont(face, 19);
         var text = new SKColor(0xf1, 0xf6, 0xfc);
-        var accent = new SKColor(0x65, 0xc9, 0xf5);
+        var accent = new SKColor(0x66, 0xc0, 0xf4);
         void Text(string value, float x, float y, SKFont font, SKColor color)
         {
             paint.Color = color;
@@ -63,7 +63,7 @@ internal static class SettingsPanel
         var bitmap = new SKBitmap(256, 256, SKColorType.Rgba8888, SKAlphaType.Premul);
         using var canvas = new SKCanvas(bitmap);
         canvas.Clear(new SKColor(0x0c, 0x15, 0x1e));
-        using var paint = new SKPaint { IsAntialias = true, Color = new SKColor(0x65, 0xc9, 0xf5) };
+        using var paint = new SKPaint { IsAntialias = true, Color = new SKColor(0x66, 0xc0, 0xf4) };
         for (var row = 0; row < 3; row++)
         for (var col = 0; col < 5; col++)
             canvas.DrawRoundRect(33 + col * 39, 61 + row * 37, 32, 29, 4, 4, paint);
