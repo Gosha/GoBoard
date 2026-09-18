@@ -10,14 +10,14 @@ internal static class Panel
     public const float WidthInMeters = OverlayGeometry.PanelWidthInMeters;
     public const float HeightInMeters = OverlayGeometry.PanelHeightInMeters;
 
-    private static readonly SKColor Background = new(0x10, 0x18, 0x20);
-    private static readonly SKColor Surface = new(0x12, 0x1b, 0x23);
-    private static readonly SKColor KeyFace = new(0x17, 0x21, 0x2a);
-    private static readonly SKColor Border = new(0x1c, 0x28, 0x32);
-    private static readonly SKColor Text = new(0xda, 0xe2, 0xe8);
-    private static readonly SKColor Mint = new(0x76, 0xb8, 0xa9);
-    private static readonly SKColor Pressed = new(0x91, 0xd8, 0xc6);
-    private static readonly SKColor Ink = new(0x10, 0x27, 0x22);
+    private static readonly SKColor Background = new(0x0c, 0x15, 0x1e);
+    private static readonly SKColor Surface = new(0x0d, 0x17, 0x20);
+    private static readonly SKColor KeyFace = new(0x14, 0x20, 0x2a);
+    private static readonly SKColor Border = new(0x1c, 0x30, 0x3e);
+    private static readonly SKColor Text = new(0xf1, 0xf6, 0xfc);
+    private static readonly SKColor Accent = new(0x70, 0xdb, 0xff);
+    private static readonly SKColor Pressed = new(0x65, 0xc9, 0xf5);
+    private static readonly SKColor Ink = new(0x09, 0x19, 0x23);
 
     public static SKBitmap Render(KeyboardState keyboard = null, bool shift = false, string status = null, bool altGr = false, bool caps = false, bool scrollLock = false)
     {
@@ -51,17 +51,17 @@ internal static class Panel
             var filled = mode == ModifierMode.Locked || (!key.IsModifier && keyboard?.Pressed(key) == true);
             var armed = mode == ModifierMode.OneShot;
             var toggleOn = (key.Id == "Caps" && caps) || (key.Id == "ScrollLock" && scrollLock);
-            paint.Color = filled ? Pressed : armed || toggleOn ? new SKColor(0x23, 0x40, 0x39) : KeyFace;
+            paint.Color = filled ? Pressed : armed || toggleOn ? new SKColor(0x17, 0x2d, 0x3c) : KeyFace;
             DrawKey(canvas, key, paint);
             if ((hover || armed || toggleOn) && !filled)
             {
                 paint.Style = SKPaintStyle.Stroke;
                 paint.StrokeWidth = 1.2f;
-                paint.Color = Mint;
+                paint.Color = Accent;
                 DrawKey(canvas, key, paint);
                 paint.Style = SKPaintStyle.Fill;
             }
-            var foreground = filled ? Ink : armed || toggleOn ? Mint : Text;
+            var foreground = filled ? Ink : armed || toggleOn ? Accent : Text;
             paint.Color = foreground;
             if (key.Printable)
             {
@@ -82,12 +82,12 @@ internal static class Panel
                 // The current output stays primary; suppress duplicate auxiliary legends.
                 if (layout.Swedish && alternate.Text != "—" && alternate.Text != active.Text)
                 {
-                    paint.Color = filled ? Ink : Mint;
+                    paint.Color = filled ? Ink : Accent;
                     canvas.DrawText(alternate.Text, rect.Right - 6, rect.Bottom - 6, SKTextAlign.Right, secondary, paint);
                 }
                 if (active.Dead)
                 {
-                    paint.Color = filled ? Ink : Mint;
+                    paint.Color = filled ? Ink : Accent;
                     canvas.DrawCircle(rect.Right - 5, rect.Top + 5, 1.3f, paint);
                 }
             }
@@ -106,10 +106,10 @@ internal static class Panel
             }
             else
             {
-                if (key.Id == "AltGr" && layout.Swedish && !filled) paint.Color = Mint;
+                if (key.Id == "AltGr" && layout.Swedish && !filled) paint.Color = Accent;
                 Center(canvas, layout.Legend(key, shift, altGr, caps).Text, rect.MidX, rect.MidY, special, paint);
             }
-            paint.Color = filled ? Ink : Mint;
+            paint.Color = filled ? Ink : Accent;
             if (armed)
             {
                 canvas.DrawRoundRect(new SKRect(rect.MidX - 8, rect.Bottom - 5, rect.MidX + 8, rect.Bottom - 3), 1, 1, paint);

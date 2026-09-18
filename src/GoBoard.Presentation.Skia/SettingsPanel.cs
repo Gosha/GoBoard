@@ -10,28 +10,28 @@ internal static class SettingsPanel
         var bitmap = new SKBitmap(SettingsControls.Width * 2, SettingsControls.Height * 2, SKColorType.Rgba8888, SKAlphaType.Opaque);
         using var canvas = new SKCanvas(bitmap);
         canvas.Scale(2);
-        canvas.Clear(new SKColor(0x10, 0x18, 0x20));
+        canvas.Clear(new SKColor(0x0c, 0x15, 0x1e));
         using var paint = new SKPaint { IsAntialias = true };
         using var face = SKTypeface.FromFamilyName("Segoe UI");
         using var heading = new SKFont(face, 38);
         using var label = new SKFont(face, 25);
         using var small = new SKFont(face, 19);
-        var text = new SKColor(0xda, 0xe2, 0xe8);
-        var mint = new SKColor(0x91, 0xd8, 0xc6);
+        var text = new SKColor(0xf1, 0xf6, 0xfc);
+        var accent = new SKColor(0x65, 0xc9, 0xf5);
         void Text(string value, float x, float y, SKFont font, SKColor color)
         {
             paint.Color = color;
             canvas.DrawText(value, x, y, SKTextAlign.Left, font, paint);
         }
         Text("GoBoard", 64, 72, heading, text);
-        Text("Settings · Changes apply immediately", 64, 110, small, mint);
+        Text("Settings · Changes apply immediately", 64, 110, small, accent);
         Text($"Keyboard size   {settings.SizePercent}%", 64, 186, label, text);
-        Text(desktopMode ? "Desktop scale · 50–150%" : $"{OverlayGeometry.PanelWidthInMeters * settings.Scale * 100:F0} cm wide · 50–150%", 64, 216, small, mint);
+        Text(desktopMode ? "Desktop scale · 50–150%" : $"{OverlayGeometry.PanelWidthInMeters * settings.Scale * 100:F0} cm wide · 50–150%", 64, 216, small, accent);
         Text("Key sounds", 64, 290, label, text);
-        Text("Sound preset", 64, 347, small, mint);
+        Text("Sound preset", 64, 347, small, accent);
         Text($"Volume   {settings.VolumePercent}%", 64, 511, label, text);
         Text(error == null ? "Saved on this PC · Shared by desktop and VR" : "Settings unavailable · Last working values kept",
-            64, 558, small, error == null ? mint : new SKColor(0xff, 0xb0, 0xa0));
+            64, 558, small, error == null ? accent : new SKColor(0xff, 0xb0, 0xa0));
         foreach (var c in SettingsControls.All)
         {
             var selected = c.Action == SettingsAction.Wood && settings.Sound == KeySound.CushionedWood ||
@@ -40,7 +40,7 @@ internal static class SettingsPanel
             var enabled = SettingsControls.Enabled(c.Action, settings);
             var b = c.Bounds;
             var rect = new SKRect(b.X, b.Y, b.X + b.Width, b.Y + b.Height);
-            paint.Color = selected ? mint : new SKColor(0x23, 0x33, 0x3e);
+            paint.Color = selected ? accent : new SKColor(0x1b, 0x2c, 0x39);
             canvas.DrawRoundRect(rect, 10, 10, paint);
             if (enabled && pointers?.Hovered(c.Action) == true)
             {
@@ -50,7 +50,7 @@ internal static class SettingsPanel
                 canvas.DrawRoundRect(rect, 10, 10, paint);
                 paint.Style = SKPaintStyle.Fill;
             }
-            paint.Color = !enabled ? new SKColor(0x66, 0x78, 0x82) : selected ? new SKColor(0x10, 0x27, 0x22) : text;
+            paint.Color = !enabled ? new SKColor(0x66, 0x78, 0x82) : selected ? new SKColor(0x09, 0x19, 0x23) : text;
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
             var font = c.Action == SettingsAction.Defaults ? small : label;
             canvas.DrawText(title, rect.MidX, rect.MidY - (font.Metrics.Ascent + font.Metrics.Descent) / 2, SKTextAlign.Center, font, paint);
@@ -62,8 +62,8 @@ internal static class SettingsPanel
     {
         var bitmap = new SKBitmap(256, 256, SKColorType.Rgba8888, SKAlphaType.Premul);
         using var canvas = new SKCanvas(bitmap);
-        canvas.Clear(new SKColor(0x10, 0x18, 0x20));
-        using var paint = new SKPaint { IsAntialias = true, Color = new SKColor(0x91, 0xd8, 0xc6) };
+        canvas.Clear(new SKColor(0x0c, 0x15, 0x1e));
+        using var paint = new SKPaint { IsAntialias = true, Color = new SKColor(0x65, 0xc9, 0xf5) };
         for (var row = 0; row < 3; row++)
         for (var col = 0; col < 5; col++)
             canvas.DrawRoundRect(33 + col * 39, 61 + row * 37, 32, 29, 4, 4, paint);
