@@ -129,6 +129,7 @@ internal sealed class DesktopKeyboardForm : Form
             {
                 var resized = applied.SizePercent != settings.Current.SizePercent;
                 applied = settings.Current;
+                drawn = null;
                 audio.Apply(applied);
                 if (resized) { Cancel(); ApplySize(); }
             }
@@ -240,7 +241,7 @@ internal sealed class DesktopKeyboardForm : Form
         var notice = faulted || Now < errorUntil ? error : !keyboard.Layout.Supported ? keyboard.Layout.Status : null;
         var signature = (keyboard.Revision, shift, altGr, caps, scroll, notice);
         if (drawn == signature) return;
-        using var pixels = KeyboardPanel.Render(keyboard, shift, notice, altGr, caps, scroll);
+        using var pixels = KeyboardPanel.Render(keyboard, shift, notice, altGr, caps, scroll, applied.Theme);
         using var bgra = pixels.Copy(SKColorType.Bgra8888);
         using var borrowed = new Bitmap(bgra.Width, bgra.Height, bgra.RowBytes, PixelFormat.Format32bppPArgb, bgra.GetPixels());
         var next = new Bitmap(borrowed);

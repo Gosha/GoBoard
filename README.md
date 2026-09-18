@@ -28,7 +28,7 @@ To stop either mode:
 .\stop-goboard.ps1
 ```
 
-Open **GoBoard Settings** in the SteamVR dashboard to change keyboard size, mute, volume, or sound preset. Changes apply live and are saved for the next launch.
+Open **GoBoard Settings** in the SteamVR dashboard to change keyboard size, theme, mute, volume, or sound preset. Changes apply live and are saved for the next launch. **Steam Soft**, the default theme, follows the supplied v13 mockup with shaded keys and blue accents; **Steam Flat** retains the earlier flat appearance. Both themes are also available from desktop Settings.
 
 For the desktop settings window (works without SteamVR):
 

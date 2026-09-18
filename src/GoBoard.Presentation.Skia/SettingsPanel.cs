@@ -30,13 +30,16 @@ internal static class SettingsPanel
         Text("Key sounds", 64, 290, label, text);
         Text("Sound preset", 64, 347, small, accent);
         Text($"Volume   {settings.VolumePercent}%", 64, 511, label, text);
+        Text("Keyboard theme", 64, 568, small, accent);
         Text(error == null ? "Saved on this PC · Shared by desktop and VR" : "Settings unavailable · Last working values kept",
-            64, 558, small, error == null ? accent : new SKColor(0xff, 0xb0, 0xa0));
+            64, 680, small, error == null ? accent : new SKColor(0xff, 0xb0, 0xa0));
         foreach (var c in SettingsControls.All)
         {
             var selected = c.Action == SettingsAction.Wood && settings.Sound == KeySound.CushionedWood ||
                 c.Action == SettingsAction.Thud && settings.Sound == KeySound.SoftLowThud ||
-                c.Action == SettingsAction.ToggleSound && settings.SoundEnabled;
+                c.Action == SettingsAction.ToggleSound && settings.SoundEnabled ||
+                c.Action == SettingsAction.SteamSoft && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamSoft ||
+                c.Action == SettingsAction.SteamFlat && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamFlat;
             var enabled = SettingsControls.Enabled(c.Action, settings);
             var b = c.Bounds;
             var rect = new SKRect(b.X, b.Y, b.X + b.Width, b.Y + b.Height);

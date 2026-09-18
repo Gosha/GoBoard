@@ -12,6 +12,37 @@ public sealed class SettingsTests : IDisposable
     private string SettingsPath => Path.Combine(directory, "settings.json");
 
     [Fact]
+    public void ThemeSelectionPersistsMergesAndResetsAcrossEditors()
+    {
+        var desktop = new SettingsStore(SettingsPath);
+        var vr = new SettingsStore(SettingsPath);
+        Assert.True(desktop.Update(s => SettingsControls.Apply(SettingsAction.SteamFlat, s)));
+        Assert.True(vr.Update(s => s with { VolumePercent = 40 }));
+        Assert.True(desktop.Reload());
+        Assert.Equal(BoardThemes.SteamFlat, desktop.Current.Theme);
+        Assert.Equal(40, desktop.Current.VolumePercent);
+        Assert.Equal(desktop.Current, new SettingsStore(SettingsPath).Current);
+        Assert.True(vr.Update(s => SettingsControls.Apply(SettingsAction.SteamSoft, s)));
+        Assert.True(desktop.Reload());
+        Assert.Equal(BoardThemes.SteamSoft, desktop.Current.Theme);
+        Assert.Equal(BoardThemes.Default, SettingsControls.Apply(SettingsAction.Defaults, vr.Current).Theme);
+    }
+
+    [Theory]
+    [InlineData("{\"SizePercent\":120}")]
+    [InlineData("{\"SizePercent\":120,\"Theme\":\"future-theme\"}")]
+    [InlineData("{\"SizePercent\":120,\"Theme\":null}")]
+    public void MissingOrUnknownThemesFallBackWithoutLosingOtherSettings(string json)
+    {
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(SettingsPath, json);
+        var store = new SettingsStore(SettingsPath);
+        Assert.Null(store.Error);
+        Assert.Equal(120, store.Current.SizePercent);
+        Assert.Equal(BoardThemes.Default, store.Current.Theme);
+    }
+
+    [Fact]
     public void DesktopAndVrEditsMergeWithLatestSavedValues()
     {
         var desktop = new SettingsStore(SettingsPath);

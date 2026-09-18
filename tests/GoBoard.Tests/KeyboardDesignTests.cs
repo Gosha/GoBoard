@@ -162,12 +162,56 @@ public sealed class KeyboardDesignTests
     [InlineData("sv")]
     public void EveryProductionPreviewStateRendersWithoutInput(string language)
     {
+        foreach (var theme in new[] { BoardThemes.SteamSoft, BoardThemes.SteamFlat })
         foreach (var state in PanelPreview.States)
         {
-            using var bitmap = PanelPreview.Render(language, state);
+            using var bitmap = PanelPreview.Render(language, state, theme);
             Assert.Equal(OverlayGeometry.PanelWidth * OverlayGeometry.RasterScale, bitmap.Width);
             Assert.Equal(OverlayGeometry.PanelHeight * OverlayGeometry.RasterScale, bitmap.Height);
         }
         Assert.Throws<ArgumentException>(() => PanelPreview.Render(language, "invalid"));
+    }
+
+    [Fact]
+    public void ThemesRenderDistinctSurfacesAndUnknownIdsUseDefault()
+    {
+        using var soft = PanelPreview.Render("sv", "idle", BoardThemes.SteamSoft);
+        using var flat = PanelPreview.Render("sv", "idle", BoardThemes.SteamFlat);
+        using var fallback = PanelPreview.Render("sv", "idle", "future-theme");
+        var space = KeyboardLayout.SwedishKeys.Single(k => k.Id == "Space").Bounds;
+        var x = (int)(space.X + space.Width / 2) * OverlayGeometry.RasterScale;
+        var top = (int)(space.Y + 6) * OverlayGeometry.RasterScale;
+        var bottom = (int)(space.Y + space.Height - 6) * OverlayGeometry.RasterScale;
+        Assert.NotEqual(soft.GetPixel(x, top), soft.GetPixel(x, bottom));
+        Assert.Equal(flat.GetPixel(x, top), flat.GetPixel(x, bottom));
+        Assert.NotEqual(soft.GetPixel(x, top), flat.GetPixel(x, top));
+        Assert.Equal(soft.Bytes, fallback.Bytes);
+    }
+
+    [Theory]
+    [InlineData("us")]
+    [InlineData("sv")]
+    public void CachedSurfacesPreserveEveryVisualState(string language)
+    {
+        foreach (var state in PanelPreview.States.Reverse())
+        {
+            using var cached = PanelPreview.Render(language, state, BoardThemes.SteamSoft);
+            using var direct = PanelPreview.Render(language, state, BoardThemes.SteamSoft, cacheSurfaces: false);
+            var actual = cached.Bytes;
+            var expected = direct.Bytes;
+            var maximumError = 0;
+            long totalError = 0;
+            for (var i = 0; i < actual.Length; i++)
+            {
+                var error = Math.Abs(actual[i] - expected[i]);
+                maximumError = Math.Max(maximumError, error);
+                totalError += error;
+            }
+            // Premultiplied sprites introduce small 8-bit composition rounding.
+            // Compare the full frame, including shadows, ISO notch, legends and
+            // overlays, so a stale state or incorrectly keyed shape cannot pass.
+            Assert.True(maximumError <= 2, $"{language}/{state}: max channel error {maximumError}");
+            Assert.True(totalError / (double)actual.Length < .1, $"{language}/{state}: excessive image difference");
+        }
     }
 }

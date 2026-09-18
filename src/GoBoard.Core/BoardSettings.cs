@@ -13,13 +13,15 @@ internal sealed record BoardSettings
     public bool SoundEnabled { get; init; } = true;
     public int VolumePercent { get; init; } = 100;
     public KeySound Sound { get; init; } = KeySound.CushionedWood;
+    public string Theme { get; init; } = BoardThemes.Default;
     public float Scale => SizePercent / 100f;
 
     public BoardSettings Normalize() => this with
     {
         SizePercent = Math.Clamp(SizePercent, 50, 150),
         VolumePercent = Math.Clamp(VolumePercent, 0, 100),
-        Sound = Enum.IsDefined(Sound) ? Sound : KeySound.CushionedWood
+        Sound = Enum.IsDefined(Sound) ? Sound : KeySound.CushionedWood,
+        Theme = BoardThemes.Normalize(Theme)
     };
 
     public static BoardSettings Defaults => new()

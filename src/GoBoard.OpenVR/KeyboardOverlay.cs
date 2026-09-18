@@ -15,6 +15,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private readonly TrackedDevicePose_t[] devices = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
     private bool enabled, faulted;
     private int renderedRevision = -1;
+    private string theme = BoardThemes.Default;
     private bool renderedShift, renderedAltGr, renderedCaps, renderedScrollLock;
     private string renderedStatus, status;
     private string targetStatus;
@@ -25,6 +26,8 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
 
     public void ApplySettings(BoardSettings settings, bool resized)
     {
+        var nextTheme = BoardThemes.Normalize(settings.Theme);
+        if (theme != nextTheme) { theme = nextTheme; renderedRevision = -1; }
         if (resized) Cancel();
         audio.Apply(settings);
     }
@@ -132,7 +135,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         var caps = WindowsKeyboard.CapsLock;
         var scrollLock = WindowsKeyboard.ScrollLock;
         if (renderedRevision == State.Revision && renderedShift == shift && renderedAltGr == altGr && renderedCaps == caps && renderedScrollLock == scrollLock && renderedStatus == status) return;
-        using var bitmap = Panel.Render(State, shift, status, altGr, caps, scrollLock);
+        using var bitmap = Panel.Render(State, shift, status, altGr, caps, scrollLock, theme);
         graphics.Upload(overlay, handle, bitmap);
         renderedRevision = State.Revision; renderedShift = shift; renderedAltGr = altGr; renderedCaps = caps; renderedStatus = status;
         renderedScrollLock = scrollLock;

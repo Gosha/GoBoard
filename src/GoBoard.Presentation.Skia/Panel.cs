@@ -10,17 +10,11 @@ internal static class Panel
     public const float WidthInMeters = OverlayGeometry.PanelWidthInMeters;
     public const float HeightInMeters = OverlayGeometry.PanelHeightInMeters;
 
-    private static readonly SKColor Background = new(0x0c, 0x15, 0x1e);
-    private static readonly SKColor Surface = new(0x0d, 0x17, 0x20);
-    private static readonly SKColor KeyFace = new(0x14, 0x20, 0x2a);
-    private static readonly SKColor Border = new(0x1c, 0x30, 0x3e);
-    private static readonly SKColor Text = new(0xf1, 0xf6, 0xfc);
-    private static readonly SKColor Accent = new(0x66, 0xc0, 0xf4);
-    private static readonly SKColor Pressed = new(0x66, 0xc0, 0xf4);
-    private static readonly SKColor Ink = new(0x09, 0x19, 0x23);
-
-    public static SKBitmap Render(KeyboardState keyboard = null, bool shift = false, string status = null, bool altGr = false, bool caps = false, bool scrollLock = false)
+    public static SKBitmap Render(KeyboardState keyboard = null, bool shift = false, string status = null, bool altGr = false, bool caps = false, bool scrollLock = false, string theme = BoardThemes.Default, bool cacheSurfaces = true)
     {
+        var style = KeyboardTheme.Resolve(theme);
+        var Accent = style.Accent;
+        var Ink = style.Ink;
         var layout = keyboard?.Layout ?? new WindowsLayout((nint)WindowsLayout.UsHandle);
         var bitmap = new SKBitmap(new SKImageInfo(LayoutWidth * RasterScale, LayoutHeight * RasterScale, SKColorType.Rgba8888, SKAlphaType.Opaque));
         using var canvas = new SKCanvas(bitmap);
@@ -29,18 +23,21 @@ internal static class Panel
         using var face = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Normal);
         using var letter = new SKFont(face, 21);
         using var number = new SKFont(face, 18);
-        using var special = new SKFont(face, 12);
+        using var special = new SKFont(face, style.SpecialSize);
         using var secondary = new SKFont(face, 12);
         using var notice = new SKFont(face, 9);
-        canvas.Clear(Background);
-        var panelRect = new SKRect(.5f, .5f, LayoutWidth - .5f, LayoutHeight - .5f);
-        paint.Color = Surface;
-        canvas.DrawRoundRect(panelRect, 6, 6, paint);
-        paint.Color = Border;
-        paint.Style = SKPaintStyle.Stroke;
-        paint.StrokeWidth = .8f;
-        canvas.DrawRoundRect(panelRect, 6, 6, paint);
-        paint.Style = SKPaintStyle.Fill;
+        canvas.Clear(style.Background);
+        if (style.PanelFrame)
+        {
+            var panelRect = new SKRect(.5f, .5f, LayoutWidth - .5f, LayoutHeight - .5f);
+            paint.Color = style.Surface;
+            canvas.DrawRoundRect(panelRect, 6, 6, paint);
+            paint.Color = style.Border;
+            paint.Style = SKPaintStyle.Stroke;
+            paint.StrokeWidth = .8f;
+            canvas.DrawRoundRect(panelRect, 6, 6, paint);
+            paint.Style = SKPaintStyle.Fill;
+        }
 
         foreach (var key in layout.Keys)
         {
@@ -51,17 +48,11 @@ internal static class Panel
             var filled = mode == ModifierMode.Locked || (!key.IsModifier && keyboard?.Pressed(key) == true);
             var armed = mode == ModifierMode.OneShot;
             var toggleOn = (key.Id == "Caps" && caps) || (key.Id == "ScrollLock" && scrollLock);
-            paint.Color = filled ? Pressed : armed || toggleOn ? new SKColor(0x17, 0x2d, 0x3c) : KeyFace;
-            DrawKey(canvas, key, paint);
-            if ((hover || armed || toggleOn) && !filled)
-            {
-                paint.Style = SKPaintStyle.Stroke;
-                paint.StrokeWidth = 1.2f;
-                paint.Color = Accent;
-                DrawKey(canvas, key, paint);
-                paint.Style = SKPaintStyle.Fill;
-            }
-            var foreground = filled ? Ink : armed || toggleOn ? Accent : Text;
+            if (cacheSurfaces && style.ShadowBlur > 0)
+                KeySurfaceCache.Draw(canvas, key, style, hover, filled, armed || toggleOn);
+            else
+                DrawKeySurface(canvas, key, style, hover, filled, armed || toggleOn);
+            var foreground = filled ? Ink : armed || toggleOn ? Accent : style.Text;
             paint.Color = foreground;
             if (key.Printable)
             {
@@ -76,6 +67,7 @@ internal static class Panel
                 {
                     canvas.DrawText(active.Text, rect.Left + 9, rect.Bottom - 6, SKTextAlign.Left, number, paint);
                     var upper = shift && !(altGr && layout.Swedish) ? normal.Text : shifted.Text;
+                    paint.Color = filled ? Ink : style.Secondary;
                     if (upper != active.Text && upper != "—")
                         canvas.DrawText(upper, rect.Left + 9, rect.Top + 16, SKTextAlign.Left, secondary, paint);
                 }
@@ -138,7 +130,7 @@ internal static class Panel
             var up = layout.Keys.Single(k => k.Id == "Up").Bounds;
             var area = new SKRect(delete.X, delete.Y + delete.Height + 6,
                 pageDown.X + pageDown.Width, up.Y - 4);
-            paint.Color = new SKColor(0xed, 0xc6, 0x94);
+            paint.Color = style.Notice;
             DrawNotice(canvas, message, area, notice, paint);
         }
         canvas.Flush();
@@ -147,6 +139,38 @@ internal static class Panel
 
     private static void Center(SKCanvas canvas, string text, float x, float y, SKFont font, SKPaint paint)
         => canvas.DrawText(text, x, y - (font.Metrics.Ascent + font.Metrics.Descent) / 2, SKTextAlign.Center, font, paint);
+
+    // Also used by the uncached rendering path to verify cache fidelity.
+    internal static void DrawKeySurface(SKCanvas canvas, KeyboardKey key, KeyboardTheme style, bool hover, bool filled, bool armed)
+    {
+        var b = key.Bounds;
+        using var paint = new SKPaint { IsAntialias = true };
+        using var shadow = style.ShadowBlur > 0 ? SKImageFilter.CreateDropShadowOnly(0, style.ShadowOffset,
+            style.ShadowBlur, style.ShadowBlur, new SKColor(0, 0, 0, 77)) : null;
+        if (shadow != null)
+        {
+            paint.Color = SKColors.Black;
+            paint.ImageFilter = shadow;
+            DrawKey(canvas, key, paint);
+            paint.ImageFilter = null;
+        }
+        using var fill = SKShader.CreateLinearGradient(new SKPoint(0, b.Y), new SKPoint(0, b.Y + b.Height),
+            armed ? style.ArmedStops : style.FaceStops, armed ? null : style.FacePositions, SKShaderTileMode.Clamp);
+        paint.Color = filled ? style.Accent : SKColors.White;
+        paint.Shader = filled ? null : fill;
+        DrawKey(canvas, key, paint);
+        paint.Shader = null;
+        if (style.KeyEdges || (hover || armed) && !filled)
+        {
+            using var edge = SKShader.CreateLinearGradient(new SKPoint(0, b.Y), new SKPoint(0, b.Y + b.Height),
+                style.EdgeStops, style.EdgePositions, SKShaderTileMode.Clamp);
+            paint.Style = SKPaintStyle.Stroke;
+            paint.StrokeWidth = (hover && !filled) || !style.KeyEdges ? 1.2f : .6f;
+            paint.Color = hover && !filled ? style.Accent : armed ? style.ArmedBorder : SKColors.White;
+            paint.Shader = (!hover && !armed) || filled ? edge : null;
+            DrawKey(canvas, key, paint);
+        }
+    }
 
     private static void DrawNotice(SKCanvas canvas, string message, SKRect area, SKFont font, SKPaint paint)
     {
@@ -232,4 +256,3 @@ internal static class Panel
         paint.Style = SKPaintStyle.Fill;
     }
 }
-

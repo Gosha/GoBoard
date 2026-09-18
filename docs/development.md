@@ -82,9 +82,30 @@ The outer margin is 4 logical units on all sides. Adjacent keys have consistent 
 
 The production panel is 850 x 282 logical units, rendered at 2550 x 846 and displayed at about 90.4 x 30.0 cm at the default 100% size. OpenVR mouse coordinates use a bottom-left origin; Skia uses top-left. The shared geometry performs that inversion. Texture UV bounds remain U 0→1 and V 1→0 in `OverlayGraphics`; changing that flips the panel.
 
-## SteamVR blue keyboard
+## Keyboard themes
 
-The production renderer takes its colors from `artifacts/keyboard-mockups/01-full-dark-steam-accents-v7.png`: flat dark blue-gray surfaces, faint borders, white primary/Shift legends, and cyan AltGr legends. Only the reference colors are used; the existing geometry and lack of a permanent header/footer are preserved. Navigation uses the standard 3-column by 2-row cluster: Insert / Home / PgUp above Delete / End / PgDn, with inverted-T arrows below and Print Screen / Scroll Lock / Pause above. All three system keys are non-repeating. Pause is injected as VK_PAUSE; Print Screen retains its E0 scan prefix. Close remains deferred; settings use the separate dashboard tab and desktop window. The POC retains its earlier design.
+Theme selection is shared by desktop and VR and saved as a stable `Theme` ID in settings.json. `steam-soft` is the default; `steam-flat` preserves the previous colors and flat surfaces. Missing, null, or unknown IDs fall back to Steam Soft without discarding other settings. Reset to defaults also resets the theme. Theme changes invalidate the keyboard render after settings reload, including while no keys are moving; they preserve input state and geometry.
+
+Steam Soft follows `artifacts/keyboard-mockups/06-spacing-experiment-2u-v13.svg`: a plain #101820 background, three-stop key and edge gradients, subtle shadows, muted Shift legends, cyan AltGr and interaction accents. The existing cropped 4-unit margin and 2-unit key spacing are retained. The mockup's illustrated modifier states are live states, not part of the theme. Both Ctrl aliases reflect the same state in production.
+
+`BoardThemes` defines persisted IDs and labels; `KeyboardTheme` holds Skia visual tokens. Themes do not own key layouts, hit targets, or input behavior. To add a preset, add its stable ID, visual tokens, and shared settings action/control. No extra assets or packages are needed at runtime.
+
+Render a theme without changing saved settings or sending input:
+
+```powershell
+dotnet run --project src/GoBoard.App -c Release -- --render .runtime\steam-soft.png --layout sv --state reference --theme steam-soft
+dotnet run --project src/GoBoard.App -c Release -- --render .runtime\steam-flat.png --layout sv --theme steam-flat
+```
+
+The `reference` preview combines locked Ctrl, one-shot Alt, and hovered E. Every preview state works with both themes and both layouts. `--theme` is a preview option requiring `--render`; select live themes in Settings.
+
+Soft key backgrounds are rasterized once per shape and visual state, then reused at the exact texture resolution. The cache includes the ISO Enter notch and theme, excludes legends and input state, and holds at most 256 immutable images. Eviction disposes the native images under the same lock used for drawing. Gradients, edges, and shadows are preserved; legends and modifier indicators remain live. Image regression tests compare every US/Swedish preview state against uncached rendering with a two-level per-channel tolerance for premultiplied-alpha rounding.
+
+Run `dotnet run --project src/GoBoard.App -c Release -- --render-benchmark` for a headless renderer benchmark (10 warmup frames and 100 timed frames alternating reference/pressed states per theme). It excludes PNG encoding, window presentation, and VR texture upload. On the development PC, caching reduced the soft median from 39.32 ms to 4.71 ms; flat measured about 6.1 ms. The first use of a shape/state populates the cache; these figures describe steady rendering, not end-to-end input latency.
+
+## SteamVR blue keyboard (Steam Flat)
+
+The Steam Flat theme takes its colors from `artifacts/keyboard-mockups/01-full-dark-steam-accents-v7.png`: flat dark blue-gray surfaces, faint borders, white primary/Shift legends, and cyan AltGr legends. Only the reference colors are used; the existing geometry and lack of a permanent header/footer are preserved. Navigation uses the standard 3-column by 2-row cluster: Insert / Home / PgUp above Delete / End / PgDn, with inverted-T arrows below and Print Screen / Scroll Lock / Pause above. All three system keys are non-repeating. Pause is injected as VK_PAUSE; Print Screen retains its E0 scan prefix. Close remains deferred; settings use the separate dashboard tab and desktop window. The POC retains its earlier design.
 
 There are 86 US or 87 Swedish buttons. Caps sends a non-repeating Caps Lock stroke and reflects the actual Windows toggle. Menu sends the extended application-menu key. Left/right Shift buttons share one logical Shift mode, and left/right Ctrl buttons share one Ctrl mode; these aliases deliberately use the same scan code so they cannot inject duplicate modifiers. Swedish ISO Enter has one continuous L-shaped face and an excluded lower-left hit region. US uses a rectangular ANSI Enter and backslash above it. Space has an empty legend.
 
@@ -97,6 +118,4 @@ Both overlay surfaces enable `MultiCursor`. Cursor slots are treated only as tra
 The renderer uses fixed Windows-derived eight-state US/Swedish legend tables. Do not replace them with live `ToUnicodeEx` calls: even nonmutating worker-thread calls can disturb a pending global dead-key accent. Unknown HKLs use US English geometry, legend tables, and modifier behavior with a visible fallback notice. The actual HKL remains available for input targeting and change detection; switching HKLs still cancels captures, repeat, and modifiers. Input errors take precedence over the fallback notice.
 
 Set `GOBOARD_TRACE_GRAB=1` before launching only when controller event diagnostics are needed. Normal operation keeps high-frequency motion logs disabled while retaining rejected-edge and lifecycle messages.
-
-
 
