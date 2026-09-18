@@ -21,6 +21,7 @@ internal sealed class SettingsForm : Form
     private string actionError;
     private bool releasingCapture;
     private Bitmap frame;
+    private readonly Icon windowIcon;
     private (BoardSettings Settings, int Hover, string Error)? drawn;
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     private SettingsViewport Viewport => SettingsViewport.Fit(ClientSize.Width, ClientSize.Height);
@@ -48,6 +49,9 @@ internal sealed class SettingsForm : Form
         this.desktopMode = desktopMode;
         this.store = store ?? new SettingsStore();
         Text = "GoBoard Settings";
+        using (var stream = typeof(SettingsForm).Assembly.GetManifestResourceStream("GoBoard.Icon.ico"))
+            windowIcon = new Icon(stream);
+        Icon = windowIcon;
         AutoScaleMode = AutoScaleMode.Dpi;
         ClientSize = new Size(SettingsControls.Width, SettingsControls.Height);
         MinimumSize = new Size(560, 440);
@@ -144,5 +148,6 @@ internal sealed class SettingsForm : Form
     {
         if (disposing) { refresh.Dispose(); details.Dispose(); frame?.Dispose(); audio.Dispose(); }
         base.Dispose(disposing);
+        if (disposing) windowIcon?.Dispose();
     }
 }

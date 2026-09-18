@@ -60,14 +60,12 @@ internal static class SettingsPanel
 
     public static SKBitmap Icon()
     {
+        using var stream = typeof(SettingsPanel).Assembly.GetManifestResourceStream("GoBoard.Logo.png");
+        using var logo = SKImage.FromEncodedData(stream);
         var bitmap = new SKBitmap(256, 256, SKColorType.Rgba8888, SKAlphaType.Premul);
         using var canvas = new SKCanvas(bitmap);
-        canvas.Clear(new SKColor(0x0c, 0x15, 0x1e));
-        using var paint = new SKPaint { IsAntialias = true, Color = new SKColor(0x66, 0xc0, 0xf4) };
-        for (var row = 0; row < 3; row++)
-        for (var col = 0; col < 5; col++)
-            canvas.DrawRoundRect(33 + col * 39, 61 + row * 37, 32, 29, 4, 4, paint);
-        canvas.DrawRoundRect(72, 172, 110, 23, 4, 4, paint);
+        canvas.DrawImage(logo, new SKRect(0, 0, bitmap.Width, bitmap.Height),
+            new SKSamplingOptions(SKCubicResampler.Mitchell));
         return bitmap;
     }
 }

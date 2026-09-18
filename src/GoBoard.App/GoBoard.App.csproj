@@ -8,9 +8,11 @@
     <Nullable>disable</Nullable>
     <AssemblyName>GoBoard</AssemblyName>
     <RootNamespace>GoBoard.App</RootNamespace>
+    <ApplicationIcon>../../assets/branding/goboard.ico</ApplicationIcon>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="../../assets/branding/goboard.ico" LogicalName="GoBoard.Icon.ico" />
     <ProjectReference Include="../GoBoard.OpenVR/GoBoard.OpenVR.csproj" />
   </ItemGroup>
 </Project>
