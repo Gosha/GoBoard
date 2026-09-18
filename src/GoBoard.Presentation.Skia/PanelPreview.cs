@@ -1,0 +1,48 @@
+using GoBoard.Core;
+using SkiaSharp;
+
+namespace GoBoard.Presentation.Skia;
+
+// Preview fixtures exercise the production renderer/state without Windows input.
+internal static class PanelPreview
+{
+    public static readonly string[] States = ["idle", "hover", "pressed", "oneshot", "locked", "shift", "caps", "scrolllock", "altgr", "unsupported", "error"];
+    private sealed class PreviewSink : IKeySink
+    {
+        public void Down(ushort scan) { }
+        public void Up(ushort scan) { }
+    }
+
+    public static SKBitmap Render(string language, string visualState)
+    {
+        if (language is not ("us" or "sv")) throw new ArgumentException("Preview layout must be us or sv.");
+        if (!States.Contains(visualState)) throw new ArgumentException($"Preview state must be {string.Join(", ", States)}.");
+        var keyboard = new KeyboardState(new PreviewSink());
+        keyboard.SetLayout(new WindowsLayout((nint)(language == "sv" ? WindowsLayout.SwedishHandle : WindowsLayout.UsHandle)), 0);
+        keyboard.Enter(0, 7, 1);
+        double time = 2;
+        void Press(string id, bool release = true)
+        {
+            var b = keyboard.Layout.Keys.Single(k => k.Id == id).Bounds;
+            keyboard.Press(0, 7, b.X + b.Width / 2, OverlayGeometry.PanelHeight - b.Y - b.Height / 2, time, time);
+            if (release) keyboard.Up(0, 7, time + .01);
+            time += .1;
+        }
+        switch (visualState)
+        {
+            case "hover":
+                var e = keyboard.Layout.Keys.Single(k => k.Id == "e").Bounds;
+                keyboard.Move(0, 7, e.X + e.Width / 2, OverlayGeometry.PanelHeight - e.Y - e.Height / 2);
+                break;
+            case "pressed": Press("e", false); break;
+            case "oneshot": Press("Ctrl"); Press("Shift"); break;
+            case "locked": Press("Ctrl"); Press("Ctrl"); Press("Shift"); Press("Shift"); break;
+            case "shift": Press("Shift"); break;
+            case "altgr": Press("AltGr"); break;
+            case "unsupported": keyboard.SetLayout(new WindowsLayout((nint)0x08090809), time); break;
+        }
+        return Panel.Render(keyboard, keyboard.Shift,
+            visualState == "error" ? "Input could not be sent. Focus a text field and try again." : null,
+            keyboard.AltGr, visualState == "caps", visualState == "scrolllock");
+    }
+}

@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GoBoard.App/GoBoard.App.csproj" />
+    <Project Path="src/GoBoard.Core/GoBoard.Core.csproj" />
+    <Project Path="src/GoBoard.OpenVR/GoBoard.OpenVR.csproj" />
+    <Project Path="src/GoBoard.Platform.Windows/GoBoard.Platform.Windows.csproj" />
+    <Project Path="src/GoBoard.Presentation.Skia/GoBoard.Presentation.Skia.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GoBoard.Tests/GoBoard.Tests.csproj" />
+  </Folder>
+</Solution>
