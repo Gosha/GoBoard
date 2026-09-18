@@ -83,6 +83,12 @@ internal sealed class WindowsKeyboard : IKeySink, IDisposable
         if (Target.Window == 0 || Foreground() != Target)
             throw new InvalidOperationException("Focus changed. Press the key again.");
         if (owned.Count != 0) throw new InvalidOperationException("Previous keyboard input still needs cleanup.");
+        if (scan == KeyboardLayout.ImeToggleKey)
+        {
+            if (!WindowsLayout.IsJapanese(Target.Layout)) throw new InvalidOperationException("Select Japanese input first.");
+            if (chord.Length != 0 || new[] { 0x10, 0x11, 0x12, 0x5b, 0x5c }.Any(vk => (GetAsyncKeyState(vk) & 0x8000) != 0))
+                throw new InvalidOperationException("Release physical modifiers before switching Japanese input.");
+        }
         var keys = new List<ushort>();
         foreach (var key in chord.Append(scan).Distinct())
         {
@@ -123,7 +129,7 @@ internal sealed class WindowsKeyboard : IKeySink, IDisposable
     internal static uint ScanFlags(ushort scan, bool up)
         => 0x0008u | ((scan & 0xff00) == 0xe000 ? 0x0001u : 0) | (up ? 0x0002u : 0);
     internal static uint VirtualKeyForScan(ushort scan, nint layout)
-        => scan == KeyboardLayout.PauseScan ? 0x13u : MapVirtualKeyEx(scan, 3, layout);
+        => scan switch { KeyboardLayout.PauseScan => 0x13u, KeyboardLayout.ImeToggleKey => 0x19u, _ => MapVirtualKeyEx(scan, 3, layout) };
 
     internal static Input MakeInput(ushort scan, bool up)
     {
@@ -132,6 +138,10 @@ internal sealed class WindowsKeyboard : IKeySink, IDisposable
         // https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-keybdinput
         if (scan == KeyboardLayout.PauseScan)
             return new() { Type = 1, VirtualKey = 0x13, Flags = up ? 2u : 0u, ExtraInfo = 0x474f4244 };
+        // VK_KANJI is the Japanese IME's half/full-width input-mode key.
+        // Send a balanced virtual-key stroke; 0xff19 is never a hardware scan.
+        if (scan == KeyboardLayout.ImeToggleKey)
+            return new() { Type = 1, VirtualKey = 0x19, Flags = up ? 2u : 0u, ExtraInfo = 0x474f4244 };
         return new() { Type = 1, Scan = (ushort)(scan & 0xff), Flags = ScanFlags(scan, up), ExtraInfo = 0x474f4244 };
     }
 

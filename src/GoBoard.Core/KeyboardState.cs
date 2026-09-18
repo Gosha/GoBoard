@@ -59,7 +59,7 @@ internal sealed class KeyboardState(IKeySink sink)
     public WindowsLayout Layout { get; private set; } = new((nint)WindowsLayout.UsHandle);
     public void SetLayout(WindowsLayout layout, double now)
     {
-        if (Layout.Handle == layout.Handle) return;
+        if (ReferenceEquals(Layout, layout)) return;
         Cancel(now, clearFocus: false);
         Layout = layout;
         // A layout change can alter geometry; discard hover from the old key list.
@@ -152,11 +152,14 @@ internal sealed class KeyboardState(IKeySink sink)
         else if (held.TryGetValue(key.Scan, out var shared)) shared.Owners++;
         else
         {
-            var modes = new ushort[] { 0xe05b, 0x1d, 0x38, 0xe038, 0x2a }.Where(scan => Mode(scan) != ModifierMode.Idle).ToArray();
-            // Swedish AltGr is Ctrl+right Alt. Keep consumption tied to the
+            // The IME button is a standalone mode action. Keep armed modifiers
+            // for the next typed key, but never apply them to the toggle.
+            ushort[] modes = key.Scan == KeyboardLayout.ImeToggleKey ? [] :
+                new ushort[] { 0xe05b, 0x1d, 0x38, 0xe038, 0x2a }.Where(scan => Mode(scan) != ModifierMode.Idle).ToArray();
+            // Layouts with AltGr use Ctrl+right Alt. Keep consumption tied to the
             // logical modifier modes, not the extra synthetic Ctrl event.
-            var chord = new ushort[] { 0xe05b, 0x1d, 0x38, 0xe038, 0x2a }
-                .Where(scan => modes.Contains(scan) || (scan == 0x1d && Layout.Swedish && AltGr)).ToArray();
+            ushort[] chord = key.Scan == KeyboardLayout.ImeToggleKey ? [] : new ushort[] { 0xe05b, 0x1d, 0x38, 0xe038, 0x2a }
+                .Where(scan => modes.Contains(scan) || (scan == 0x1d && Layout.HasAltGr && AltGr)).ToArray();
             Stroke(key.Scan, chord);
             held.Add(key.Scan, new HeldKey(key, chord, now));
             // Consume together on the next ordinary key, not on another modifier.

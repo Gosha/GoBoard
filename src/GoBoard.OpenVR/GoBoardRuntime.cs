@@ -26,6 +26,7 @@ public static int Run(string[] args)
         if (args.Length == 1 && args[0] == "--input-check") { KeyboardInputCheck.Run(); return 0; }
         if (args.Length == 1 && args[0] == "--shell-check") { KeyboardInputCheck.Run(shell: true); return 0; }
         if (args.Length == 1 && args[0] == "--layout-check") { KeyboardInputCheck.Run(layouts: true); return 0; }
+        if (args.Length == 1 && args[0] == "--ime-check") { KeyboardInputCheck.Run(ime: true); return 0; }
         string renderPath = null;
         string settingsRenderPath = null;
         string previewLayout = "us", previewState = "idle";
@@ -45,14 +46,20 @@ public static int Run(string[] args)
                     seconds = double.Parse(args[++i], CultureInfo.InvariantCulture);
                     if (!double.IsFinite(seconds) || seconds <= 0) throw new ArgumentException("Seconds must be positive and finite.");
                     break;
-                default: throw new ArgumentException("Usage: GoBoard [--desktop] [--seconds N] [--stop-file PATH] | --settings | --render-desktop PATH | --desktop-input-check | --render-settings PATH | --render-desktop-settings PATH | --render PATH [--layout us|sv] [--state idle|hover|pressed|oneshot|locked|shift|caps|scrolllock|altgr|unsupported|error] | --self-test | --input-check | --shell-check | --layout-check");
+                default: throw new ArgumentException("Usage: GoBoard [--desktop] [--seconds N] [--stop-file PATH] | --settings | --render-desktop PATH | --desktop-input-check | --render-settings PATH | --render-desktop-settings PATH | --render PATH [--layout us|sv|uk|de|fr|us-intl|ja|KLID] [--state idle|hover|pressed|oneshot|locked|shift|caps|scrolllock|altgr|unsupported|error] | --self-test | --input-check | --shell-check | --layout-check | --ime-check");
             }
         }
 
         if (settingsRenderPath != null && (renderPath != null || previewOptions)) throw new ArgumentException("--render-settings cannot be combined with keyboard preview options.");
         if (previewOptions && renderPath == null) throw new ArgumentException("--layout and --state require --render; live layouts follow Windows automatically.");
+        var previewId = previewLayout switch
+        {
+            "us" => "00000409", "sv" => "0000041d", "uk" => "00000809", "de" => "00000407",
+            "fr" => "0000040c", "us-intl" => "00020409", _ => previewLayout
+        };
         using var panel = settingsRenderPath != null ? SettingsPanel.Render(new BoardSettings()) :
-            renderPath == null ? Panel.Render() : PanelPreview.Render(previewLayout, previewState);
+            renderPath == null ? Panel.Render() : previewLayout == "ja" ? PanelPreview.Render("ja", previewState) :
+            PanelPreview.Render(WindowsLayoutProvider.FromKlid(0, previewId), previewState);
         renderPath ??= settingsRenderPath;
         if (renderPath != null)
         {
@@ -218,4 +225,3 @@ static void Check(EVROverlayError error, string operation)
     if (error != EVROverlayError.None) throw new InvalidOperationException($"{operation}: {error}");
 }
 }
-

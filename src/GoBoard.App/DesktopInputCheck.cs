@@ -68,7 +68,8 @@ internal static class DesktopInputCheck
             keyboard.Show();
             Require(WindowsKeyboard.Foreground().Window == target.Handle, $"Showing the keyboard stole focus (expected {target.Handle}, keyboard {keyboard.Handle}, actual {WindowsKeyboard.Foreground().Window}).");
             Pump(100);
-            Require(keyboard.State.Layout.Supported, "This check requires the current Windows layout to be US or Swedish.");
+            Require(unchecked((uint)(long)keyboard.State.Layout.Handle) is WindowsLayout.UsHandle or WindowsLayout.SwedishHandle,
+                "This check requires the current Windows layout to be US or Swedish.");
             Require(WindowsKeyboard.Foreground().Window == target.Handle, "Showing the keyboard stole focus.");
             Require(((long)GetWindowLongPtr(keyboard.Handle, -20) & 0x08000000) != 0, "The keyboard is missing WS_EX_NOACTIVATE.");
             Require(SendMessage(keyboard.Handle, 0x21, target.Handle, (nint)(0x201 << 16 | 1)) == 3, "Mouse activation was not suppressed.");

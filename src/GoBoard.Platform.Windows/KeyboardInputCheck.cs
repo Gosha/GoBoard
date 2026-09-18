@@ -26,7 +26,7 @@ internal static class KeyboardInputCheck
         public uint Time; public int X, Y; public uint Private;
     }
 
-    public static void Run(bool shell = false, bool layouts = false)
+    public static void Run(bool shell = false, bool layouts = false, bool ime = false)
     {
         foreach (var vk in new[] { 0x10, 0x11, 0x12, 0x5b, 0x5c })
             if ((GetAsyncKeyState(vk) & 0x8000) != 0) throw new InvalidOperationException("Release physical modifiers before running the input check.");
@@ -75,7 +75,7 @@ internal static class KeyboardInputCheck
             }
             void Up(uint cursor = 1, uint device = 8) { state.Up(cursor, device, Now()); Pump(8); }
             void Tap(string id) { Press(id); Up(); }
-            if (!shell && !layouts)
+            if (!shell && !layouts && !ime)
             {
                 Tap("Shift"); Tap("g");
                 Tap("o"); Tap("Shift"); Tap("b");
@@ -141,11 +141,22 @@ internal static class KeyboardInputCheck
                     {
                         // The first label lookup while an accent
                         // is pending must neither inherit nor consume that accent.
-                        Tap("Equals"); Legend("BracketRight", "^", shift: true, dead: true); Tap("e");
+                        Tap("Equals");
+                        // Cold provider lookup must neither inherit nor consume
+                        // the accent. Exercise DLL parsing and full-HKL resolution.
+                        var generated = WindowsLayoutProvider.Get(hkl);
+                        if (!generated.WindowsDerived || generated.Legend(generated.Keys.Single(k => k.Id == "e"), false, false, false).Text != "e")
+                            throw new InvalidOperationException("Generated labels inherited a pending accent.");
+                        foreach (var id in new[] { "00000407", "0000040c", "00020409" })
+                            WindowsLayoutProvider.FromKlid(hkl, id);
+                        Legend("BracketRight", "^", shift: true, dead: true); Tap("e");
                         var accent = new StringBuilder(32); GetWindowText(edit, accent, accent.Capacity);
                         if (accent.ToString() != (caps ? "É" : "é")) throw new InvalidOperationException("Cold legend lookup changed dead-key composition.");
                         SetWindowText(edit, "");
                     }
+                    layout = WindowsLayoutProvider.Get(hkl);
+                    state.SetLayout(layout, Now());
+                    state.Enter(1, 8, Now()); Pump(5);
                     Legend("2", layout.Swedish ? "\"" : "@", shift: true);
                     Legend("7", layout.Swedish ? "/" : "&", shift: true);
                     Legend("2", "2", capsLock: true); // Caps affects letters, not the number row.
@@ -181,6 +192,49 @@ internal static class KeyboardInputCheck
                 }
                 state.Cancel(Now());
                 if (output.HasOwnedKeys || new[] { 0x10, 0x11, 0x12, 0xa5 }.Any(k => (GetAsyncKeyState(k) & 0x8000) != 0)) throw new InvalidOperationException("Layout check left modifiers held.");
+            }
+            if (ime)
+            {
+                var japanese = loaded.Take(loadedCount).FirstOrDefault(WindowsLayout.IsJapanese);
+                if (japanese == 0) throw new InvalidOperationException("Japanese must already be installed for this check; no languages were added.");
+                if (WindowsKeyboard.Foreground().Window != frame) throw new InvalidOperationException("Focus left the owned IME-test window.");
+                ActivateKeyboardLayout(japanese, 0); Pump(200);
+                output.Target = WindowsKeyboard.Foreground();
+                if (output.Target.Window != frame || output.Target.Layout != japanese)
+                    throw new InvalidOperationException("Japanese did not activate in the disposable test window.");
+                state.SetLayout(WindowsLayoutProvider.Get(japanese), Now());
+                state.Enter(1, 8, Now()); Pump(10);
+                var context = ImmGetContext(edit);
+                if (context == 0) throw new InvalidOperationException("The disposable text field has no IME context.");
+                try
+                {
+                    // Set only this disposable control's context to Romaji /
+                    // Hiragana, initially closed. Production never sets IME state.
+                    if (!ImmSetConversionStatus(context, 0x19, 0) || !ImmSetOpenStatus(context, false))
+                        throw new InvalidOperationException("Could not initialize the disposable IME context.");
+                    Pump(100);
+                    void ExpectTyping(bool hiragana)
+                    {
+                        SetWindowText(edit, "");
+                        Tap("k"); Tap("a"); Pump(100);
+                        if (hiragana) { Tap("Enter"); Pump(100); }
+                        var text = new StringBuilder(128); GetWindowText(edit, text, text.Capacity);
+                        var expected = hiragana ? "か" : caps ? "KA" : "ka";
+                        if (text.ToString() != expected)
+                            throw new InvalidOperationException($"IME typing: expected {expected}, got {text}; open={ImmGetOpenStatus(context)}.");
+                        if (WindowsKeyboard.Foreground() != output.Target || output.HasOwnedKeys)
+                            throw new InvalidOperationException("IME toggle changed focus/layout or left keys held.");
+                    }
+                    ExpectTyping(false);
+                    Press("ImeToggle"); state.Tick(Now() + 1); Pump(100); Up();
+                    ExpectTyping(true);
+                    Tap("ImeToggle"); Pump(100); ExpectTyping(false);
+                    // External mode changes must not desynchronize the button.
+                    ImmSetOpenStatus(context, true); Pump(100);
+                    Tap("ImeToggle"); Pump(100); ExpectTyping(false);
+                    Console.WriteLine("Japanese IME check passed: あ/A toggles Latin → Hiragana → Latin, held button does not repeat, external mode changes remain in sync, focus/HKL preserved, no held keys.");
+                }
+                finally { ImmReleaseContext(edit, context); }
             }
             if (shell)
             {
@@ -275,4 +329,9 @@ internal static class KeyboardInputCheck
     [DllImport("user32.dll")] private static extern bool TranslateMessage(ref Message message);
     [DllImport("user32.dll", EntryPoint = "DispatchMessageW")] private static extern nint DispatchMessage(ref Message message);
     [DllImport("user32.dll", EntryPoint = "GetWindowTextW", CharSet = CharSet.Unicode)] private static extern int GetWindowText(nint window, StringBuilder text, int size);
+    [DllImport("imm32.dll")] private static extern nint ImmGetContext(nint window);
+    [DllImport("imm32.dll")] private static extern bool ImmReleaseContext(nint window, nint context);
+    [DllImport("imm32.dll")] private static extern bool ImmSetOpenStatus(nint context, bool open);
+    [DllImport("imm32.dll")] private static extern bool ImmGetOpenStatus(nint context);
+    [DllImport("imm32.dll")] private static extern bool ImmSetConversionStatus(nint context, uint conversion, uint sentence);
 }

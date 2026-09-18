@@ -109,7 +109,7 @@ internal sealed class DesktopKeyboardForm : Form
         {
             Cancel();
             output.Target = target;
-            keyboard.SetLayout(new WindowsLayout(target.Layout), Now);
+            keyboard.SetLayout(WindowsLayoutProvider.Get(target.Layout, applied.Geometry), Now);
             Invalidate();
         }
         // Any foreground window can receive shortcuts, including our Settings
@@ -127,6 +127,11 @@ internal sealed class DesktopKeyboardForm : Form
             nextSettingsRead = Now + .5;
             if (applied != settings.Current)
             {
+                if (applied.Geometry != settings.Current.Geometry)
+                {
+                    Cancel();
+                    keyboard.SetLayout(WindowsLayoutProvider.Get(output.Target.Layout, settings.Current.Geometry), Now);
+                }
                 var resized = applied.SizePercent != settings.Current.SizePercent;
                 applied = settings.Current;
                 audio.Apply(applied);
@@ -237,7 +242,7 @@ internal sealed class DesktopKeyboardForm : Form
             keyboard.Mode(0x1d) != ModifierMode.Idle && keyboard.Mode(0x38) != ModifierMode.Idle;
         var caps = !previewOnly && WindowsKeyboard.CapsLock;
         var scroll = !previewOnly && WindowsKeyboard.ScrollLock;
-        var notice = faulted || Now < errorUntil ? error : !keyboard.Layout.Supported ? keyboard.Layout.Status : null;
+        var notice = faulted || Now < errorUntil ? error : keyboard.Layout.Notice;
         var signature = (keyboard.Revision, shift, altGr, caps, scroll, notice);
         if (drawn == signature) return;
         using var pixels = KeyboardPanel.Render(keyboard, shift, notice, altGr, caps, scroll);

@@ -30,8 +30,10 @@ internal static class SettingsPanel
         Text("Key sounds", 64, 290, label, text);
         Text("Sound preset", 64, 347, small, accent);
         Text($"Volume   {settings.VolumePercent}%", 64, 511, label, text);
+        Text("Keyboard arrangement", 64, 578, label, text);
+        Text("Auto · ANSI · ISO", 64, 608, small, accent);
         Text(error == null ? "Saved on this PC · Shared by desktop and VR" : "Settings unavailable · Last working values kept",
-            64, 558, small, error == null ? accent : new SKColor(0xff, 0xb0, 0xa0));
+            64, 658, small, error == null ? accent : new SKColor(0xff, 0xb0, 0xa0));
         foreach (var c in SettingsControls.All)
         {
             var selected = c.Action == SettingsAction.Wood && settings.Sound == KeySound.CushionedWood ||
@@ -52,6 +54,8 @@ internal static class SettingsPanel
             }
             paint.Color = !enabled ? new SKColor(0x66, 0x78, 0x82) : selected ? new SKColor(0x09, 0x19, 0x23) : text;
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
+            if (c.Action == SettingsAction.Geometry) title = settings.Geometry switch
+            { KeyboardGeometry.Ansi => "ANSI", KeyboardGeometry.Iso => "ISO", _ => "Auto" };
             var font = c.Action == SettingsAction.Defaults ? small : label;
             canvas.DrawText(title, rect.MidX, rect.MidY - (font.Metrics.Ascent + font.Metrics.Descent) / 2, SKTextAlign.Center, font, paint);
         }

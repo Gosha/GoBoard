@@ -36,6 +36,10 @@ internal static class SettingsInputCheck
                 Click(SettingsAction.Larger);
                 Require(store.Current.SizePercent == before + 5, "Scaled size button");
                 Require(new SettingsStore(path).Current == store.Current, "Saved click");
+                var geometry = store.Current.Geometry;
+                Click(SettingsAction.Geometry);
+                Require(store.Current.Geometry == (KeyboardGeometry)(((int)geometry + 1) % 3), "Arrangement selection");
+                Require(new SettingsStore(path).Current.Geometry == store.Current.Geometry, "Saved arrangement");
                 Click(SettingsAction.Thud);
                 Require(store.Current.Sound == KeySound.SoftLowThud, "Preset selection");
                 Click(SettingsAction.Louder);

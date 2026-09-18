@@ -15,10 +15,15 @@ internal static class PanelPreview
 
     public static SKBitmap Render(string language, string visualState)
     {
-        if (language is not ("us" or "sv")) throw new ArgumentException("Preview layout must be us or sv.");
+        if (language is not ("us" or "sv" or "ja")) throw new ArgumentException("Preview layout must be us, sv or ja.");
+        return Render(new WindowsLayout((nint)(language == "ja" ? 0x04110411u : language == "sv" ? WindowsLayout.SwedishHandle : WindowsLayout.UsHandle)), visualState);
+    }
+
+    public static SKBitmap Render(WindowsLayout layout, string visualState)
+    {
         if (!States.Contains(visualState)) throw new ArgumentException($"Preview state must be {string.Join(", ", States)}.");
         var keyboard = new KeyboardState(new PreviewSink());
-        keyboard.SetLayout(new WindowsLayout((nint)(language == "sv" ? WindowsLayout.SwedishHandle : WindowsLayout.UsHandle)), 0);
+        keyboard.SetLayout(layout, 0);
         keyboard.Enter(0, 7, 1);
         double time = 2;
         void Press(string id, bool release = true)

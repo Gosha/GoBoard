@@ -15,11 +15,12 @@ public sealed class KeyboardDesignTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void TargetsAreInsidePanelAndNeverOverlap(bool swedish)
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void TargetsAreInsidePanelAndNeverOverlap(int arrangement)
     {
-        var keys = swedish ? KeyboardLayout.SwedishKeys : KeyboardLayout.Keys;
+        var keys = arrangement switch { 1 => KeyboardLayout.SwedishKeys, 2 => KeyboardLayout.JapaneseKeys, _ => KeyboardLayout.Keys };
         Assert.Equal(OverlayGeometry.PanelPadding, keys.Min(k => k.Bounds.X));
         Assert.Equal(OverlayGeometry.PanelPadding, keys.Min(k => k.Bounds.Y));
         Assert.Equal(OverlayGeometry.PanelWidth - OverlayGeometry.PanelPadding, keys.Max(k => k.Bounds.X + k.Bounds.Width));
@@ -139,6 +140,7 @@ public sealed class KeyboardDesignTests
     [InlineData(KeyboardLayout.PrintScreenScan, 0, 0x37, 9)]
     [InlineData(KeyboardLayout.ScrollLockScan, 0, 0x46, 8)]
     [InlineData(KeyboardLayout.PauseScan, 0x13, 0, 0)]
+    [InlineData(KeyboardLayout.ImeToggleKey, 0x19, 0, 0)]
     public void SystemKeysEncodeCorrectWindowsDownAndUp(int scan, int virtualKey, int hardwareScan, int flags)
     {
         var down = WindowsKeyboard.MakeInput((ushort)scan, false);
@@ -155,11 +157,14 @@ public sealed class KeyboardDesignTests
         // Pause's physical-key guard must also query VK_PAUSE, not Num Lock.
         if (scan == KeyboardLayout.PauseScan)
             Assert.Equal(0x13u, WindowsKeyboard.VirtualKeyForScan((ushort)scan, 0));
+        if (scan == KeyboardLayout.ImeToggleKey)
+            Assert.Equal(0x19u, WindowsKeyboard.VirtualKeyForScan((ushort)scan, 0));
     }
 
     [Theory]
     [InlineData("us")]
     [InlineData("sv")]
+    [InlineData("ja")]
     public void EveryProductionPreviewStateRendersWithoutInput(string language)
     {
         foreach (var state in PanelPreview.States)

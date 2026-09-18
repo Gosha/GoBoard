@@ -16,10 +16,11 @@ public sealed class SettingsTests : IDisposable
     {
         var desktop = new SettingsStore(SettingsPath);
         var vr = new SettingsStore(SettingsPath);
-        Assert.True(desktop.Update(s => s with { SizePercent = 125 }));
+        Assert.True(desktop.Update(s => s with { SizePercent = 125, Geometry = KeyboardGeometry.Iso }));
         Assert.True(vr.Update(s => s with { SoundEnabled = false, VolumePercent = 30, Sound = KeySound.SoftLowThud }));
         Assert.True(desktop.Reload());
         Assert.Equal(125, desktop.Current.SizePercent);
+        Assert.Equal(KeyboardGeometry.Iso, desktop.Current.Geometry);
         Assert.False(desktop.Current.SoundEnabled);
         Assert.Equal(30, desktop.Current.VolumePercent);
         Assert.Equal(KeySound.SoftLowThud, desktop.Current.Sound);

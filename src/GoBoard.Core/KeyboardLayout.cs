@@ -18,15 +18,19 @@ internal static class KeyboardLayout
 {
     private const int KeySize = 44, KeyGap = 2, RowPitch = KeySize + KeyGap;
     public const ushort PrintScreenScan = 0xe037, ScrollLockScan = 0x46, PauseScan = 0xe145;
+    // Internal key identity, not a physical scan code. Windows sends VK_KANJI.
+    public const ushort ImeToggleKey = 0xff19;
     public static readonly IReadOnlyList<KeyboardKey> Keys = Create(false);
-    public static readonly IReadOnlyList<KeyboardKey> SwedishKeys = Create(true);
+    public static readonly IReadOnlyList<KeyboardKey> IsoKeys = Create(true);
+    public static readonly IReadOnlyList<KeyboardKey> JapaneseKeys = Create(false, japanese: true);
+    public static IReadOnlyList<KeyboardKey> SwedishKeys => IsoKeys;
     public static KeyboardKey Hit(float x, float y, IReadOnlyList<KeyboardKey> keys = null) => float.IsFinite(x) && float.IsFinite(y)
         ? (keys ?? Keys).FirstOrDefault(k => k.Contains(x, y)) : null;
 
     // OpenVR mouse coordinates have a bottom-left origin. Drawing uses top-left.
     public static KeyboardKey HitOpenVr(float x, float y, IReadOnlyList<KeyboardKey> keys = null) => Hit(x, OverlayGeometry.PanelHeight - y, keys);
 
-    private static KeyboardKey[] Create(bool swedish)
+    private static KeyboardKey[] Create(bool iso, bool japanese = false)
     {
         var keys = new List<KeyboardKey>();
         void Key(string id, string label, ushort scan, float x, float y, float width = KeySize, float height = KeySize, bool repeat = true)
@@ -64,7 +68,7 @@ internal static class KeyboardLayout
         Row("qwertyuiop", [0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19], 82, 12 + RowPitch * 2);
         Symbol("BracketLeft", "[", 0x1a, 542, 12 + RowPitch * 2);
         Symbol("BracketRight", "]", 0x1b, 588, 12 + RowPitch * 2);
-        if (swedish)
+        if (iso)
             keys.Add(new("Enter", "Enter", 0x1c, new(634, 12 + RowPitch * 2, 74, KeySize * 2 + KeyGap), false, CutoutWidth: 16, CutoutTop: KeySize));
         else
         {
@@ -76,10 +80,10 @@ internal static class KeyboardLayout
         Row("asdfghjkl", [0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26], 98, 12 + RowPitch * 3);
         Symbol("Semicolon", ";", 0x27, 512, 12 + RowPitch * 3);
         Symbol("Quote", "'", 0x28, 558, 12 + RowPitch * 3);
-        if (swedish) Symbol("Backslash", "\\", 0x2b, 604, 12 + RowPitch * 3);
+        if (iso) Symbol("Backslash", "\\", 0x2b, 604, 12 + RowPitch * 3);
 
-        Key("Shift", "Shift", 0x2a, 16, 12 + RowPitch * 4, swedish ? 70 : 116, repeat: false);
-        if (swedish) Symbol("Iso", "<", 0x56, 88, 12 + RowPitch * 4, KeySize);
+        Key("Shift", "Shift", 0x2a, 16, 12 + RowPitch * 4, iso ? 70 : 116, repeat: false);
+        if (iso) Symbol("Iso", "<", 0x56, 88, 12 + RowPitch * 4, KeySize);
         Row("zxcvbnm", [0x2c, 0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x32], 134, 12 + RowPitch * 4);
         Symbol("Comma", ",", 0x33, 456, 12 + RowPitch * 4);
         Symbol("Period", ".", 0x34, 502, 12 + RowPitch * 4);
@@ -91,7 +95,8 @@ internal static class KeyboardLayout
         Key("Ctrl", "Ctrl", 0x1d, 16, 12 + RowPitch * 5, 56, repeat: false);
         Key("Win", "Win", 0xe05b, 74, 12 + RowPitch * 5, 52, repeat: false);
         Key("Alt", "Alt", 0x38, 128, 12 + RowPitch * 5, 56, repeat: false);
-        Key("Space", "", 0x39, 186, 12 + RowPitch * 5, 324);
+        Key("Space", "", 0x39, 186, 12 + RowPitch * 5, japanese ? 256 : 324);
+        if (japanese) Key("ImeToggle", "あ/A", ImeToggleKey, 444, 12 + RowPitch * 5, 66, repeat: false);
         Key("AltGr", "AltGr", 0xe038, 512, 12 + RowPitch * 5, 60, repeat: false);
         Key("Menu", "Menu", 0xe05d, 574, 12 + RowPitch * 5, 68, repeat: false);
         Key("RightCtrl", "Ctrl", 0x1d, 644, 12 + RowPitch * 5, 64, repeat: false);

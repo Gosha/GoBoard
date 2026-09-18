@@ -1,6 +1,6 @@
 # Automatic keyboard layouts for GoBoard
 
-> Historical research note: the implementation has since completed static, Windows-derived eight-state legend tables and full 79-key US/80-key Swedish geometry. Runtime `ToUnicodeEx` legend lookup was rejected because it can disturb a pending global dead-key accent. Current behavior is documented in `README.md` and `docs/development.md`.
+> Historical proposal, superseded by [the automatic layout implementation](automatic-keyboard-layouts.md). Production now reads installed Windows keyboard DLL tables directly and caches eight-state labels; it never queries `ToUnicodeEx` for labels. The reduced keyboard and proposed API pipeline below describe the earlier research state, not current behavior.
 
 Research date: 2026-09-18. This is a proposal, not an implemented feature or an expansion of the confirmed product scope.
 

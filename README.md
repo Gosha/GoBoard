@@ -1,6 +1,6 @@
 # GoBoard
 
-A Windows keyboard overlay for SteamVR, inspired by [YuuBoard](https://yuuzami.itch.io/yuuboard), with its own interface and automatic Swedish / US English layout switching to match the focused application.
+A Windows keyboard overlay for SteamVR, inspired by [YuuBoard](https://yuuzami.itch.io/yuuboard), with its own interface and automatic Windows keyboard labels matching the focused application's layout.
 
 ## Run
 
@@ -30,6 +30,10 @@ To stop either mode:
 
 Open **GoBoard Settings** in the SteamVR dashboard to change keyboard size, mute, volume, or sound preset. Changes apply live and are saved for the next launch.
 
+Keyboard labels follow Windows, including Shift, Caps Lock, AltGr, and dead keys. **Keyboard arrangement** cycles Auto, ANSI, and ISO independently of the language. Unsupported layouts remain usable with US labels and a warning. See [layout support and validation limits](docs/automatic-keyboard-layouts.md), including IME and complex-script limitations.
+
+When Japanese is selected, an **あ/A** button appears beside Space in both desktop and VR mode. Click it to toggle Japanese and Latin input within the Japanese IME. Its label identifies the action; it does not display the current IME mode.
+
 For the desktop settings window (works without SteamVR):
 
 ```powershell
@@ -40,5 +44,6 @@ For the desktop settings window (works without SteamVR):
 
 - [Development, builds, tests, and previews](docs/development.md)
 - [Technical design](docs/technical-design.md)
+- [Automatic Windows keyboard layouts](docs/automatic-keyboard-layouts.md)
 - [Proof of concept: usage, implementation, and history](docs/proof-of-concept.md)
 - [Stereo dashboard experiment](experiments/SteamVR.StereoDashboard/README.md)

@@ -18,6 +18,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private bool renderedShift, renderedAltGr, renderedCaps, renderedScrollLock;
     private string renderedStatus, status;
     private string targetStatus;
+    private KeyboardGeometry geometry;
     private double lastErrorTime;
     private readonly ulong left = SourcePath("/user/hand/left"), right = SourcePath("/user/hand/right");
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
@@ -26,6 +27,14 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     public void ApplySettings(BoardSettings settings, bool resized)
     {
         if (resized) Cancel();
+        if (geometry != settings.Geometry)
+        {
+            Cancel();
+            geometry = settings.Geometry;
+            State.SetLayout(WindowsLayoutProvider.Get(output.Target.Layout, geometry), Now);
+            targetStatus = State.Layout.Notice;
+            if (!faulted) status = targetStatus;
+        }
         audio.Apply(settings);
     }
 
@@ -42,8 +51,8 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         {
             Cancel(clearFocus: false);
             output.Target = target;
-            State.SetLayout(new WindowsLayout(target.Layout), Now);
-            targetStatus = State.Layout.Supported ? null : State.Layout.Status;
+            State.SetLayout(WindowsLayoutProvider.Get(target.Layout, geometry), Now);
+            targetStatus = State.Layout.Notice;
             Console.WriteLine($"Windows input layout: {State.Layout.Name}, HKL {unchecked((uint)(long)target.Layout):X8}.");
             if (!faulted) status = targetStatus;
         }

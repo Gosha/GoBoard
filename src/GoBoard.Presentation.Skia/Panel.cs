@@ -30,6 +30,8 @@ internal static class Panel
         using var letter = new SKFont(face, 21);
         using var number = new SKFont(face, 18);
         using var special = new SKFont(face, 12);
+        using var japaneseFace = layout.Japanese ? SKFontManager.Default.MatchCharacter('あ') : null;
+        using var imeLabel = new SKFont(japaneseFace ?? face, 16);
         using var secondary = new SKFont(face, 12);
         using var notice = new SKFont(face, 9);
         canvas.Clear(Background);
@@ -68,19 +70,24 @@ internal static class Panel
                 var normal = layout.Legend(key, false, false, false);
                 var shifted = layout.Legend(key, true, false, false);
                 var alternate = layout.Legend(key, false, true, false);
-                var active = layout.Legend(key, shift, altGr && layout.Swedish, caps);
-                var isLetter = normal.Text.Length == 1 && char.IsLetter(normal.Text[0]);
+                var active = layout.Legend(key, shift, altGr && layout.HasAltGr, caps);
+                // French number keys can have a letter in the base layer (é/2).
+                // Only a case pair uses the centered letter treatment.
+                var isLetter = normal.Text.Length == 1 && char.IsLetter(normal.Text[0]) &&
+                    string.Equals(normal.Text, shifted.Text, StringComparison.OrdinalIgnoreCase);
+                canvas.Save();
+                canvas.ClipRect(rect);
                 if (isLetter)
                     Center(canvas, active.Text, rect.MidX, rect.MidY, letter, paint);
                 else
                 {
                     canvas.DrawText(active.Text, rect.Left + 9, rect.Bottom - 6, SKTextAlign.Left, number, paint);
-                    var upper = shift && !(altGr && layout.Swedish) ? normal.Text : shifted.Text;
-                    if (upper != active.Text && upper != "—")
+                    var upper = shift && !(altGr && layout.HasAltGr) ? normal.Text : shifted.Text;
+                    if (upper.Length > 0 && upper != active.Text && upper != "—")
                         canvas.DrawText(upper, rect.Left + 9, rect.Top + 16, SKTextAlign.Left, secondary, paint);
                 }
                 // The current output stays primary; suppress duplicate auxiliary legends.
-                if (layout.Swedish && alternate.Text != "—" && alternate.Text != active.Text)
+                if (layout.HasAltGr && alternate.Text.Length > 0 && alternate.Text != "—" && alternate.Text != active.Text)
                 {
                     paint.Color = filled ? Ink : Accent;
                     canvas.DrawText(alternate.Text, rect.Right - 6, rect.Bottom - 6, SKTextAlign.Right, secondary, paint);
@@ -90,6 +97,12 @@ internal static class Panel
                     paint.Color = filled ? Ink : Accent;
                     canvas.DrawCircle(rect.Right - 5, rect.Top + 5, 1.3f, paint);
                 }
+                canvas.Restore();
+            }
+            else if (key.Id == "ImeToggle")
+            {
+                paint.Color = filled ? Ink : Accent;
+                Center(canvas, key.Label, rect.MidX, rect.MidY, imeLabel, paint);
             }
             else if (key.Id == "Win") DrawWindows(canvas, rect.MidX, rect.MidY, paint);
             else if (key.Id is "Up" or "Down" or "Left" or "Right") DrawArrow(canvas, key.Id, rect.MidX, rect.MidY, paint);
@@ -101,12 +114,12 @@ internal static class Panel
             else if (key.Id == "Enter")
             {
                 var cx = rect.MidX + key.CutoutWidth / 2;
-                Center(canvas, "Enter", cx, rect.MidY - (layout.Swedish ? 5 : 0), special, paint);
-                if (layout.Swedish) DrawReturn(canvas, cx, rect.MidY + 18, true, paint);
+                Center(canvas, "Enter", cx, rect.MidY - (layout.Iso ? 5 : 0), special, paint);
+                if (layout.Iso) DrawReturn(canvas, cx, rect.MidY + 18, true, paint);
             }
             else
             {
-                if (key.Id == "AltGr" && layout.Swedish && !filled) paint.Color = Accent;
+                if (key.Id == "AltGr" && layout.HasAltGr && !filled) paint.Color = Accent;
                 Center(canvas, layout.Legend(key, shift, altGr, caps).Text, rect.MidX, rect.MidY, special, paint);
             }
             paint.Color = filled ? Ink : Accent;
@@ -128,7 +141,7 @@ internal static class Panel
             }
             else if (toggleOn) canvas.DrawCircle(rect.Right - 7, rect.Top + 7, 2, paint);
         }
-        var message = !string.IsNullOrWhiteSpace(status) ? status : !layout.Supported ? layout.Status : null;
+        var message = !string.IsNullOrWhiteSpace(status) ? status : layout.Notice;
         if (!string.IsNullOrWhiteSpace(message))
         {
             // Use the existing gap between navigation and arrows instead of
@@ -232,4 +245,3 @@ internal static class Panel
         paint.Style = SKPaintStyle.Fill;
     }
 }
-
