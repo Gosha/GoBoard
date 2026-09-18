@@ -9,6 +9,7 @@ internal static class Program
         if (args.Length > 0 && args[0] == "--desktop") return DesktopRuntime.Run(args);
         if (args is ["--render-desktop", var desktopPath]) return DesktopRuntime.Render(desktopPath);
         if (args is ["--desktop-input-check"]) return DesktopInputCheck.Run();
+        if (args is ["--desktop-launch-check"]) return DesktopInputCheck.RunLaunch();
         if (args is ["--settings-input-check"]) return SettingsInputCheck.Run();
         if (args is ["--settings"])
         {

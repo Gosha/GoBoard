@@ -8,6 +8,43 @@ namespace GoBoard.App;
 // Explicit integration check: only this disposable text window may receive input.
 internal static class DesktopInputCheck
 {
+    // Launch this with the same STARTUPINFO as the PowerShell launcher. Unlike
+    // Run(), it must not show any disposable window before the keyboard.
+    public static int RunLaunch()
+    {
+        ApplicationConfiguration.Initialize();
+        using var keyboard = new DesktopKeyboardForm();
+        using var timer = new System.Windows.Forms.Timer { Interval = 300 };
+        var stage = 0;
+        var result = 1;
+        timer.Tick += (_, _) =>
+        {
+            try
+            {
+                var p = keyboard.SettingsPoint;
+                var packed = (nint)((p.Y << 16) | (p.X & 0xffff));
+                if (stage++ == 0) { SendMessage(keyboard.Handle, 0x201, 1, packed); return; }
+                if (stage == 2) { SendMessage(keyboard.Handle, 0x202, 0, packed); return; }
+                var settings = Application.OpenForms.OfType<SettingsForm>().SingleOrDefault();
+                Require(settings != null, "Settings click did not create a settings form.");
+                var style = (long)GetWindowLongPtr(settings.Handle, -20);
+                Console.WriteLine($"Settings launch: managed visible={settings.Visible}, native visible={IsWindowVisible(settings.Handle)}, taskbar={settings.ShowInTaskbar}, style={style:X}.");
+                Require(IsWindowVisible(settings.Handle), "Settings was created but Windows kept it hidden.");
+                Require(settings.ShowInTaskbar && (style & 0x40000) != 0 && (style & 0x80) == 0, "Settings has no normal taskbar entry.");
+                Require((style & 8) == 0, "Settings is unexpectedly always on top.");
+                Console.WriteLine("Desktop launcher check passed: Settings button shows a visible normal window with taskbar style.");
+                result = 0;
+            }
+            catch (Exception ex) { Console.Error.WriteLine(ex.Message); }
+            timer.Stop();
+            keyboard.Close();
+        };
+        keyboard.Shown += (_, _) => timer.Start();
+        Application.Run(keyboard);
+        return result;
+    }
+
+
     public static int Run()
     {
         ApplicationConfiguration.Initialize();
@@ -104,4 +141,5 @@ internal static class DesktopInputCheck
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint window, out uint process);
     [DllImport("user32.dll")] private static extern bool AttachThreadInput(uint first, uint second, bool attach);
     [DllImport("user32.dll")] private static extern nint SetFocus(nint window);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(nint window);
 }

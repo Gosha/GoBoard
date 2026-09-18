@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using GoBoard.Core;
 using GoBoard.Platform.Windows;
 using GoBoard.Presentation.Skia;
@@ -24,6 +25,22 @@ internal sealed class SettingsForm : Form
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     private SettingsViewport Viewport => SettingsViewport.Fit(ClientSize.Width, ClientSize.Height);
     protected override bool ShowWithoutActivation => previewOnly;
+
+    protected override void SetVisibleCore(bool value)
+    {
+        base.SetVisibleCore(value);
+        // The launcher hides the console with STARTUPINFO/SW_HIDE. Windows can
+        // apply that to this first activating window while WinForms caches
+        // Visible=true. Explicitly show it once that startup hint is consumed.
+        if (value && !previewOnly && !IsWindowVisible(Handle)) ShowWindow(Handle, 5); // SW_SHOW
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(nint window);
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ShowWindow(nint window, int command);
 
     public SettingsForm(bool previewOnly = false, bool desktopMode = false, SettingsStore store = null)
     {

@@ -34,6 +34,7 @@ internal sealed class DesktopKeyboardForm : Form
     private DesktopGeometry Geometry => new(ClientSize.Width, ClientSize.Height, HeaderHeight);
     internal KeyboardState State => keyboard;
     internal bool HasOwnedKeys => output.HasOwnedKeys;
+    internal Point SettingsPoint => new(SettingsButton.Left + SettingsButton.Width / 2, SettingsButton.Top + SettingsButton.Height / 2);
     internal Point KeyPoint(string id)
     {
         var b = keyboard.Layout.Keys.Single(k => k.Id == id).Bounds;
@@ -201,9 +202,13 @@ internal sealed class DesktopKeyboardForm : Form
     {
         Cancel();
         if (settingsForm == null || settingsForm.IsDisposed) settingsForm = new SettingsForm(desktopMode: true);
-        if (!settingsForm.Visible) settingsForm.Show(this);
+        // Owning this window would make it inherit the keyboard's topmost state.
+        if (settingsForm.WindowState == FormWindowState.Minimized) settingsForm.WindowState = FormWindowState.Normal;
+        if (!settingsForm.Visible) settingsForm.Show();
+        settingsForm.BringToFront();
         settingsForm.Activate();
     }
+
     private void CancelKeyboard()
     {
         keyboard.Cancel(Now);

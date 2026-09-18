@@ -35,6 +35,8 @@ dotnet run --project src/GoBoard.App -c Release -- --render-desktop .runtime\des
 dotnet run --project src/GoBoard.App -c Release -- --desktop-input-check
 ```
 
+`GoBoard.exe --desktop-launch-check` starts the keyboard first and clicks its Settings button without injecting keys. Run it through `Start-Process -WindowStyle Hidden -Wait` to reproduce the PowerShell launcher's startup flags. It verifies that Settings is natively visible, has the normal taskbar window style, and is not topmost. This catches Windows applying the hidden-console startup hint to the first activating window even while WinForms reports `Visible=true`; the settings host explicitly shows that window after the hint is consumed.
+
 The native check sends mouse messages to the real keyboard window, verifies its non-activation style and behavior, types only into its disposable text field, and restores the previous foreground window. It covers text, one-shot/locked Shift, Ctrl+A, repeat release, capture-loss cancellation, cleanup, and absence of the OpenVR native module. Unit tests cover pixel-to-key mapping at multiple sizes/DPIs and monitor constraints. The desktop preview has been visually inspected. Physical pointer dragging, mixed-DPI monitor transitions, and application-specific shortcuts remain manual acceptance checks.
 
 The Windows integration commands remain explicit because they activate a disposable native test window or Windows shell UI:
