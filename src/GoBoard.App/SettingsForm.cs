@@ -1,0 +1,131 @@
+using System.Diagnostics;
+using System.Drawing.Imaging;
+using GoBoard.Core;
+using GoBoard.Platform.Windows;
+using GoBoard.Presentation.Skia;
+using SkiaSharp;
+
+namespace GoBoard.App;
+
+// Windows hosts the shared Skia panel; drawing, targets, and actions belong to
+// the same renderer/model as the SteamVR dashboard.
+internal sealed class SettingsForm : Form
+{
+    private readonly SettingsStore store;
+    private readonly KeyAudio audio = new();
+    private readonly SettingsPointerState pointers = new();
+    private readonly System.Windows.Forms.Timer refresh = new() { Interval = 500 };
+    private readonly ToolTip details = new();
+    private readonly bool previewOnly, desktopMode;
+    private string actionError;
+    private bool releasingCapture;
+    private Bitmap frame;
+    private (BoardSettings Settings, int Hover, string Error)? drawn;
+    private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
+    private SettingsViewport Viewport => SettingsViewport.Fit(ClientSize.Width, ClientSize.Height);
+    protected override bool ShowWithoutActivation => previewOnly;
+
+    public SettingsForm(bool previewOnly = false, bool desktopMode = false, SettingsStore store = null)
+    {
+        this.previewOnly = previewOnly;
+        this.desktopMode = desktopMode;
+        this.store = store ?? new SettingsStore();
+        Text = "GoBoard Settings";
+        AutoScaleMode = AutoScaleMode.Dpi;
+        ClientSize = new Size(SettingsControls.Width, SettingsControls.Height);
+        MinimumSize = new Size(560, 440);
+        StartPosition = FormStartPosition.CenterScreen;
+        BackColor = Color.FromArgb(16, 24, 32);
+        DoubleBuffered = true;
+        if (previewOnly) { ShowInTaskbar = false; Opacity = 0; }
+        refresh.Tick += (_, _) => { this.store.Reload(); RenderFrame(); };
+        Shown += (_, _) =>
+        {
+            var area = Screen.FromControl(this).WorkingArea;
+            Size = new Size(Math.Min(Width, area.Width), Math.Min(Height, area.Height));
+            RenderFrame();
+            refresh.Start();
+        };
+        RenderFrame();
+    }
+
+    private void Pointer(Point location, bool down = false, bool up = false, bool leave = false)
+    {
+        if (previewOnly || Disposing || IsDisposed) return;
+        var point = Viewport.ToPanel(location.X, location.Y);
+        var now = Now;
+        var action = pointers.Process(0, point.X, point.Y, now, now, down, up, leave);
+        if (action.HasValue && SettingsControls.Enabled(action.Value, store.Current))
+        {
+            var saved = store.Update(s => SettingsControls.Enabled(action.Value, s) ? SettingsControls.Apply(action.Value, s) : s);
+            actionError = saved ? null : store.Error;
+            audio.Apply(store.Current);
+            if (saved && action.Value is SettingsAction.Wood or SettingsAction.Thud or SettingsAction.ToggleSound or SettingsAction.Quieter or SettingsAction.Louder)
+                audio.Click();
+        }
+        RenderFrame();
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e) { base.OnMouseMove(e); Pointer(e.Location); }
+    protected override void OnMouseLeave(EventArgs e) { base.OnMouseLeave(e); Pointer(Point.Empty, leave: true); }
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        if (e.Button != MouseButtons.Left || previewOnly) return;
+        Capture = true;
+        Pointer(e.Location, down: true);
+    }
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        base.OnMouseUp(e);
+        if (e.Button != MouseButtons.Left || previewOnly) return;
+        Pointer(e.Location, up: true);
+        releasingCapture = true;
+        try { Capture = false; } finally { releasingCapture = false; }
+    }
+    protected override void OnMouseCaptureChanged(EventArgs e)
+    {
+        base.OnMouseCaptureChanged(e);
+        if (!Capture && !releasingCapture) ResetPointer();
+    }
+    protected override void OnDeactivate(EventArgs e) { base.OnDeactivate(e); ResetPointer(); }
+    protected override void OnResize(EventArgs e) { base.OnResize(e); ResetPointer(); Invalidate(); }
+    private void ResetPointer()
+    {
+        pointers?.Reset();
+        if (store != null && !Disposing && !IsDisposed) RenderFrame();
+    }
+
+    private void RenderFrame()
+    {
+        var hover = SettingsControls.All.Aggregate(0, (mask, c) => mask | (pointers.Hovered(c.Action) ? 1 << (int)c.Action : 0));
+        var error = actionError ?? store.Error;
+        var signature = (store.Current, hover, error);
+        if (drawn == signature) return;
+        using var pixels = SettingsPanel.Render(store.Current, pointers, error, desktopMode);
+        using var bgra = pixels.Copy(SKColorType.Bgra8888);
+        using var borrowed = new Bitmap(bgra.Width, bgra.Height, bgra.RowBytes, PixelFormat.Format32bppPArgb, bgra.GetPixels());
+        var next = new Bitmap(borrowed);
+        frame?.Dispose();
+        frame = next;
+        drawn = signature;
+        details.SetToolTip(this, error);
+        AccessibleDescription = error ?? "GoBoard settings. Changes apply immediately and are saved on this PC.";
+        audio.Apply(store.Current);
+        Invalidate();
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        var v = Viewport;
+        if (frame != null && v.Scale > 0)
+            e.Graphics.DrawImage(frame, new RectangleF(v.X, v.Y, v.Width, v.Height));
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) { refresh.Dispose(); details.Dispose(); frame?.Dispose(); audio.Dispose(); }
+        base.Dispose(disposing);
+    }
+}

@@ -4,7 +4,7 @@ A Windows keyboard overlay for SteamVR, inspired by [YuuBoard](https://yuuzami.i
 
 ## Run
 
-Requires Windows x64, the .NET 10 SDK (see [global.json](global.json)), and SteamVR running with a connected headset.
+Requires Windows x64 and the .NET 10 SDK (see [global.json](global.json)). VR mode also requires SteamVR running with a connected headset.
 
 From the repository root in PowerShell:
 
@@ -14,10 +14,26 @@ From the repository root in PowerShell:
 
 Open the SteamVR dashboard, focus a text field in Desktop, then point at keys and pull the trigger to type. Drag the line beneath the keyboard to reposition it.
 
-To stop:
+For a complete desktop application without SteamVR:
+
+```powershell
+.\start-goboard.ps1 -Desktop
+```
+
+Select a text field in another application, then click the floating keyboard to type. Drag its header to move it, click **Settings** for size and sound, or **×** to exit. It stays above other windows and preserves the text field's focus. The same layouts, modifiers, shortcuts, repeat, and saved settings work in both modes.
+
+To stop either mode:
 
 ```powershell
 .\stop-goboard.ps1
+```
+
+Open **GoBoard Settings** in the SteamVR dashboard to change keyboard size, mute, volume, or sound preset. Changes apply live and are saved for the next launch.
+
+For the desktop settings window (works without SteamVR):
+
+```powershell
+.\settings-goboard.ps1
 ```
 
 ## Documentation

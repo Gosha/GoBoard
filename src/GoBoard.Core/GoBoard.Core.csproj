@@ -9,5 +9,6 @@
     <InternalsVisibleTo Include="GoBoard.Presentation.Skia" />
     <InternalsVisibleTo Include="GoBoard.OpenVR" />
     <InternalsVisibleTo Include="GoBoard.Tests" />
+    <InternalsVisibleTo Include="GoBoard" />
   </ItemGroup>
 </Project>

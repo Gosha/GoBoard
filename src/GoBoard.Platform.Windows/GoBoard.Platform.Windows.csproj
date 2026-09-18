@@ -9,5 +9,6 @@
     <ProjectReference Include="../GoBoard.Core/GoBoard.Core.csproj" />
     <InternalsVisibleTo Include="GoBoard.OpenVR" />
     <InternalsVisibleTo Include="GoBoard.Tests" />
+    <InternalsVisibleTo Include="GoBoard" />
   </ItemGroup>
 </Project>

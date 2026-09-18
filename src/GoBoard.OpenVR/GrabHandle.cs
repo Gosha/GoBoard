@@ -11,7 +11,6 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
 {
     public const int LayoutWidth = OverlayGeometry.GrabWidth, LayoutHeight = OverlayGeometry.GrabHeight;
     public const float Width = OverlayGeometry.GrabWidthInMeters;
-    public static readonly Matrix4x4 PanelOffset = OverlayGeometry.GrabFromPanel;
     private readonly TrackedDevicePose_t[] devices = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
     private readonly GrabInput input = new();
     private readonly OverlayPointers pointers = new();

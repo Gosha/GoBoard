@@ -1,9 +1,8 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using GoBoard.Core;
 
 namespace GoBoard.Platform.Windows;
-
-internal enum KeySound { CushionedWood, SoftLowThud }
 
 // The auditioned "Cushioned wood" sound, with "Soft low thud" retained.
 // Async playback keeps the VR
@@ -13,14 +12,23 @@ internal sealed class KeyAudio : IDisposable
     private GCHandle downWave;
     private GCHandle upWave;
     private bool warned;
+    private BoardSettings settings;
 
     public KeyAudio()
     {
-        var sound = string.Equals(Environment.GetEnvironmentVariable("GOBOARD_KEY_SOUND"),
-            "soft-low-thud", StringComparison.OrdinalIgnoreCase)
-            ? KeySound.SoftLowThud : KeySound.CushionedWood;
-        downWave = GCHandle.Alloc(CreateClick(false, sound), GCHandleType.Pinned);
-        upWave = GCHandle.Alloc(CreateClick(true, sound), GCHandleType.Pinned);
+        Apply(BoardSettings.Defaults);
+    }
+
+    public void Apply(BoardSettings next)
+    {
+        next = next.Normalize();
+        if (settings != null && settings.Sound == next.Sound && settings.SoundEnabled == next.SoundEnabled &&
+            settings.VolumePercent == next.VolumePercent) return;
+        Dispose(); // Stop playback before replacing pinned wave data.
+        settings = next;
+        if (!next.SoundEnabled || next.VolumePercent == 0) return;
+        downWave = GCHandle.Alloc(CreateClick(false, next.Sound, next.VolumePercent / 100f), GCHandleType.Pinned);
+        upWave = GCHandle.Alloc(CreateClick(true, next.Sound, next.VolumePercent / 100f), GCHandleType.Pinned);
     }
 
     public bool Click(bool released = false)
@@ -38,7 +46,7 @@ internal sealed class KeyAudio : IDisposable
         return played;
     }
 
-    internal static byte[] CreateClick(bool released, KeySound sound = KeySound.CushionedWood)
+    internal static byte[] CreateClick(bool released, KeySound sound = KeySound.CushionedWood, float volume = 1)
     {
         const int rate = 48000;
         var samples = released ? 1680 : 2880; // 35/60 ms, mono 16-bit PCM.
@@ -68,7 +76,7 @@ internal sealed class KeyAudio : IDisposable
         // Match the audition's signal energy, with a quieter release and peak cap.
         var targetEnergy = released ? .2147025504138874 : .6197242718860959;
         var level = (thud ? .68 : .78) * (released ? .65 : 1);
-        var gain = Math.Min(Math.Sqrt(targetEnergy / energy) * level, .16 / peak);
+        var gain = Math.Min(Math.Sqrt(targetEnergy / energy) * level, .16 / peak) * Math.Clamp(volume, 0, 1);
         using var stream = new MemoryStream(44 + samples * 2);
         using var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true);
         writer.Write("RIFF"u8); writer.Write(36 + samples * 2); writer.Write("WAVE"u8);

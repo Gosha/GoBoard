@@ -23,6 +23,18 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     private KeyboardState State => keyboard ??= new KeyboardState(output);
 
+    public void ApplySettings(BoardSettings settings, bool resized)
+    {
+        if (resized) Cancel();
+        audio.Apply(settings);
+    }
+
+    public void PreviewSound(BoardSettings settings)
+    {
+        audio.Apply(settings);
+        audio.Click();
+    }
+
     public void BeginFrame(bool active, uint? grabbingController = null)
     {
         var target = WindowsKeyboard.Foreground();

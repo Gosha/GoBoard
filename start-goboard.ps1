@@ -1,3 +1,5 @@
+param([switch]$Desktop)
+
 $ErrorActionPreference = 'Stop'
 
 $project = Join-Path $PSScriptRoot 'src\GoBoard.App\GoBoard.App.csproj'
@@ -17,13 +19,21 @@ if (Test-Path -LiteralPath $pidFile) {
     }
 }
 
-dotnet build $project -c Release --nologo
+$exe = Join-Path $PSScriptRoot 'src\GoBoard.App\bin\Release\net10.0-windows\GoBoard.exe'
+if ($Desktop) {
+    $desktopBuild = Join-Path $PSScriptRoot 'artifacts\desktop-build'
+    dotnet build $project -c Release --artifacts-path $desktopBuild --nologo
+    $exe = Join-Path $desktopBuild 'bin\GoBoard.App\release\GoBoard.exe'
+} else {
+    dotnet build $project -c Release --nologo
+}
 if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 New-Item -ItemType Directory -Force -Path $runtime | Out-Null
 if (Test-Path -LiteralPath $stopFile) { Remove-Item -LiteralPath $stopFile }
-$exe = Join-Path $PSScriptRoot 'src\GoBoard.App\bin\Release\net10.0-windows\GoBoard.exe'
-$process = Start-Process -FilePath $exe -ArgumentList @('--stop-file', ('"' + $stopFile + '"')) -WindowStyle Hidden -PassThru `
+$launchArguments = @('--stop-file', ('"' + $stopFile + '"'))
+if ($Desktop) { $launchArguments = @('--desktop') + $launchArguments }
+$process = Start-Process -FilePath $exe -ArgumentList $launchArguments -WindowStyle Hidden -PassThru `
     -RedirectStandardOutput (Join-Path $runtime 'goboard.log') -RedirectStandardError (Join-Path $runtime 'goboard.error.log')
 $process.Id | Set-Content -LiteralPath $pidFile
 Start-Sleep -Seconds 2

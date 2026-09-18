@@ -27,6 +27,7 @@ public static int Run(string[] args)
         if (args.Length == 1 && args[0] == "--shell-check") { KeyboardInputCheck.Run(shell: true); return 0; }
         if (args.Length == 1 && args[0] == "--layout-check") { KeyboardInputCheck.Run(layouts: true); return 0; }
         string renderPath = null;
+        string settingsRenderPath = null;
         string previewLayout = "us", previewState = "idle";
         bool previewOptions = false;
         string stopFile = null;
@@ -36,6 +37,7 @@ public static int Run(string[] args)
             switch (args[i])
             {
                 case "--render" when i + 1 < args.Length: renderPath = args[++i]; break;
+                case "--render-settings" when i + 1 < args.Length: settingsRenderPath = args[++i]; break;
                 case "--layout" when i + 1 < args.Length: previewLayout = args[++i]; previewOptions = true; break;
                 case "--state" when i + 1 < args.Length: previewState = args[++i]; previewOptions = true; break;
                 case "--stop-file" when i + 1 < args.Length: stopFile = args[++i]; break;
@@ -43,12 +45,15 @@ public static int Run(string[] args)
                     seconds = double.Parse(args[++i], CultureInfo.InvariantCulture);
                     if (!double.IsFinite(seconds) || seconds <= 0) throw new ArgumentException("Seconds must be positive and finite.");
                     break;
-                default: throw new ArgumentException("Usage: GoBoard [--seconds N] [--stop-file PATH] | --render PATH [--layout us|sv] [--state idle|hover|pressed|oneshot|locked|shift|caps|scrolllock|altgr|unsupported|error] | --self-test | --input-check | --shell-check | --layout-check");
+                default: throw new ArgumentException("Usage: GoBoard [--desktop] [--seconds N] [--stop-file PATH] | --settings | --render-desktop PATH | --desktop-input-check | --render-settings PATH | --render-desktop-settings PATH | --render PATH [--layout us|sv] [--state idle|hover|pressed|oneshot|locked|shift|caps|scrolllock|altgr|unsupported|error] | --self-test | --input-check | --shell-check | --layout-check");
             }
         }
 
+        if (settingsRenderPath != null && (renderPath != null || previewOptions)) throw new ArgumentException("--render-settings cannot be combined with keyboard preview options.");
         if (previewOptions && renderPath == null) throw new ArgumentException("--layout and --state require --render; live layouts follow Windows automatically.");
-        using var panel = renderPath == null ? Panel.Render() : PanelPreview.Render(previewLayout, previewState);
+        using var panel = settingsRenderPath != null ? SettingsPanel.Render(new BoardSettings()) :
+            renderPath == null ? Panel.Render() : PanelPreview.Render(previewLayout, previewState);
+        renderPath ??= settingsRenderPath;
         if (renderPath != null)
         {
             var fullRenderPath = Path.GetFullPath(renderPath);
@@ -114,17 +119,25 @@ public static int Run(string[] args)
         grab.Update(false, default);
         var follower = new DashboardFollower(overlay, handle, grabHandle, grab);
         using var keyboard = new KeyboardOverlay(system, overlay, handle, graphics);
+        var settings = new SettingsStore();
+        var appliedSettings = settings.Current;
+        follower.SetScale(appliedSettings.Scale);
+        keyboard.ApplySettings(appliedSettings, false);
+        using var settingsOverlay = new SettingsOverlay(system, overlay, graphics, settings, keyboard.PreviewSound);
         Console.WriteLine($"Independent overlay: {transformType}; 10 cm grab line with an 18 x 6 cm hover target. Controller-relative movement; no smoothing.");
         Console.WriteLine($"Panel: {Panel.WidthInMeters * 100:F1} x {Panel.HeightInMeters * 100:F1} cm, {panel.Width}x{panel.Height} texture; input coordinates remain {Panel.LayoutWidth}x{Panel.LayoutHeight}.");
         Console.WriteLine($"Headset connected: {system.IsTrackedDeviceConnected(OpenVR.k_unTrackedDeviceIndex_Hmd)}.");
         Console.WriteLine("Open the SteamVR menu: GoBoard appears separately below it and follows dashboard movement.");
         Console.WriteLine("Point at the line below GoBoard and hold the trigger to move it. Release to keep its new dashboard-relative position.");
-        Console.WriteLine("No dashboard tab is created. Ctrl+C or the stop script closes GoBoard.");
+        Console.WriteLine("Open GoBoard Settings in the dashboard, or run GoBoard --settings on desktop. Ctrl+C or the stop script closes GoBoard.");
+        Console.WriteLine($"Settings: {settings.FilePath}");
         Console.WriteLine("Focus a text field in SteamVR Desktop. Ctrl/Alt/AltGr/Shift: arm, lock, clear. Win: first click arms a shortcut; second taps Windows and clears.");
 
         var timer = Stopwatch.StartNew();
         var vrEvent = new VREvent_t();
         var eventSize = (uint)Marshal.SizeOf<VREvent_t>();
+        double nextSettingsRead = 0;
+        string settingsError = null;
         while (!cancel.IsCancellationRequested && timer.Elapsed.TotalSeconds < seconds && (stopFile == null || !File.Exists(stopFile)))
         {
             while (system.PollNextEvent(ref vrEvent, eventSize))
@@ -134,6 +147,20 @@ public static int Run(string[] args)
                     system.AcknowledgeQuit_Exiting();
                     cancel.Cancel();
                 }
+            }
+            if (timer.Elapsed.TotalSeconds >= nextSettingsRead)
+            {
+                settings.Reload();
+                nextSettingsRead = timer.Elapsed.TotalSeconds + .5;
+                if (settings.Error != settingsError && settings.Error != null) Console.Error.WriteLine(settings.Error);
+                settingsError = settings.Error;
+            }
+            settingsOverlay.Update();
+            if (appliedSettings != settings.Current)
+            {
+                keyboard.ApplySettings(settings.Current, appliedSettings.SizePercent != settings.Current.SizePercent);
+                follower.SetScale(settings.Current.Scale);
+                appliedSettings = settings.Current;
             }
             var visible = follower.Update();
             keyboard.BeginFrame(visible && !cancel.IsCancellationRequested,

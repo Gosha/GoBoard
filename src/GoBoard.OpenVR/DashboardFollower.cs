@@ -15,6 +15,16 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
     private bool warned;
     private ulong previousAnchor;
     private GrabPose boundGrab;
+    private float panelScale = 1;
+    private bool sizeChanged;
+
+    public void SetScale(float scale)
+    {
+        if (panelScale == scale) return;
+        Check(overlay.SetOverlayWidthInMeters(panel, OverlayGeometry.PanelWidthInMeters * scale), "Resize keyboard");
+        panelScale = scale;
+        sizeChanged = true;
+    }
 
 
     public bool Update()
@@ -53,25 +63,26 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         {
             // Bind once per grab. SteamVR now tracks the controller at compositor
             // rate instead of displaying app-polled absolute poses a frame late.
-            if (boundGrab != grab.ActiveGrab)
+            if (boundGrab != grab.ActiveGrab || sizeChanged)
             {
                 var relative = OpenVrPose.ToOpenVr(grab.ActiveGrab.ControllerOffset);
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(panel, grab.Controller, ref relative), "Attach panel to controller");
-                var barRelative = OpenVrPose.ToOpenVr(GrabHandle.PanelOffset * grab.ActiveGrab.ControllerOffset);
+                var barRelative = OpenVrPose.ToOpenVr(OverlayGeometry.GrabFromScaledPanel(panelScale) * grab.ActiveGrab.ControllerOffset);
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(handle, grab.Controller, ref barRelative), "Attach handle to controller");
                 boundGrab = grab.ActiveGrab;
                 Console.WriteLine($"SteamVR now tracks the held panel directly on controller {grab.Controller}; no app smoothing.");
             }
         }
-        else if (boundGrab != null || update.Write || !visible)
+        else if (boundGrab != null || update.Write || !visible || sizeChanged)
         {
             var raw = OpenVrPose.ToOpenVr(update.World);
             Check(overlay.SetOverlayTransformAbsolute(panel, Origin, ref raw), "Follow dashboard pose");
-            var bar = OpenVrPose.ToOpenVr(GrabHandle.PanelOffset * update.World);
+            var bar = OpenVrPose.ToOpenVr(OverlayGeometry.GrabFromScaledPanel(panelScale) * update.World);
             Check(overlay.SetOverlayTransformAbsolute(handle, Origin, ref bar), "Place grab handle");
             boundGrab = null;
         }
         SetVisible(true);
+        sizeChanged = false;
         return true;
     }
 
