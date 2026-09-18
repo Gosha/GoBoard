@@ -18,6 +18,13 @@ internal static class Program
     private static int Run(string[] args)
     {
         if (args is ["--desktop-effects-benchmark"]) { DesktopEffectsBenchmark.Run(); return 0; }
+        if (args.Length > 0 && args[0] == "--steamvr") return SteamVrApplication.Run(args);
+        if (args is ["--stop"])
+        {
+            Console.WriteLine(GoBoard.Platform.Windows.RuntimeSession.RequestStop()
+                ? "Requested graceful GoBoard shutdown." : "GoBoard is not running in this Windows session.");
+            return 0;
+        }
         if (args.Length > 0 && args[0] == "--desktop") return DesktopRuntime.Run(args);
         if (args is ["--render-desktop", var desktopPath]) return DesktopRuntime.Render(desktopPath);
         if (args is ["--render-desktop", var shortcutDesktopPath, "--shortcuts"]) return DesktopRuntime.Render(shortcutDesktopPath, shortcuts: true);

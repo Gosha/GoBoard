@@ -1,5 +1,8 @@
 $ErrorActionPreference = 'Stop'
-$runtime = Join-Path $PSScriptRoot '.runtime\app'
-New-Item -ItemType Directory -Force -Path $runtime | Out-Null
-Set-Content -LiteralPath (Join-Path $runtime 'stop') -Value 'stop'
-Write-Output 'Requested graceful GoBoard shutdown.'
+$stop = $null
+if ([Threading.EventWaitHandle]::TryOpenExisting('Local\GoBoard.Runtime.Stop', [ref]$stop)) {
+    try { $stop.Set() | Out-Null } finally { $stop.Dispose() }
+    Write-Output 'Requested graceful GoBoard shutdown.'
+} else {
+    Write-Output 'GoBoard is not running in this Windows session.'
+}

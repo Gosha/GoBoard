@@ -1,4 +1,5 @@
 using System.Globalization;
+using GoBoard.Platform.Windows;
 
 namespace GoBoard.App;
 
@@ -6,6 +7,7 @@ internal static class DesktopRuntime
 {
     public static int Run(string[] args)
     {
+        RuntimeSession session = null;
         try
         {
             string stopFile = null;
@@ -22,14 +24,16 @@ internal static class DesktopRuntime
                     default: throw new ArgumentException("Usage: GoBoard --desktop [--stop-file PATH] [--seconds N]");
                 }
             }
-            using var instance = new Mutex(false, "Local\\GoBoard.Desktop", out var first);
-            if (!first) throw new InvalidOperationException("GoBoard desktop mode is already running.");
+            session = RuntimeSession.TryStart();
+            if (session == null) { Console.WriteLine("GoBoard is already running in this Windows session."); return 0; }
+            session.StartLogging();
             ApplicationConfiguration.Initialize();
             Console.WriteLine("GoBoard desktop mode. SteamVR is not initialized. Select a window, then click the keyboard. No text field is needed for shortcuts.");
-            Application.Run(new DesktopKeyboardForm(stopFile, seconds));
+            Application.Run(new DesktopKeyboardForm(stopFile, seconds, stopRequested: () => session.StopRequested));
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine($"GoBoard desktop: {ex.Message}"); return 1; }
+        finally { session?.Dispose(); }
     }
 
     public static int Render(string path, bool shortcuts = false)

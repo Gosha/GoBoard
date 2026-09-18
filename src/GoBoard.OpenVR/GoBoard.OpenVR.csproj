@@ -7,6 +7,8 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="goboard.vrmanifest" LogicalName="GoBoard.vrmanifest" />
+    <None Update="goboard.vrmanifest" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <ProjectReference Include="../GoBoard.Core/GoBoard.Core.csproj" />
     <ProjectReference Include="../GoBoard.Platform.Windows/GoBoard.Platform.Windows.csproj" />
     <ProjectReference Include="../GoBoard.Presentation.Skia/GoBoard.Presentation.Skia.csproj" />

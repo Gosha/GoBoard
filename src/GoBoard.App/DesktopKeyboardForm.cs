@@ -17,6 +17,7 @@ internal sealed class DesktopKeyboardForm : Form
     private readonly bool previewOnly;
     private readonly bool fixedPreview;
     private readonly string stopFile;
+    private readonly Func<bool> stopRequested;
     private readonly double seconds;
     private readonly double started = Now;
     private double nextSettingsRead, errorUntil;
@@ -44,9 +45,10 @@ internal sealed class DesktopKeyboardForm : Form
             HeaderHeight + (int)((b.Y + b.Height / 2) * (ClientSize.Height - HeaderHeight) / OverlayGeometry.PanelHeight));
     }
 
-    public DesktopKeyboardForm(string stopFile = null, double seconds = double.PositiveInfinity, bool previewOnly = false, SettingsStore store = null, bool previewShortcuts = false)
+    public DesktopKeyboardForm(string stopFile = null, double seconds = double.PositiveInfinity, bool previewOnly = false, SettingsStore store = null, bool previewShortcuts = false, Func<bool> stopRequested = null)
     {
         this.stopFile = stopFile; this.seconds = seconds; this.previewOnly = previewOnly;
+        this.stopRequested = stopRequested;
         fixedPreview = previewOnly && store == null;
         settings = store ?? new SettingsStore();
         keyboard = new KeyboardState(output);
@@ -154,7 +156,7 @@ internal sealed class DesktopKeyboardForm : Form
     private void Frame()
     {
         if (closing) return;
-        if ((stopFile != null && File.Exists(stopFile)) || Now - started >= seconds) { Close(); return; }
+        if (stopRequested?.Invoke() == true || (stopFile != null && File.Exists(stopFile)) || Now - started >= seconds) { Close(); return; }
         if (Now >= nextSettingsRead) RefreshSettings();
         if (faulted)
         {
