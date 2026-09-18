@@ -130,7 +130,6 @@ internal sealed class KeyboardState(IKeySink sink)
         if (source.HasValue && (source == grabOwner || PredatesGrabRelease(source.Value, time))) return false;
         if (!p.Focused || p.Down || Mismatch(p.Device, device) || !(device ?? p.Device).HasValue ||
             !double.IsFinite(time) || now - time > 0.20 || time > now + 0.001 || time < p.Entered || time <= p.Released + 0.001) return false;
-        if (!Layout.Supported) return false;
         var key = KeyboardLayout.HitOpenVr(x, y, Layout.Keys);
         if (key == null) return false;
         p.Device ??= device;

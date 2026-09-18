@@ -128,7 +128,7 @@ internal static class Panel
             }
             else if (toggleOn) canvas.DrawCircle(rect.Right - 7, rect.Top + 7, 2, paint);
         }
-        var message = layout.Supported ? status : layout.Status;
+        var message = !string.IsNullOrWhiteSpace(status) ? status : !layout.Supported ? layout.Status : null;
         if (!string.IsNullOrWhiteSpace(message))
         {
             // Use the existing gap between navigation and arrows instead of

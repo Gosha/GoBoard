@@ -213,10 +213,11 @@ public sealed class KeyboardStateTests
         state.SetLayout(new WindowsLayout((nint)WindowsLayout.UsHandle), ++time);
         Require(!state.HasHeldKeys && !state.AltGr && !state.Shift && state.Layout.Keys.All(k => k.Id != "Iso"), "Layout switch retained an old capture/modifier/ISO key.");
         state.SetLayout(new WindowsLayout((nint)0x08090809), ++time);
-        Require(!state.Layout.Supported && !Press(0, 7, "a", time + .1), "Unsupported layout silently typed US keys.");
+        Require(!state.Layout.Supported && Press(0, 7, "a", time + .1), "Unknown layout blocked input.");
+        state.Up(0, 7, time + .2);
         Console.WriteLine("Two-hand focus checks passed: reused cursor slots, slot changes during a press, late other-hand release, pause/resume, stale-motion rejection and live-motion recovery.");
         Console.WriteLine("Grab/typing checks passed in both hand directions: owner-only capture, other-hand typing/modifiers/repeat, release and stale queued input rejection.");
-        Console.WriteLine("Keyboard checks passed: 86 US/87 Swedish buttons, Win arm/tap/re-arm and failure cleanup, ISO geometry, AltGr chords, layout-change cancellation, unsupported-layout guard, shortcuts, repeat and pointer ownership.");
+        Console.WriteLine("Keyboard checks passed: 86 US/87 Swedish buttons, Win arm/tap/re-arm and failure cleanup, ISO geometry, AltGr chords, layout-change cancellation, unknown-layout fallback, shortcuts, repeat and pointer ownership.");
     }
 
     [Fact]
