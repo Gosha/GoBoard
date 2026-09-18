@@ -26,7 +26,7 @@ Run `./start-goboard.ps1 -Desktop`, or `GoBoard.exe --desktop [--stop-file PATH]
 
 The keyboard is a topmost, non-activating Windows Forms surface displaying the real Skia keyboard. Select a text field in another app, then click the keys; dragging the header moves the window. Settings opens an ordinary focused window, so select your text target again afterward. Closing the keyboard also closes its settings window. Foreground HWND/HKL detection, layout legends, balanced scan-code input, logical modifiers, and repeat reuse the production model/backend. Unknown layouts remain usable with US English geometry and labels, regardless of the previously recognized layout. Windows still interprets scan codes using its active layout, so the panel warns that output may differ from the labels. Lost mouse capture, hiding, target/layout changes, resizing, and closing cancel pending input. This mode uses one mouse pointer; two-controller behavior remains specific to VR.
 
-Size uses the shared 50–150% setting, with 100% corresponding to 858 logical desktop pixels plus a 42-pixel header before display scaling. It scales with monitor DPI and fits the monitor's work area. The VR physical width and desktop pixel width share a percentage, not a physical measurement. Sound settings are identical in both modes. Desktop placement is session-only.
+Size uses the shared 50–150% setting, with 100% corresponding to 850 logical desktop pixels plus a 42-pixel header before display scaling. It scales with monitor DPI and fits the monitor's work area. The VR physical width and desktop pixel width share a percentage, not a physical measurement. Sound settings are identical in both modes. Desktop placement is session-only.
 
 Desktop preview and a guarded native integration check (the latter temporarily focuses a disposable text window):
 
@@ -78,9 +78,9 @@ The default is Cushioned wood, with quieter release sounds. `GOBOARD_KEY_SOUND=s
 | `GoBoard.App` | Executable entry point and Windows Forms hosts for the shared Skia keyboard/settings renderers. |
 | `GoBoard.Tests` | Discoverable pure regression tests for layout/state, two-hand typing while dragging, stale events, relative poses, OpenVR matrix conversion, and extended scan flags. |
 
-The outer margin is 4 logical units on all sides; key sizes and internal spacing are unchanged. Physical dimensions follow the cropped logical bounds so removing padding also reduces the dashboard area covered.
+The outer margin is 4 logical units on all sides. Adjacent keys have consistent 2-unit horizontal and vertical gaps, including modifiers, function keys, navigation, and the Swedish Enter notch. Larger separations between key groups are preserved. Physical dimensions follow the cropped logical bounds so removing padding also reduces the dashboard area covered.
 
-The production panel is 858 x 302 logical units, rendered at 2574 x 906 and displayed at about 91.2 x 32.1 cm at the default 100% size. OpenVR mouse coordinates use a bottom-left origin; Skia uses top-left. The shared geometry performs that inversion. Texture UV bounds remain U 0→1 and V 1→0 in `OverlayGraphics`; changing that flips the panel.
+The production panel is 850 x 282 logical units, rendered at 2550 x 846 and displayed at about 90.4 x 30.0 cm at the default 100% size. OpenVR mouse coordinates use a bottom-left origin; Skia uses top-left. The shared geometry performs that inversion. Texture UV bounds remain U 0→1 and V 1→0 in `OverlayGraphics`; changing that flips the panel.
 
 ## SteamVR blue keyboard
 

@@ -6,8 +6,8 @@ internal static class OverlayGeometry
 {
     // Shared logical units keep rendering and hit testing aligned.
     public const int PanelPadding = 4;
-    public const int PanelWidth = 850 + PanelPadding * 2;
-    public const int PanelHeight = 294 + PanelPadding * 2;
+    public const int PanelWidth = 842 + PanelPadding * 2;
+    public const int PanelHeight = 274 + PanelPadding * 2;
     public const int RasterScale = 3;
     public const float PanelWidthInMeters = 0.5445f * PanelWidth / 512;
     public const float PanelHeightInMeters = PanelWidthInMeters * PanelHeight / PanelWidth;
