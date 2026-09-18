@@ -1,6 +1,6 @@
 namespace GoBoard.Core;
 
-internal enum SettingsAction { Smaller, Larger, ToggleSound, Wood, Thud, Quieter, Louder, Defaults, Geometry }
+internal enum SettingsAction { Smaller, Larger, ToggleSound, Wood, Thud, Quieter, Louder, Defaults, Geometry, SteamSoft, SteamFlat }
 internal sealed record SettingsControl(SettingsAction Action, string Label, KeyBounds Bounds);
 
 // Preserve the dashboard aspect ratio in a resizable desktop window. Painting
@@ -22,7 +22,7 @@ internal readonly record struct SettingsViewport(float X, float Y, float Scale)
 
 internal static class SettingsControls
 {
-    public const int Width = 900, Height = 750;
+    public const int Width = 900, Height = 850;
     public static readonly SettingsControl[] All =
     [
         new(SettingsAction.Smaller, "−", new(588, 158, 100, 64)),
@@ -33,7 +33,9 @@ internal static class SettingsControls
         new(SettingsAction.Quieter, "−", new(588, 474, 100, 64)),
         new(SettingsAction.Louder, "+", new(704, 474, 100, 64)),
         new(SettingsAction.Geometry, "", new(588, 550, 216, 64)),
-        new(SettingsAction.Defaults, "Reset to defaults", new(588, 670, 216, 48))
+        new(SettingsAction.SteamSoft, BoardThemes.Name(BoardThemes.SteamSoft), new(64, 668, 340, 64)),
+        new(SettingsAction.SteamFlat, BoardThemes.Name(BoardThemes.SteamFlat), new(420, 668, 384, 64)),
+        new(SettingsAction.Defaults, "Reset to defaults", new(588, 770, 216, 48))
     ];
 
     public static SettingsAction? Hit(float x, float y) => All.FirstOrDefault(c => c.Bounds.Contains(x, y))?.Action;
@@ -54,6 +56,8 @@ internal static class SettingsControls
         SettingsAction.Thud => s with { Sound = KeySound.SoftLowThud },
         SettingsAction.Quieter => s with { VolumePercent = s.VolumePercent - 10 },
         SettingsAction.Louder => s with { VolumePercent = s.VolumePercent + 10 },
+        SettingsAction.SteamSoft => s with { Theme = BoardThemes.SteamSoft },
+        SettingsAction.SteamFlat => s with { Theme = BoardThemes.SteamFlat },
         SettingsAction.Defaults => new BoardSettings(),
         SettingsAction.Geometry => s with { Geometry = (KeyboardGeometry)(((int)s.Geometry + 1) % 3) },
         _ => s

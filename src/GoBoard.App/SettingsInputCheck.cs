@@ -42,6 +42,11 @@ internal static class SettingsInputCheck
                 Require(new SettingsStore(path).Current.Geometry == store.Current.Geometry, "Saved arrangement");
                 Click(SettingsAction.Thud);
                 Require(store.Current.Sound == KeySound.SoftLowThud, "Preset selection");
+                Click(SettingsAction.SteamFlat);
+                Require(store.Current.Theme == BoardThemes.SteamFlat, "Flat theme selection");
+                Require(new SettingsStore(path).Current.Theme == BoardThemes.SteamFlat, "Saved theme selection");
+                Click(SettingsAction.SteamSoft);
+                Require(store.Current.Theme == BoardThemes.SteamSoft, "Soft theme selection");
                 Click(SettingsAction.Louder);
                 Require(store.Current.VolumePercent == 100, "Disabled volume button");
                 Mouse(0x201, Center(SettingsAction.Larger));
@@ -53,7 +58,7 @@ internal static class SettingsInputCheck
                 Mouse(0x202, Center(SettingsAction.Larger));
                 Require(store.Current.SizePercent == before + 5, "Capture-loss cancellation");
             }
-            Console.WriteLine("Shared settings input check passed: native mouse clicks, resized/letterboxed targets, persistence, preset selection, disabled controls, and capture cancellation. User settings were untouched.");
+            Console.WriteLine("Shared settings input check passed: native mouse clicks, resized/letterboxed targets, persistence, theme and preset selection, disabled controls, and capture cancellation. User settings were untouched.");
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine($"Settings input check: {ex.Message}"); return 1; }

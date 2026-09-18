@@ -14,6 +14,7 @@ internal sealed record BoardSettings
     public int VolumePercent { get; init; } = 100;
     public KeySound Sound { get; init; } = KeySound.CushionedWood;
     public KeyboardGeometry Geometry { get; init; } = KeyboardGeometry.Auto;
+    public string Theme { get; init; } = BoardThemes.Default;
     public float Scale => SizePercent / 100f;
 
     public BoardSettings Normalize() => this with
@@ -21,7 +22,8 @@ internal sealed record BoardSettings
         SizePercent = Math.Clamp(SizePercent, 50, 150),
         VolumePercent = Math.Clamp(VolumePercent, 0, 100),
         Sound = Enum.IsDefined(Sound) ? Sound : KeySound.CushionedWood,
-        Geometry = Enum.IsDefined(Geometry) ? Geometry : KeyboardGeometry.Auto
+        Geometry = Enum.IsDefined(Geometry) ? Geometry : KeyboardGeometry.Auto,
+        Theme = BoardThemes.Normalize(Theme)
     };
 
     public static BoardSettings Defaults => new()

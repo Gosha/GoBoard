@@ -6,20 +6,38 @@ namespace GoBoard.Presentation.Skia;
 // Preview fixtures exercise the production renderer/state without Windows input.
 internal static class PanelPreview
 {
-    public static readonly string[] States = ["idle", "hover", "pressed", "oneshot", "locked", "shift", "caps", "scrolllock", "altgr", "unsupported", "error"];
+    // Explicit, headless timing check. No PNG encoding, Windows input, or VR upload.
+    public static void Benchmark()
+    {
+        foreach (var theme in new[] { BoardThemes.SteamFlat, BoardThemes.SteamSoft })
+        {
+            for (var i = 0; i < 10; i++) using (Render("sv", "reference", theme)) { }
+            var samples = new double[100];
+            for (var i = 0; i < samples.Length; i++)
+            {
+                var start = System.Diagnostics.Stopwatch.GetTimestamp();
+                using (Render("sv", i % 2 == 0 ? "reference" : "pressed", theme)) { }
+                samples[i] = System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+            }
+            Array.Sort(samples);
+            Console.WriteLine($"{theme}: median {samples[50]:F2} ms, p95 {samples[95]:F2} ms (100 frames, {Panel.LayoutWidth * Panel.RasterScale}x{Panel.LayoutHeight * Panel.RasterScale})");
+        }
+    }
+
+    public static readonly string[] States = ["idle", "hover", "pressed", "oneshot", "locked", "shift", "caps", "scrolllock", "altgr", "unsupported", "error", "reference"];
     private sealed class PreviewSink : IKeySink
     {
         public void Down(ushort scan) { }
         public void Up(ushort scan) { }
     }
 
-    public static SKBitmap Render(string language, string visualState)
+    public static SKBitmap Render(string language, string visualState, string theme = BoardThemes.Default, bool cacheSurfaces = true)
     {
         if (language is not ("us" or "sv" or "ja")) throw new ArgumentException("Preview layout must be us, sv or ja.");
-        return Render(new WindowsLayout((nint)(language == "ja" ? 0x04110411u : language == "sv" ? WindowsLayout.SwedishHandle : WindowsLayout.UsHandle)), visualState);
+        return Render(new WindowsLayout((nint)(language == "ja" ? 0x04110411u : language == "sv" ? WindowsLayout.SwedishHandle : WindowsLayout.UsHandle)), visualState, theme, cacheSurfaces);
     }
 
-    public static SKBitmap Render(WindowsLayout layout, string visualState)
+    public static SKBitmap Render(WindowsLayout layout, string visualState, string theme = BoardThemes.Default, bool cacheSurfaces = true)
     {
         if (!States.Contains(visualState)) throw new ArgumentException($"Preview state must be {string.Join(", ", States)}.");
         var keyboard = new KeyboardState(new PreviewSink());
@@ -35,6 +53,9 @@ internal static class PanelPreview
         }
         switch (visualState)
         {
+            case "reference":
+                Press("Ctrl"); Press("Ctrl"); Press("Alt");
+                goto case "hover";
             case "hover":
                 var e = keyboard.Layout.Keys.Single(k => k.Id == "e").Bounds;
                 keyboard.Move(0, 7, e.X + e.Width / 2, OverlayGeometry.PanelHeight - e.Y - e.Height / 2);
@@ -48,6 +69,6 @@ internal static class PanelPreview
         }
         return Panel.Render(keyboard, keyboard.Shift,
             visualState == "error" ? "Input could not be sent. Focus a text field and try again." : null,
-            keyboard.AltGr, visualState == "caps", visualState == "scrolllock");
+            keyboard.AltGr, visualState == "caps", visualState == "scrolllock", theme, cacheSurfaces);
     }
 }
