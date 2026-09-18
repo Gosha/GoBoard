@@ -20,7 +20,7 @@ For a complete desktop application without SteamVR:
 .\start-goboard.ps1 -Desktop
 ```
 
-Select a text field in another application, then click the floating keyboard to type. Drag its header to move it, click **Settings** for size and sound, or **×** to exit. It stays above other windows and preserves the text field's focus. The same layouts, modifiers, shortcuts, repeat, and saved settings work in both modes.
+Select a window, then click the floating keyboard to send keys. Select a text field when you want to type text; shortcuts also work without one, including while GoBoard Settings is focused. Click **Win** once to arm a shortcut, or twice to send a Windows-key tap. Drag the header to move the keyboard, click **Settings** for size and sound, or **×** to exit. It stays above other windows and preserves the target window's focus. The same layouts, modifiers, shortcuts, repeat, and saved settings work in both modes.
 
 To stop either mode:
 

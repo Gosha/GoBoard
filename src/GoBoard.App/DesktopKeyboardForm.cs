@@ -15,7 +15,6 @@ internal sealed class DesktopKeyboardForm : Form
     private readonly SettingsStore settings = new();
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 16 };
     private readonly bool previewOnly;
-    private readonly nint testTarget;
     private readonly string stopFile;
     private readonly double seconds;
     private readonly double started = Now;
@@ -42,9 +41,9 @@ internal sealed class DesktopKeyboardForm : Form
             HeaderHeight + (int)((b.Y + b.Height / 2) * (ClientSize.Height - HeaderHeight) / OverlayGeometry.PanelHeight));
     }
 
-    public DesktopKeyboardForm(string stopFile = null, double seconds = double.PositiveInfinity, bool previewOnly = false, nint testTarget = 0)
+    public DesktopKeyboardForm(string stopFile = null, double seconds = double.PositiveInfinity, bool previewOnly = false)
     {
-        this.stopFile = stopFile; this.seconds = seconds; this.previewOnly = previewOnly; this.testTarget = testTarget;
+        this.stopFile = stopFile; this.seconds = seconds; this.previewOnly = previewOnly;
         keyboard = new KeyboardState(output);
         Text = "GoBoard Desktop";
         FormBorderStyle = FormBorderStyle.None;
@@ -113,8 +112,9 @@ internal sealed class DesktopKeyboardForm : Form
             keyboard.SetLayout(new WindowsLayout(target.Layout), Now);
             Invalidate();
         }
-        return !faulted && target.Window != 0 &&
-            (testTarget != 0 ? target.Window == testTarget : target.Process != Environment.ProcessId);
+        // Any foreground window can receive shortcuts, including our Settings
+        // window. Windows routes input; a focused text control is not required.
+        return !faulted && target.Window != 0;
     }
 
     private void Frame()

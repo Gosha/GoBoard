@@ -5,7 +5,8 @@ using GoBoard.Platform.Windows;
 
 namespace GoBoard.App;
 
-// Explicit integration check: only this disposable text window may receive input.
+// Explicit integration check: input is guarded to disposable text/settings
+// windows. The optional shell check opens Start and dismisses it without typing.
 internal static class DesktopInputCheck
 {
     // Launch this with the same STARTUPINFO as the PowerShell launcher. Unlike
@@ -45,7 +46,7 @@ internal static class DesktopInputCheck
     }
 
 
-    public static int Run()
+    public static int Run(bool shell = false)
     {
         ApplicationConfiguration.Initialize();
         var previous = WindowsKeyboard.Foreground().Window;
@@ -60,7 +61,9 @@ internal static class DesktopInputCheck
             FocusTestWindow(target.Handle, text.Handle);
             Pump(100);
             Require(WindowsKeyboard.Foreground().Window == target.Handle, "The disposable text window could not get focus; no input was sent.");
-            using var keyboard = new DesktopKeyboardForm(testTarget: target.Handle);
+            // Exercise the normal production input path, without a test-only
+            // exemption for windows owned by this process.
+            using var keyboard = new DesktopKeyboardForm();
             Require(WindowsKeyboard.Foreground().Window == target.Handle, $"Constructing the keyboard changed focus (expected {target.Handle}, actual {WindowsKeyboard.Foreground().Window}, keyboard {keyboard.Handle}).");
             keyboard.Show();
             Require(WindowsKeyboard.Foreground().Window == target.Handle, $"Showing the keyboard stole focus (expected {target.Handle}, keyboard {keyboard.Handle}, actual {WindowsKeyboard.Foreground().Window}).");
@@ -70,7 +73,8 @@ internal static class DesktopInputCheck
             Require(((long)GetWindowLongPtr(keyboard.Handle, -20) & 0x08000000) != 0, "The keyboard is missing WS_EX_NOACTIVATE.");
             Require(SendMessage(keyboard.Handle, 0x21, target.Handle, (nint)(0x201 << 16 | 1)) == 3, "Mouse activation was not suppressed.");
 
-            void Guard() => Require(WindowsKeyboard.Foreground().Window == target.Handle, "Focus left the disposable test window; input check aborted.");
+            var expectedWindow = target.Handle;
+            void Guard() => Require(WindowsKeyboard.Foreground().Window == expectedWindow, "Focus left the disposable test window; input check aborted.");
             void Mouse(uint message, Point p)
             {
                 Guard();
@@ -105,11 +109,59 @@ internal static class DesktopInputCheck
             Mouse(0x201, keyboard.KeyPoint("a"));
             SendMessage(keyboard.Handle, 0x215, 0, text.Handle);
             Require(!keyboard.State.HasHeldKeys && !keyboard.State.Shift && !keyboard.HasOwnedKeys, "Capture loss left a chord active.");
+
+            // Open Settings through the real keyboard button. It has no text
+            // control, and shares the keyboard's process (the old blocked case).
+            Mouse(0x201, keyboard.SettingsPoint);
+            var settingsPoint = keyboard.SettingsPoint;
+            Guard();
+            SendMessage(keyboard.Handle, 0x202, 0, (nint)((settingsPoint.Y << 16) | (settingsPoint.X & 0xffff)));
+            Pump(100);
+            var settings = Application.OpenForms.OfType<SettingsForm>().Single();
+            expectedWindow = settings.Handle;
+            Guard();
+            var downs = 0;
+            var ups = 0;
+            settings.KeyDown += (_, e) => { if (e.KeyCode == Keys.F8) downs++; };
+            settings.KeyUp += (_, e) => { if (e.KeyCode == Keys.F8) ups++; };
+            Tap("F8");
+            Require(downs == 1 && ups == 1, "Settings without a text box did not receive a balanced F8 stroke.");
+            Tap("Win");
+            Require(keyboard.State.Mode(0xe05b) == ModifierMode.OneShot, "Windows key did not arm while Settings was focused.");
+            if (shell)
+            {
+                // This press intentionally changes foreground focus. Only send
+                // dismissal input after identifying the actual Start process.
+                Guard();
+                var winPoint = keyboard.KeyPoint("Win");
+                var packed = (nint)((winPoint.Y << 16) | (winPoint.X & 0xffff));
+                SendMessage(keyboard.Handle, 0x201, 1, packed);
+                SendMessage(keyboard.Handle, 0x202, 0, packed);
+                var wait = Stopwatch.StartNew();
+                InputTarget start = default;
+                var matched = false;
+                var observed = "Settings";
+                do
+                {
+                    Pump(50);
+                    start = WindowsKeyboard.Foreground();
+                    if (start.Window == 0 || start.Window == settings.Handle) continue;
+                    using var process = Process.GetProcessById((int)start.Process);
+                    observed = process.ProcessName;
+                    matched = process.ProcessName.Equals("StartMenuExperienceHost", StringComparison.OrdinalIgnoreCase);
+                } while (!matched && wait.ElapsedMilliseconds < 3000);
+                Require(matched, $"Double Windows click from Settings did not focus Start; observed {observed}; no dismissal input sent.");
+                Require(!keyboard.HasOwnedKeys && (GetAsyncKeyState(0x5b) & 0x8000) == 0, "Opening Start left the Windows key held.");
+                using var output = new WindowsKeyboard { Target = start };
+                output.Stroke(0x01, []);
+                Pump(200);
+                Console.WriteLine("Desktop shell check passed: double Windows click from Settings opened Start; Escape sent to dismiss it.");
+            }
             keyboard.Hide();
             Require(!keyboard.State.HasHeldKeys && !keyboard.HasOwnedKeys, "Hiding the keyboard left input active.");
             Require(!Process.GetCurrentProcess().Modules.Cast<ProcessModule>().Any(m => m.ModuleName.Equals("openvr_api.dll", StringComparison.OrdinalIgnoreCase)),
                 "Desktop mode loaded the OpenVR native library.");
-            Console.WriteLine("Desktop input check passed: native mouse messages, focus preservation, text, Shift, Ctrl+A, repeat release, capture-loss cancellation, and cleanup; no SteamVR required.");
+            Console.WriteLine("Desktop input check passed: native mouse messages, focus preservation, text, Shift, Ctrl+A, repeat release, capture-loss cancellation, Settings input without a text box, Windows-key arming, and cleanup; no SteamVR required.");
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine($"Desktop input check: {ex.Message}"); return 1; }

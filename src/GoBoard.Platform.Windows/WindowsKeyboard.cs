@@ -38,9 +38,9 @@ internal sealed class WindowsKeyboard : IKeySink, IDisposable
 
     public static string TargetName(InputTarget target)
     {
-        if (target.Window == 0 || target.Process == Environment.ProcessId) return "Focus a text field on your desktop";
-        try { using var process = Process.GetProcessById((int)target.Process); return $"Typing into {process.ProcessName}"; }
-        catch (ArgumentException) { return "Focus a text field on your desktop"; }
+        if (target.Window == 0) return "Select a window on your desktop";
+        try { using var process = Process.GetProcessById((int)target.Process); return $"Sending keys to {process.ProcessName}"; }
+        catch (ArgumentException) { return "Select a window on your desktop"; }
     }
 
     public void Down(ushort scan)

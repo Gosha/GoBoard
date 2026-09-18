@@ -28,7 +28,7 @@ internal static class DesktopRuntime
             using var instance = new Mutex(false, "Local\\GoBoard.Desktop", out var first);
             if (!first) throw new InvalidOperationException("GoBoard desktop mode is already running.");
             ApplicationConfiguration.Initialize();
-            Console.WriteLine("GoBoard desktop mode. SteamVR is not initialized. Focus a text field, then click the keyboard.");
+            Console.WriteLine("GoBoard desktop mode. SteamVR is not initialized. Select a window, then click the keyboard. No text field is needed for shortcuts.");
             Application.Run(new DesktopKeyboardForm(stopFile, seconds));
             return 0;
         }
