@@ -10,7 +10,7 @@ internal static class Panel
     public const float WidthInMeters = OverlayGeometry.PanelWidthInMeters;
     public const float HeightInMeters = OverlayGeometry.PanelHeightInMeters;
 
-    public static SKBitmap Render(KeyboardState keyboard = null, bool shift = false, string status = null, bool altGr = false, bool caps = false, bool scrollLock = false, string theme = BoardThemes.Default, bool cacheSurfaces = true)
+    public static SKBitmap Render(KeyboardState keyboard = null, bool shift = false, string status = null, bool altGr = false, bool caps = false, bool scrollLock = false, string theme = BoardThemes.Default, bool cacheSurfaces = true, bool omitPrintableLegends = false, bool suppressHover = false, bool suppressPressed = false)
     {
         var style = KeyboardTheme.Resolve(theme);
         var Accent = style.Accent;
@@ -45,9 +45,9 @@ internal static class Panel
         {
             var b = key.Bounds;
             var rect = new SKRect(b.X, b.Y, b.X + b.Width, b.Y + b.Height);
-            var hover = keyboard?.Hovered(key) == true;
+            var hover = !suppressHover && keyboard?.Hovered(key) == true;
             var mode = key.IsModifier ? keyboard?.Mode(key.Scan) ?? ModifierMode.Idle : ModifierMode.Idle;
-            var filled = mode == ModifierMode.Locked || (!key.IsModifier && keyboard?.Pressed(key) == true);
+            var filled = mode == ModifierMode.Locked || (!suppressPressed && !key.IsModifier && keyboard?.Pressed(key) == true);
             var armed = mode == ModifierMode.OneShot;
             var toggleOn = (key.Id == "Caps" && caps) || (key.Id == "ScrollLock" && scrollLock);
             if (cacheSurfaces && style.ShadowBlur > 0)
@@ -56,6 +56,7 @@ internal static class Panel
                 DrawKeySurface(canvas, key, style, hover, filled, armed || toggleOn);
             var foreground = filled ? Ink : armed || toggleOn ? Accent : style.Text;
             paint.Color = foreground;
+            if (omitPrintableLegends && key.Printable) continue;
             if (key.Printable)
             {
                 var normal = layout.Legend(key, false, false, false);

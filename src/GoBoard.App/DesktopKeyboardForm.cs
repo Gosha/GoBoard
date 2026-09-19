@@ -1,9 +1,8 @@
 using System.Diagnostics;
-using System.Drawing.Imaging;
 using GoBoard.Core;
 using GoBoard.Platform.Windows;
 using SkiaSharp;
-using KeyboardPanel = GoBoard.Presentation.Skia.Panel;
+using GoBoard.Presentation.Skia;
 
 namespace GoBoard.App;
 
@@ -11,6 +10,7 @@ internal sealed class DesktopKeyboardForm : Form
 {
     private readonly WindowsKeyboard output = new();
     private readonly KeyAudio audio = new();
+    private readonly AnimatedKeyboardRenderer renderer = new();
     private readonly KeyboardState keyboard;
     private readonly SettingsStore settings = new();
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 16 };
@@ -24,8 +24,7 @@ internal sealed class DesktopKeyboardForm : Form
     private bool faulted, closing, keyCapture;
     private int headerCapture;
     private SettingsForm settingsForm;
-    private Bitmap frame;
-    private (int Revision, bool Shift, bool AltGr, bool Caps, bool Scroll, string Status)? drawn;
+    private DesktopFrame frame;
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     private int HeaderHeight => (int)Math.Round(42 * DeviceDpi / 96f);
     private Rectangle SettingsButton => new(ClientSize.Width - (int)(144 * DeviceDpi / 96f), 0, (int)(100 * DeviceDpi / 96f), HeaderHeight);
@@ -134,7 +133,6 @@ internal sealed class DesktopKeyboardForm : Form
                 }
                 var resized = applied.SizePercent != settings.Current.SizePercent;
                 applied = settings.Current;
-                drawn = null;
                 audio.Apply(applied);
                 if (resized) { Cancel(); ApplySize(); }
             }
@@ -160,13 +158,13 @@ internal sealed class DesktopKeyboardForm : Form
         var point = Geometry.ToKeyboard(e.X, e.Y);
         keyboard.Enter(0, 0, now);
         keyboard.Move(0, 0, point.X, point.Y);
-        RenderFrame();
+        // Coalesce high-rate mouse motion into the existing 16 ms frame timer.
+        // Picking/input update immediately; rendering must not block each event.
     }
     protected override void OnMouseLeave(EventArgs e)
     {
         base.OnMouseLeave(e);
         keyboard.Leave(0, 0, Now);
-        RenderFrame();
     }
     protected override void OnMouseDown(MouseEventArgs e)
     {
@@ -244,21 +242,19 @@ internal sealed class DesktopKeyboardForm : Form
         var caps = !previewOnly && WindowsKeyboard.CapsLock;
         var scroll = !previewOnly && WindowsKeyboard.ScrollLock;
         var notice = faulted || Now < errorUntil ? error : keyboard.Layout.Notice;
-        var signature = (keyboard.Revision, shift, altGr, caps, scroll, notice);
-        if (drawn == signature) return;
-        using var pixels = KeyboardPanel.Render(keyboard, shift, notice, altGr, caps, scroll, applied.Theme);
-        using var bgra = pixels.Copy(SKColorType.Bgra8888);
-        using var borrowed = new Bitmap(bgra.Width, bgra.Height, bgra.RowBytes, PixelFormat.Format32bppPArgb, bgra.GetPixels());
-        var next = new Bitmap(borrowed);
+        if (ClientSize.Width <= 0 || ClientSize.Height <= HeaderHeight) return;
+        var output = new SKImageInfo(ClientSize.Width, ClientSize.Height - HeaderHeight, SKColorType.Bgra8888, SKAlphaType.Opaque);
+        var pixels = renderer.Render(keyboard, shift, notice, altGr, caps, scroll, applied.Theme, applied.Effects, Now, output);
+        if (pixels == null) return;
+        var next = new DesktopFrame(pixels);
         frame?.Dispose();
         frame = next;
-        drawn = signature;
         Invalidate();
     }
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        if (frame != null) e.Graphics.DrawImage(frame, new Rectangle(0, HeaderHeight, ClientSize.Width, ClientSize.Height - HeaderHeight));
+        frame?.Draw(e.Graphics, new Rectangle(0, HeaderHeight, ClientSize.Width, ClientSize.Height - HeaderHeight));
         var title = previewOnly ? "GoBoard · Desktop · Drag to move" : "GoBoard · " + WindowsKeyboard.TargetName(output.Target);
         TextRenderer.DrawText(e.Graphics, title, Font, new Rectangle(12, 0, Math.Max(0, SettingsButton.Left - 16), HeaderHeight), ForeColor,
             TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
@@ -282,6 +278,7 @@ internal sealed class DesktopKeyboardForm : Form
             timer.Dispose();
             settingsForm?.Dispose();
             frame?.Dispose();
+            renderer.Dispose();
             output.Dispose();
             audio.Dispose();
         }

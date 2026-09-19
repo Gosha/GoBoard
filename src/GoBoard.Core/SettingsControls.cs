@@ -1,6 +1,14 @@
 namespace GoBoard.Core;
 
-internal enum SettingsAction { Smaller, Larger, ToggleSound, Wood, Thud, Quieter, Louder, Defaults, Geometry, SteamSoft, SteamFlat }
+internal enum SettingsPage { General, Effects }
+internal enum SettingsAction
+{
+    Smaller, Larger, ToggleSound, Wood, Thud, Quieter, Louder, Defaults, Geometry, SteamSoft, SteamFlat,
+    GeneralTab, EffectsTab, Afterglow, Spotlight, Edges, Ripples, PressFlash,
+    TransitionNone, Crossfade, Lift, TransitionFaster, TransitionSlower, TravelLess, TravelMore,
+    EnterFaster, EnterSlower, LeaveFaster, LeaveSlower, RadiusLess, RadiusMore,
+    StrengthLess, StrengthMore, RippleFaster, RippleSlower, ResetEffects
+}
 internal sealed record SettingsControl(SettingsAction Action, string Label, KeyBounds Bounds);
 
 // Preserve the dashboard aspect ratio in a resizable desktop window. Painting
@@ -38,13 +46,56 @@ internal static class SettingsControls
         new(SettingsAction.Defaults, "Reset to defaults", new(588, 770, 216, 48))
     ];
 
-    public static SettingsAction? Hit(float x, float y) => All.FirstOrDefault(c => c.Bounds.Contains(x, y))?.Action;
+    public static readonly SettingsControl[] Tabs =
+    [new(SettingsAction.GeneralTab, "General", new(548, 32, 120, 54)),
+     new(SettingsAction.EffectsTab, "Effects", new(684, 32, 120, 54))];
+    public static readonly (string Label, SettingsAction Less, SettingsAction More)[] Parameters =
+    [
+        ("Character duration", SettingsAction.TransitionFaster, SettingsAction.TransitionSlower),
+        ("Lift distance", SettingsAction.TravelLess, SettingsAction.TravelMore),
+        ("Hover fade in", SettingsAction.EnterFaster, SettingsAction.EnterSlower),
+        ("Hover fade out", SettingsAction.LeaveFaster, SettingsAction.LeaveSlower),
+        ("Light radius", SettingsAction.RadiusLess, SettingsAction.RadiusMore),
+        ("Effect strength", SettingsAction.StrengthLess, SettingsAction.StrengthMore),
+        ("Click duration", SettingsAction.RippleFaster, SettingsAction.RippleSlower)
+    ];
+    public static readonly SettingsControl[] Effects = BuildEffects();
+    private static SettingsControl[] BuildEffects()
+    {
+        var controls = new List<SettingsControl>
+        {
+            new(SettingsAction.Afterglow, "Afterglow", new(64, 156, 236, 52)),
+            new(SettingsAction.Spotlight, "Spotlight", new(316, 156, 236, 52)),
+            new(SettingsAction.Edges, "Proximity edges", new(568, 156, 236, 52)),
+            new(SettingsAction.Ripples, "Click ripple", new(64, 220, 236, 52)),
+            new(SettingsAction.PressFlash, "Press flash / tint", new(316, 220, 236, 52)),
+            new(SettingsAction.TransitionNone, "None", new(64, 322, 236, 52)),
+            new(SettingsAction.Crossfade, "Crossfade", new(316, 322, 236, 52)),
+            new(SettingsAction.Lift, "Lift", new(568, 322, 236, 52)),
+            new(SettingsAction.ResetEffects, "Reset effects", new(588, 770, 216, 48))
+        };
+        for (var i = 0; i < Parameters.Length; i++)
+        {
+            var x = 64 + i % 2 * 392; var y = 414 + i / 2 * 84;
+            controls.Add(new(Parameters[i].Less, "−", new(x, y, 54, 44)));
+            controls.Add(new(Parameters[i].More, "+", new(x + 294, y, 54, 44)));
+        }
+        return controls.ToArray();
+    }
+    public static IEnumerable<SettingsControl> ForPage(SettingsPage page) => Tabs.Concat(page == SettingsPage.Effects ? Effects : All);
+    public static SettingsAction? Hit(float x, float y, SettingsPage page = SettingsPage.General) => ForPage(page).FirstOrDefault(c => c.Bounds.Contains(x, y))?.Action;
+    public static string ParameterValue(int index, EffectSettings e) => index switch
+    {
+        0 => $"{e.TransitionMs} ms", 1 => $"{e.Travel} px", 2 => e.EnterMs == 0 ? "Instant" : $"{e.EnterMs} ms",
+        3 => $"{e.LeaveMs} ms", 4 => $"{e.Radius} px", 5 => $"{e.Strength}%", _ => $"{e.RippleMs} ms"
+    };
     public static bool Enabled(SettingsAction action, BoardSettings s) => action switch
     {
         SettingsAction.Smaller => s.SizePercent > 50,
         SettingsAction.Larger => s.SizePercent < 150,
         SettingsAction.Quieter => s.SoundEnabled && s.VolumePercent > 0,
         SettingsAction.Louder => s.SoundEnabled && s.VolumePercent < 100,
+        >= SettingsAction.TransitionFaster and <= SettingsAction.RippleSlower => Apply(action, s) != s,
         _ => true
     };
     public static BoardSettings Apply(SettingsAction action, BoardSettings s) => (action switch
@@ -60,6 +111,29 @@ internal static class SettingsControls
         SettingsAction.SteamFlat => s with { Theme = BoardThemes.SteamFlat },
         SettingsAction.Defaults => new BoardSettings(),
         SettingsAction.Geometry => s with { Geometry = (KeyboardGeometry)(((int)s.Geometry + 1) % 3) },
+        SettingsAction.ResetEffects => s with { Effects = new() },
+        SettingsAction.Afterglow => s with { Effects = s.Effects with { Afterglow = !s.Effects.Afterglow } },
+        SettingsAction.Spotlight => s with { Effects = s.Effects with { Spotlight = !s.Effects.Spotlight } },
+        SettingsAction.Edges => s with { Effects = s.Effects with { Edges = !s.Effects.Edges } },
+        SettingsAction.Ripples => s with { Effects = s.Effects with { Ripples = !s.Effects.Ripples } },
+        SettingsAction.PressFlash => s with { Effects = s.Effects with { PressFlash = !s.Effects.PressFlash } },
+        SettingsAction.TransitionNone => s with { Effects = s.Effects with { Transition = CharacterTransition.None } },
+        SettingsAction.Crossfade => s with { Effects = s.Effects with { Transition = CharacterTransition.Crossfade } },
+        SettingsAction.Lift => s with { Effects = s.Effects with { Transition = CharacterTransition.Lift } },
+        SettingsAction.TransitionFaster => s with { Effects = s.Effects with { TransitionMs = s.Effects.TransitionMs - 20 } },
+        SettingsAction.TransitionSlower => s with { Effects = s.Effects with { TransitionMs = s.Effects.TransitionMs + 20 } },
+        SettingsAction.TravelLess => s with { Effects = s.Effects with { Travel = s.Effects.Travel - 1 } },
+        SettingsAction.TravelMore => s with { Effects = s.Effects with { Travel = s.Effects.Travel + 1 } },
+        SettingsAction.EnterFaster => s with { Effects = s.Effects with { EnterMs = s.Effects.EnterMs - 20 } },
+        SettingsAction.EnterSlower => s with { Effects = s.Effects with { EnterMs = s.Effects.EnterMs + 20 } },
+        SettingsAction.LeaveFaster => s with { Effects = s.Effects with { LeaveMs = s.Effects.LeaveMs - 20 } },
+        SettingsAction.LeaveSlower => s with { Effects = s.Effects with { LeaveMs = s.Effects.LeaveMs + 20 } },
+        SettingsAction.RadiusLess => s with { Effects = s.Effects with { Radius = s.Effects.Radius - 10 } },
+        SettingsAction.RadiusMore => s with { Effects = s.Effects with { Radius = s.Effects.Radius + 10 } },
+        SettingsAction.StrengthLess => s with { Effects = s.Effects with { Strength = s.Effects.Strength - 5 } },
+        SettingsAction.StrengthMore => s with { Effects = s.Effects with { Strength = s.Effects.Strength + 5 } },
+        SettingsAction.RippleFaster => s with { Effects = s.Effects with { RippleMs = s.Effects.RippleMs - 20 } },
+        SettingsAction.RippleSlower => s with { Effects = s.Effects with { RippleMs = s.Effects.RippleMs + 20 } },
         _ => s
     }).Normalize();
 }
@@ -74,21 +148,30 @@ internal sealed class SettingsPointerState
         public SettingsAction? Hover, Capture;
     }
     private readonly Dictionary<uint, Pointer> pointers = new();
+    public SettingsPage Page { get; private set; }
+    public int Revision { get; private set; }
     public bool Hovered(SettingsAction action) => pointers.Values.Any(p => p.Hover == action);
-    public void Reset() => pointers.Clear();
+    public void Reset() { pointers.Clear(); Revision++; }
     public SettingsAction? Process(uint device, float x, float y, double time, double now, bool down = false, bool up = false, bool leave = false)
     {
         if (!double.IsFinite(time) || time > now || now - time > .5) return null;
         if (!pointers.TryGetValue(device, out var p)) pointers[device] = p = new();
         if (time < p.Last) return null;
         p.Last = time;
-        var hit = leave ? null : SettingsControls.Hit(x, y);
+        var hit = leave ? null : SettingsControls.Hit(x, y, Page);
+        if (p.Hover != hit) Revision++;
         p.Hover = hit;
         if (leave || (p.Capture.HasValue && p.Capture != hit)) p.Capture = null;
         if (down) p.Capture = now - time <= .2 ? hit : null;
         if (!up) return null;
         var clicked = p.Capture == hit ? hit : null;
         p.Capture = null;
+        if (clicked is SettingsAction.GeneralTab or SettingsAction.EffectsTab)
+        {
+            Page = clicked == SettingsAction.GeneralTab ? SettingsPage.General : SettingsPage.Effects;
+            Reset(); // Both hands lose captures from the old page.
+            return null;
+        }
         return clicked;
     }
 }

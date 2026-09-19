@@ -21,6 +21,8 @@ internal interface IKeySink
 }
 
 internal enum ModifierMode { Idle, OneShot, Locked }
+internal readonly record struct KeyboardVisualPointer(uint Cursor, bool Focused, float X, float Y,
+    KeyboardKey Held, long PressSequence, KeyboardKey LastPressed, float PressX, float PressY);
 
 // Input geometry and pointer ownership are independent of OpenVR and Windows.
 internal sealed class KeyboardState(IKeySink sink)
@@ -31,6 +33,9 @@ internal sealed class KeyboardState(IKeySink sink)
         public bool Focused, Down;
         public KeyboardKey Hover, Held;
         public double Entered, PressedAt, Released = double.NegativeInfinity;
+        public float X = float.NaN, Y = float.NaN, PressX, PressY;
+        public long PressSequence;
+        public KeyboardKey LastPressed;
     }
     private sealed class HeldKey(KeyboardKey key, ushort[] modifiers, double now)
     {
@@ -54,6 +59,13 @@ internal sealed class KeyboardState(IKeySink sink)
         if (device.HasValue) { LoseDevice(device.Value, now); grabWatermarks[device.Value] = now; }
     }
     public int Revision { get; private set; }
+    // Hover is drawn separately when pointer effects are enabled.
+    public int ContentRevision { get; private set; }
+    public int VisualRevision { get; private set; }
+    public int CancellationRevision { get; private set; }
+    public IEnumerable<KeyboardVisualPointer> VisualPointers => pointers.Select(p => new KeyboardVisualPointer(
+        p.Key, p.Value.Focused, p.Value.X, p.Value.Y, p.Value.Held, p.Value.PressSequence,
+        p.Value.LastPressed, p.Value.PressX, p.Value.PressY));
     public bool Shift => Mode(0x2a) != ModifierMode.Idle;
     public bool AltGr => Mode(0xe038) != ModifierMode.Idle;
     public WindowsLayout Layout { get; private set; } = new((nint)WindowsLayout.UsHandle);
@@ -64,7 +76,7 @@ internal sealed class KeyboardState(IKeySink sink)
         Layout = layout;
         // A layout change can alter geometry; discard hover from the old key list.
         foreach (var p in pointers.Values) p.Hover = null;
-        Revision++;
+        Revision++; ContentRevision++;
     }
     public ModifierMode Mode(ushort scan) => modifiers.GetValueOrDefault(scan);
     public bool HasHeldKeys => held.Count > 0;
@@ -79,6 +91,7 @@ internal sealed class KeyboardState(IKeySink sink)
         if (time < p.Entered || time < p.Released) return;
         if (p.Device != device) { Release(p); p.Down = false; Hover(p, null); }
         p.Device = device;
+        if (!p.Focused) VisualRevision++;
         p.Focused = true;
         p.Entered = time;
     }
@@ -88,6 +101,7 @@ internal sealed class KeyboardState(IKeySink sink)
         var p = Get(cursor);
         if (Mismatch(p.Device, device) || time < p.Entered) return;
         Release(p);
+        if (p.Focused) VisualRevision++;
         p.Focused = false;
         p.Down = false;
         p.Released = Math.Max(p.Released, time);
@@ -98,6 +112,7 @@ internal sealed class KeyboardState(IKeySink sink)
     {
         var p = Get(cursor);
         if (!p.Focused || Mismatch(p.Device, device)) return;
+        Position(p, x, y);
         var key = KeyboardLayout.HitOpenVr(x, y, Layout.Keys);
         Hover(p, key);
         // Leaving a captured key cancels it; sliding while held never types a new key.
@@ -169,7 +184,9 @@ internal sealed class KeyboardState(IKeySink sink)
         p.Down = true;
         p.PressedAt = time;
         p.Held = key;
-        Revision++;
+        Position(p, x, y);
+        p.PressX = p.X; p.PressY = p.Y; p.LastPressed = key; p.PressSequence++;
+        Revision++; ContentRevision++;
         return true;
     }
 
@@ -198,12 +215,14 @@ internal sealed class KeyboardState(IKeySink sink)
     {
         foreach (var p in pointers.Values.Where(p => p.Device == device))
         {
+            VisualRevision++;
             Release(p); p.Focused = false; p.Down = false; p.Released = now; Hover(p, null);
         }
     }
 
     public void Cancel(double now, bool clearFocus = true)
     {
+        CancellationRevision++;
         held.Clear();
         modifiers.Clear();
         foreach (var p in pointers.Values)
@@ -211,7 +230,7 @@ internal sealed class KeyboardState(IKeySink sink)
             p.Held = null; p.Down = false; p.Released = now;
             if (clearFocus) { p.Focused = false; p.Hover = null; }
         }
-        Revision++;
+        Revision++; ContentRevision++;
     }
 
     private void Release(Pointer p)
@@ -224,12 +243,18 @@ internal sealed class KeyboardState(IKeySink sink)
             else held[scan].Owners--;
         }
         p.Held = null;
-        Revision++;
+        Revision++; ContentRevision++;
     }
     private void Hover(Pointer p, KeyboardKey key)
     {
         if (p.Hover == key) return;
         p.Hover = key; Revision++;
+    }
+    private void Position(Pointer p, float x, float y)
+    {
+        y = OverlayGeometry.PanelHeight - y;
+        if (p.X == x && p.Y == y) return;
+        p.X = x; p.Y = y; VisualRevision++;
     }
     private Pointer Get(uint cursor)
     {

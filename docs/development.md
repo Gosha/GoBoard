@@ -18,7 +18,7 @@ dotnet run --project src/GoBoard.App -c Release -- --render-settings .runtime\se
 dotnet run --project src/GoBoard.App -c Release -- --render-desktop-settings .runtime\settings-desktop.png
 ```
 
-Run the overlay with `./start-goboard.ps1` and stop it with `./stop-goboard.ps1`. Production logs and the graceful stop signal live under `.runtime/app`; the POC continues to use its original `.runtime/poc.*` and `.runtime/stop` files.
+Run the overlay with `./start-goboard.ps1` and stop it with `./stop-goboard.ps1`. The launcher builds VR into `artifacts/vr-build` and desktop into `artifacts/desktop-build`, independently of normal builds and standalone Settings. If another GoBoard process still has the selected build loaded, it uses a fresh suffixed build directory instead of overwriting locked DLLs. Add `-BuildOnly` to compile without starting the keyboard or SteamVR. Production logs and the graceful stop signal live under `.runtime/app`; the POC continues to use its original `.runtime/poc.*` and `.runtime/stop` files.
 
 ## Desktop mode
 
@@ -103,6 +103,18 @@ The `reference` preview combines locked Ctrl, one-shot Alt, and hovered E. Every
 Soft key backgrounds are rasterized once per shape and visual state, then reused at the exact texture resolution. The cache includes the ISO Enter notch and theme, excludes legends and input state, and holds at most 256 immutable images. Eviction disposes the native images under the same lock used for drawing. Gradients, edges, and shadows are preserved; legends and modifier indicators remain live. Image regression tests compare every US/Swedish/Japanese preview state against uncached rendering with a two-level per-channel tolerance for premultiplied-alpha rounding.
 
 Run `dotnet run --project src/GoBoard.App -c Release -- --render-benchmark` for a headless renderer benchmark (10 warmup frames and 100 timed frames alternating reference/pressed states per theme). It excludes PNG encoding, window presentation, and VR texture upload. On the development PC, caching reduced the soft median from 39.32 ms to 4.71 ms; flat measured about 6.1 ms. The first use of a shape/state populates the cache; these figures describe steady rendering, not end-to-end input latency.
+
+## Optional effects
+
+Desktop and VR use the same `AnimatedKeyboardRenderer` and saved `EffectSettings`. The Effects settings page uses the same Skia controls and release-to-activate pointer handling in both hosts. `--settings-input-check` also exercises tab switching, effect selection, duration edits, persistence, and effect-only reset at three window aspect ratios with an isolated settings file.
+
+The renderer returns no frame when idle. During animation it reuses immutable images of the settled keyboard and its key surfaces, preserving both themes. Character transitions track primary, Shift, AltGr, and dead-key labels separately; unchanged labels are restored exactly from the settled raster. Interrupted transitions snapshot the visible label before retargeting. Pointer effects follow accepted keyboard state independently for each cursor; cancellation, layout/theme changes, and settings changes discard old animation state. These visuals do not schedule or delay input.
+
+Desktop animation frames use the keyboard window's actual pixel dimensions and BGRA format. A cached, resized background avoids repeated scaling, and GDI borrows the Skia frame pixels until replacement, without conversion or cloning. Mouse motion updates picking immediately but is drawn on the 16 ms frame timer. Hover-only changes reuse the keyboard background when pointer effects are active. VR retains its full-resolution RGBA texture output.
+
+`--effects-benchmark` measures each effect at VR texture resolution without upload. `--desktop-effects-benchmark` compares the former bitmap conversion/clone/scaling overhead with direct BGRA presentation, then measures each effect including GDI painting at 1275×423. Both use synthetic input and exclude the desktop compositor/SteamVR presentation. On the development PC, desktop presentation overhead fell from approximately 13 ms to 0.27 ms; individual pointer effects measured 0.7–1.2 ms median including rendering/painting, and all effects with Lift measured about 8 ms. State-change frames remain more expensive than steady animation frames; these are benchmark timings, not measured display latency.
+
+`EffectsTests` covers both themes, unchanged auxiliary legends, immediate/disabled behavior, rapid retargeting, independent pointers and leave fades, cancellation, settings persistence, and tab hit targets. Set `GOBOARD_EFFECTS_ARTIFACTS` to an output directory when running tests to save the settings page and animation review PNGs. Headset presentation and controller feel still require manual VR testing.
 
 ## SteamVR blue keyboard (Steam Flat)
 

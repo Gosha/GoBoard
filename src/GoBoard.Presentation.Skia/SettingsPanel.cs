@@ -24,7 +24,21 @@ internal static class SettingsPanel
             canvas.DrawText(value, x, y, SKTextAlign.Left, font, paint);
         }
         Text("GoBoard", 64, 72, heading, text);
-        Text("Settings · Changes apply immediately", 64, 110, small, accent);
+        var effectsPage = pointers?.Page == SettingsPage.Effects;
+        Text(effectsPage ? "Effects · Changes apply immediately" : "Settings · Changes apply immediately", 64, 110, small, accent);
+        if (effectsPage)
+        {
+            Text("Character changes", 64, 306, small, accent);
+            for (var i = 0; i < SettingsControls.Parameters.Length; i++)
+            {
+                var x = 64 + i % 2 * 392; var y = 414 + i / 2 * 84;
+                Text(SettingsControls.Parameters[i].Label, x, y - 10, small, accent);
+                paint.Color = text;
+                canvas.DrawText(SettingsControls.ParameterValue(i, settings.Effects), x + 174, y + 29, SKTextAlign.Center, small, paint);
+            }
+        }
+        else
+        {
         Text($"Keyboard size   {settings.SizePercent}%", 64, 186, label, text);
         Text(desktopMode ? "Desktop scale · 50–150%" : $"{OverlayGeometry.PanelWidthInMeters * settings.Scale * 100:F0} cm wide · 50–150%", 64, 216, small, accent);
         Text("Key sounds", 64, 290, label, text);
@@ -33,15 +47,25 @@ internal static class SettingsPanel
         Text("Keyboard arrangement", 64, 578, label, text);
         Text("Auto · ANSI · ISO", 64, 608, small, accent);
         Text("Keyboard theme", 64, 648, small, accent);
+        }
         Text(error == null ? "Saved on this PC · Shared by desktop and VR" : "Settings unavailable · Last working values kept",
             64, 760, small, error == null ? accent : new SKColor(0xff, 0xb0, 0xa0));
-        foreach (var c in SettingsControls.All)
+        foreach (var c in SettingsControls.ForPage(pointers?.Page ?? SettingsPage.General))
         {
             var selected = c.Action == SettingsAction.Wood && settings.Sound == KeySound.CushionedWood ||
                 c.Action == SettingsAction.Thud && settings.Sound == KeySound.SoftLowThud ||
                 c.Action == SettingsAction.ToggleSound && settings.SoundEnabled ||
                 c.Action == SettingsAction.SteamSoft && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamSoft ||
-                c.Action == SettingsAction.SteamFlat && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamFlat;
+                c.Action == SettingsAction.SteamFlat && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamFlat ||
+                c.Action == SettingsAction.GeneralTab && !effectsPage || c.Action == SettingsAction.EffectsTab && effectsPage ||
+                c.Action == SettingsAction.Afterglow && settings.Effects.Afterglow ||
+                c.Action == SettingsAction.Spotlight && settings.Effects.Spotlight ||
+                c.Action == SettingsAction.Edges && settings.Effects.Edges ||
+                c.Action == SettingsAction.Ripples && settings.Effects.Ripples ||
+                c.Action == SettingsAction.PressFlash && settings.Effects.PressFlash ||
+                c.Action == SettingsAction.TransitionNone && settings.Effects.Transition == CharacterTransition.None ||
+                c.Action == SettingsAction.Crossfade && settings.Effects.Transition == CharacterTransition.Crossfade ||
+                c.Action == SettingsAction.Lift && settings.Effects.Transition == CharacterTransition.Lift;
             var enabled = SettingsControls.Enabled(c.Action, settings);
             var b = c.Bounds;
             var rect = new SKRect(b.X, b.Y, b.X + b.Width, b.Y + b.Height);
@@ -59,7 +83,7 @@ internal static class SettingsPanel
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
             if (c.Action == SettingsAction.Geometry) title = settings.Geometry switch
             { KeyboardGeometry.Ansi => "ANSI", KeyboardGeometry.Iso => "ISO", _ => "Auto" };
-            var font = c.Action == SettingsAction.Defaults ? small : label;
+            var font = effectsPage || c.Action is SettingsAction.Defaults or SettingsAction.GeneralTab or SettingsAction.EffectsTab ? small : label;
             canvas.DrawText(title, rect.MidX, rect.MidY - (font.Metrics.Ascent + font.Metrics.Descent) / 2, SKTextAlign.Center, font, paint);
         }
         return bitmap;

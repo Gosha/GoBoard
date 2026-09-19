@@ -1,4 +1,4 @@
-param([switch]$Desktop)
+param([switch]$Desktop, [switch]$BuildOnly)
 
 $ErrorActionPreference = 'Stop'
 
@@ -7,11 +7,11 @@ $runtime = Join-Path $PSScriptRoot '.runtime\app'
 $stopFile = Join-Path $runtime 'stop'
 $pidFile = Join-Path $runtime 'goboard.pid'
 
-if (Get-Process -Name 'GoBoard.Poc' -ErrorAction SilentlyContinue) {
+if (!$BuildOnly -and (Get-Process -Name 'GoBoard.Poc' -ErrorAction SilentlyContinue)) {
     throw 'The POC is running. Close it with .\stop-poc.ps1 before starting GoBoard.'
 }
 
-if (Test-Path -LiteralPath $pidFile) {
+if (!$BuildOnly -and (Test-Path -LiteralPath $pidFile)) {
     $existingId = [int](Get-Content -LiteralPath $pidFile)
     $existing = Get-Process -Id $existingId -ErrorAction SilentlyContinue
     if ($existing -and $existing.ProcessName -eq 'GoBoard') {
@@ -19,15 +19,26 @@ if (Test-Path -LiteralPath $pidFile) {
     }
 }
 
-$exe = Join-Path $PSScriptRoot 'src\GoBoard.App\bin\Release\net10.0-windows\GoBoard.exe'
-if ($Desktop) {
-    $desktopBuild = Join-Path $PSScriptRoot 'artifacts\desktop-build'
-    dotnet build $project -c Release --artifacts-path $desktopBuild --nologo
-    $exe = Join-Path $desktopBuild 'bin\GoBoard.App\release\GoBoard.exe'
-} else {
-    dotnet build $project -c Release --nologo
+# Keep both modes separate from normal builds and standalone Settings. Windows
+# prevents overwriting DLLs loaded by an older window, even after typing stops.
+$buildName = if ($Desktop) { 'desktop-build' } else { 'vr-build' }
+$buildRoot = Join-Path $PSScriptRoot "artifacts\$buildName"
+$relativeExe = 'bin\GoBoard.App\release\GoBoard.exe'
+$exe = Join-Path $buildRoot $relativeExe
+$loaded = Get-Process -Name GoBoard -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe }
+if ($loaded) {
+    # A directly launched keyboard/settings window may outlive the PID guard.
+    # Build fresh binaries without terminating that process or reusing stale code.
+    $buildRoot = Join-Path $PSScriptRoot ("artifacts\$buildName-" + [Guid]::NewGuid().ToString('N'))
+    $exe = Join-Path $buildRoot $relativeExe
+    Write-Output "Previous build is still loaded; building into $buildRoot"
 }
+dotnet build $project -c Release --artifacts-path $buildRoot --nologo
 if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
+if ($BuildOnly) {
+    Write-Output "Built GoBoard: $exe"
+    return
+}
 
 New-Item -ItemType Directory -Force -Path $runtime | Out-Null
 if (Test-Path -LiteralPath $stopFile) { Remove-Item -LiteralPath $stopFile }

@@ -22,7 +22,7 @@ internal static class SettingsInputCheck
                 var v = SettingsViewport.Fit(form.ClientSize.Width, form.ClientSize.Height);
                 Point Center(SettingsAction action)
                 {
-                    var b = SettingsControls.All.Single(c => c.Action == action).Bounds;
+                    var b = SettingsControls.All.Concat(SettingsControls.Tabs).Concat(SettingsControls.Effects).Single(c => c.Action == action).Bounds;
                     return new((int)(v.X + (b.X + b.Width / 2) * v.Scale), (int)(v.Y + (b.Y + b.Height / 2) * v.Scale));
                 }
                 void Mouse(uint message, Point point) => SendMessage(form.Handle, message, message == 0x201 ? 1 : 0,
@@ -57,8 +57,19 @@ internal static class SettingsInputCheck
                 form.Capture = false;
                 Mouse(0x202, Center(SettingsAction.Larger));
                 Require(store.Current.SizePercent == before + 5, "Capture-loss cancellation");
+                var general = store.Current;
+                Click(SettingsAction.EffectsTab);
+                Click(SettingsAction.Spotlight);
+                Click(SettingsAction.Lift);
+                Click(SettingsAction.TransitionSlower);
+                Require(store.Current.Effects.Spotlight && store.Current.Effects.Transition == CharacterTransition.Lift &&
+                    store.Current.Effects.TransitionMs == 320, "Effects tab controls");
+                Require(new SettingsStore(path).Current == store.Current, "Saved effects selection and duration");
+                Click(SettingsAction.ResetEffects);
+                Require(store.Current == general, "Effects reset preserves general preferences");
+                Click(SettingsAction.GeneralTab);
             }
-            Console.WriteLine("Shared settings input check passed: native mouse clicks, resized/letterboxed targets, persistence, theme and preset selection, disabled controls, and capture cancellation. User settings were untouched.");
+            Console.WriteLine("Shared settings input check passed: native mouse clicks, resized/letterboxed targets, persistence, themes, sound, effects tab and reset, disabled controls, and capture cancellation. User settings were untouched.");
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine($"Settings input check: {ex.Message}"); return 1; }

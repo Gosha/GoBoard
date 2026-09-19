@@ -30,6 +30,8 @@ To stop either mode:
 
 Open **GoBoard Settings** in the SteamVR dashboard to change keyboard size, theme, mute, volume, or sound preset. Changes apply live and are saved for the next launch. **Steam Soft**, the default theme, follows the supplied v13 mockup with shaded keys and blue accents; **Steam Flat** retains the earlier flat appearance. Both themes are also available from desktop Settings.
 
+The **Effects** tab in desktop and VR Settings offers **Crossfade** and **Lift** for changing character labels, plus **Afterglow**, **Spotlight**, **Proximity edges**, **Click ripple**, and **Press flash / tint**. Adjust character duration and lift distance, hover fade-in/out, light radius, strength, and click duration independently. Unchanged legends stay stationary and animations never delay typing. Effects start disabled; all choices are saved and shared between desktop and VR. **Reset effects** restores only this tab's defaults; the General tab's reset restores all settings.
+
 Keyboard labels follow Windows, including Shift, Caps Lock, AltGr, and dead keys. **Keyboard arrangement** cycles Auto, ANSI, and ISO independently of the language. Unsupported layouts remain usable with US labels and a warning. See [layout support and validation limits](docs/automatic-keyboard-layouts.md), including IME and complex-script limitations.
 
 When Japanese is selected, an **あ/A** button appears beside Space in both desktop and VR mode. Click it to toggle Japanese and Latin input within the Japanese IME. Its label identifies the action; it does not display the current IME mode.

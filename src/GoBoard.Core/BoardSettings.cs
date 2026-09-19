@@ -15,6 +15,7 @@ internal sealed record BoardSettings
     public KeySound Sound { get; init; } = KeySound.CushionedWood;
     public KeyboardGeometry Geometry { get; init; } = KeyboardGeometry.Auto;
     public string Theme { get; init; } = BoardThemes.Default;
+    public EffectSettings Effects { get; init; } = new();
     public float Scale => SizePercent / 100f;
 
     public BoardSettings Normalize() => this with
@@ -23,7 +24,8 @@ internal sealed record BoardSettings
         VolumePercent = Math.Clamp(VolumePercent, 0, 100),
         Sound = Enum.IsDefined(Sound) ? Sound : KeySound.CushionedWood,
         Geometry = Enum.IsDefined(Geometry) ? Geometry : KeyboardGeometry.Auto,
-        Theme = BoardThemes.Normalize(Theme)
+        Theme = BoardThemes.Normalize(Theme),
+        Effects = (Effects ?? new()).Normalize()
     };
 
     public static BoardSettings Defaults => new()
@@ -40,7 +42,7 @@ internal sealed class SettingsStore
     private static readonly JsonSerializerOptions Json = new()
     {
         WriteIndented = true,
-        Converters = { new JsonStringEnumConverter<KeySound>(), new JsonStringEnumConverter<KeyboardGeometry>() },
+        Converters = { new JsonStringEnumConverter<KeySound>(), new JsonStringEnumConverter<KeyboardGeometry>(), new JsonStringEnumConverter<CharacterTransition>() },
         IgnoreReadOnlyProperties = true
     };
     public static string DefaultPath => Path.Combine(

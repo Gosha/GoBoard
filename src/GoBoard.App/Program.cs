@@ -6,6 +6,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args is ["--desktop-effects-benchmark"]) { DesktopEffectsBenchmark.Run(); return 0; }
         if (args.Length > 0 && args[0] == "--desktop") return DesktopRuntime.Run(args);
         if (args is ["--render-desktop", var desktopPath]) return DesktopRuntime.Render(desktopPath);
         if (args is ["--desktop-input-check"]) return DesktopInputCheck.Run();

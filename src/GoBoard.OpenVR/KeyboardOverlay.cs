@@ -14,10 +14,10 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private readonly OverlayPointers pointers = new();
     private readonly TrackedDevicePose_t[] devices = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
     private bool enabled, faulted;
-    private int renderedRevision = -1;
     private string theme = BoardThemes.Default;
-    private bool renderedShift, renderedAltGr, renderedCaps, renderedScrollLock;
-    private string renderedStatus, status;
+    private EffectSettings effects = new();
+    private readonly AnimatedKeyboardRenderer renderer = new();
+    private string status;
     private string targetStatus;
     private KeyboardGeometry geometry;
     private double lastErrorTime;
@@ -27,8 +27,8 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
 
     public void ApplySettings(BoardSettings settings, bool resized)
     {
-        var nextTheme = BoardThemes.Normalize(settings.Theme);
-        if (theme != nextTheme) { theme = nextTheme; renderedRevision = -1; }
+        effects = settings.Effects;
+        theme = BoardThemes.Normalize(settings.Theme);
         if (resized) Cancel();
         if (geometry != settings.Geometry)
         {
@@ -143,11 +143,9 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             (State.Mode(0x1d) != ModifierMode.Idle && State.Mode(0x38) != ModifierMode.Idle);
         var caps = WindowsKeyboard.CapsLock;
         var scrollLock = WindowsKeyboard.ScrollLock;
-        if (renderedRevision == State.Revision && renderedShift == shift && renderedAltGr == altGr && renderedCaps == caps && renderedScrollLock == scrollLock && renderedStatus == status) return;
-        using var bitmap = Panel.Render(State, shift, status, altGr, caps, scrollLock, theme);
+        using var bitmap = renderer.Render(State, shift, status, altGr, caps, scrollLock, theme, effects, Now);
+        if (bitmap == null) return;
         graphics.Upload(overlay, handle, bitmap);
-        renderedRevision = State.Revision; renderedShift = shift; renderedAltGr = altGr; renderedCaps = caps; renderedStatus = status;
-        renderedScrollLock = scrollLock;
     }
 
     private void Cancel(bool clearFocus = true)
@@ -175,5 +173,5 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         ulong path = 0;
         return OpenVR.Input.GetInputSourceHandle(name, ref path) == EVRInputError.None ? path : 0;
     }
-    public void Dispose() { Cancel(); output.Dispose(); audio.Dispose(); }
+    public void Dispose() { Cancel(); renderer.Dispose(); output.Dispose(); audio.Dispose(); }
 }

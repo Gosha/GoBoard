@@ -119,7 +119,7 @@ internal sealed class SettingsForm : Form
 
     private void RenderFrame()
     {
-        var hover = SettingsControls.All.Aggregate(0, (mask, c) => mask | (pointers.Hovered(c.Action) ? 1 << (int)c.Action : 0));
+        var hover = pointers.Revision;
         var error = actionError ?? store.Error;
         var signature = (store.Current, hover, error);
         if (drawn == signature) return;

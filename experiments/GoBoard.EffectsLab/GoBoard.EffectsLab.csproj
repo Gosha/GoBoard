@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <PlatformTarget>x64</PlatformTarget>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="4.152.1" />
+    <!-- Compile the actual renderer/geometry/state without changing their visibility
+         or pulling Windows input injection or OpenVR into this sandbox. -->
+    <Compile Include="../../src/GoBoard.Core/KeyboardLayout.cs" Link="Production/KeyboardLayout.cs" />
+    <Compile Include="../../src/GoBoard.Core/KeyboardState.cs" Link="Production/KeyboardState.cs" />
+    <Compile Include="../../src/GoBoard.Core/OverlayGeometry.cs" Link="Production/OverlayGeometry.cs" />
+    <Compile Include="../../src/GoBoard.Core/WindowsLayout.cs" Link="Production/WindowsLayout.cs" />
+    <Compile Include="../../src/GoBoard.Core/WindowsLegends.cs" Link="Production/WindowsLegends.cs" />
+    <Compile Include="../../src/GoBoard.Core/BoardThemes.cs" Link="Production/BoardThemes.cs" />
+    <!-- Read the same installed layout tables as the app, including empty
+         legends for unavailable output. No Windows input injection is linked. -->
+    <Compile Include="../../src/GoBoard.Platform.Windows/WindowsLayoutProvider.cs" Link="Production/WindowsLayoutProvider.cs" />
+    <Compile Include="../../src/GoBoard.Platform.Windows/KeyboardTables.cs" Link="Production/KeyboardTables.cs" />
+    <Compile Include="../../src/GoBoard.Presentation.Skia/Panel.cs" Link="Production/Panel.cs" />
+    <Compile Include="../../src/GoBoard.Presentation.Skia/KeyboardTheme.cs" Link="Production/KeyboardTheme.cs" />
+    <Compile Include="../../src/GoBoard.Presentation.Skia/KeySurfaceCache.cs" Link="Production/KeySurfaceCache.cs" />
+  </ItemGroup>
+</Project>
