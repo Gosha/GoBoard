@@ -1,6 +1,6 @@
 # Native grab controls: investigation results
 
-Historical investigation of native controls. The user subsequently selected a custom grab line, now implemented in the POC: dragging the keyboard changes its local offset, and dragging the dashboard carries both. The findings below explain that decision; they do not claim native controls are implemented.
+Historical investigation of native controls. The user subsequently selected a custom grab line, implemented in GoBoard: dragging the keyboard changes its local offset, and dragging the dashboard carries both. The findings below explain that decision; they do not claim native controls are implemented.
 
 ## Confirmed corrections
 
@@ -39,7 +39,7 @@ Thus creating a native dashboard frame and then detaching/positioning it like a 
 
 ## Remaining limitation
 
-No supported public-API route has been found that combines a separate freely positioned overlay, SteamVR's native frame controls, and application-controlled dashboard-relative positioning. This does not prove every private integration is impossible. Further native work would require understanding SteamVR's internal frame/scene-graph protocol or obtaining an API extension from Valve; it should be kept separate from the working POC until independently demonstrated.
+No supported public-API route has been found that combines a separate freely positioned overlay, SteamVR's native frame controls, and application-controlled dashboard-relative positioning. This does not prove every private integration is impossible. Further native work would require understanding SteamVR's internal frame/scene-graph protocol or obtaining an API extension from Valve; it should be kept separate from the production app until independently demonstrated.
 
-The POC retains the corrected bounds and dashboard following and adds a custom SkiaSharp grab line using SteamVR pointer events and tracked controller poses. Native grabbing remains unimplemented; the unused native-control flags were removed.
+GoBoard retains the corrected bounds and dashboard following and adds a custom SkiaSharp grab line using SteamVR pointer events and tracked controller poses. Native grabbing remains unimplemented; the unused native-control flags were removed.
 

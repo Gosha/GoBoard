@@ -1,12 +1,12 @@
 # Development
 
-See [AGENTS.md](../AGENTS.md) for production/POC boundaries, contributor workflows, and engineering constraints. This document covers implementation details, troubleshooting, and validation evidence.
+See [AGENTS.md](../AGENTS.md) for project boundaries, contributor workflows, and engineering constraints. This document covers implementation details, troubleshooting, and validation evidence.
 
 ## Prerequisites and commands
 
 The canonical [build, test, preview, and launch commands](../AGENTS.md#build-and-validation) are in AGENTS.md. Feature-specific previews and native integration commands are documented below alongside their coverage and limitations.
 
-If another GoBoard process still has the selected launcher build loaded, the launcher uses a fresh suffixed build directory instead of overwriting locked DLLs. The production launcher and executable refuse to start while `GoBoard.Poc` is running. The POC continues to use its original `.runtime/poc.*` and `.runtime/stop` files.
+If another GoBoard process still has the selected launcher build loaded, the launcher uses a fresh suffixed build directory instead of overwriting locked DLLs.
 
 ## Desktop mode
 
@@ -60,7 +60,7 @@ Resize unit tests cover geometry, captured pointer ownership, cancellation, keyb
 
 Settings writes merge only the edited field into the latest file under a per-file mutex, then replace the file atomically. Unreadable or malformed files leave the last working values active and show an error; failed writes do not change applied settings. If manually repairing a malformed file, close the editors and fix or remove the file at the path above. Pure regression tests cover concurrent edits, restart persistence, failure handling, scaling geometry, settings pointer cancellation, and audio amplitude. Desktop and dashboard preview images have been inspected. Live dashboard activation, controller clicks, resize during a grab, and sound routing still need in-headset acceptance with SteamVR running.
 
-The default is Cushioned wood, with quieter release sounds. `GOBOARD_KEY_SOUND=soft-low-thud` remains a fallback only when no production settings file exists; saved settings take precedence. The POC remains unchanged and still uses the environment variable on every launch.
+The default is Cushioned wood, with quieter release sounds. `GOBOARD_KEY_SOUND=soft-low-thud` remains a fallback only when no production settings file exists; saved settings take precedence.
 
 Cherry MX Clear is retired from the live app. Existing Clear settings migrate to Cherry MX Blue, and its WAVs remain only in the offline lab archive. The approved Blue and Gateron presets use paired press/release playback. Missing or malformed banks fall back to Cushioned wood on key-down. Synthesized presets retain their quieter release sound. There is no runtime Python or audio-codec dependency.
 
@@ -111,7 +111,7 @@ Desktop animation frames use the keyboard window's actual pixel dimensions and B
 
 ## SteamVR blue keyboard (Steam Flat)
 
-The Steam Flat theme takes its colors from `artifacts/keyboard-mockups/01-full-dark-steam-accents-v7.png`: flat dark blue-gray surfaces, faint borders, white primary/Shift legends, and cyan AltGr legends. Only the reference colors are used; the existing geometry and lack of a permanent header/footer are preserved. Navigation uses the standard 3-column by 2-row cluster: Insert / Home / PgUp above Delete / End / PgDn, with inverted-T arrows below and Print Screen / Scroll Lock / Pause above. All three system keys are non-repeating. Pause is injected as VK_PAUSE; Print Screen retains its E0 scan prefix. Close remains deferred; settings use the separate dashboard tab and desktop window. The POC retains its earlier design.
+The Steam Flat theme takes its colors from `artifacts/keyboard-mockups/01-full-dark-steam-accents-v7.png`: flat dark blue-gray surfaces, faint borders, white primary/Shift legends, and cyan AltGr legends. Only the reference colors are used; the existing geometry and lack of a permanent header/footer are preserved. Navigation uses the standard 3-column by 2-row cluster: Insert / Home / PgUp above Delete / End / PgDn, with inverted-T arrows below and Print Screen / Scroll Lock / Pause above. All three system keys are non-repeating. Pause is injected as VK_PAUSE; Print Screen retains its E0 scan prefix. Close remains deferred; settings use the separate dashboard tab and desktop window.
 
 There are 86 US or 87 Swedish buttons. Caps sends a non-repeating Caps Lock stroke and reflects the actual Windows toggle. Menu sends the extended application-menu key. Left/right Shift buttons share one logical Shift mode, and left/right Ctrl buttons share one Ctrl mode; these aliases deliberately use the same scan code so they cannot inject duplicate modifiers. Swedish ISO Enter has one continuous L-shaped face and an excluded lower-left hit region. US uses a rectangular ANSI Enter and backslash above it. Space has an empty legend.
 

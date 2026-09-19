@@ -6,7 +6,7 @@ Unmodified files from Valve's [OpenVR v2.15.6](https://github.com/ValveSoftware/
 - `bin/win64/openvr_api.dll`
 - `LICENSE`
 
-Requires a SteamVR runtime supporting this SDK's interfaces. Keep the native library and generated binding from the same SDK release. `MinimalControlBar` suppresses dashboard controls; it is not a standalone grab-handle API. Neither that flag nor `EnableControlBar` has produced a native grab handle for this POC's independent overlay.
+Requires a SteamVR runtime supporting this SDK's interfaces. Keep the native library and generated binding from the same SDK release. `MinimalControlBar` suppresses dashboard controls; it is not a standalone grab-handle API. Neither that flag nor `EnableControlBar` has produced a native grab handle for GoBoard's independent overlay.
 
 SHA-256:
 

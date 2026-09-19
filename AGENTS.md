@@ -11,7 +11,7 @@ GoBoard is a Windows x64 keyboard overlay and desktop keyboard built with C#/.NE
 - `src/GoBoard.App`: executable entry point and Windows Forms hosts.
 - `tests/GoBoard.Tests`: regression tests.
 
-Production lives in `GoBoard.slnx`. `src/GoBoard.Poc` is a separate working reference; make production changes in the production projects. Preserve the distinct executable names, overlay keys, and runtime files. Do not run production and the POC together.
+Production lives in `GoBoard.slnx`; make application changes in its production projects. Keep experiment executables, overlay keys, and runtime files separate from the app.
 
 ## Build and validation
 
@@ -71,7 +71,6 @@ Report what was actually verified. Pure tests and PNGs do not establish headset 
 
 - [Development](docs/development.md): detailed workflows, feature implementation, benchmarks, and acceptance gaps.
 - [Automatic layouts](docs/automatic-keyboard-layouts.md): current production label generation, fallback behavior, and IME scope.
-- [Technical design](docs/technical-design.md): architecture rationale and interaction history; several sections describe earlier POC behavior.
-- [Proof of concept](docs/proof-of-concept.md): separate reference app and its commands.
+- [Technical design](docs/technical-design.md): application architecture and interaction model.
 - [Layout research](docs/automatic-keyboard-layouts-research.md) and [native controls investigation](docs/native-controls-investigation.md): historical proposals/findings, not current implementation instructions.
 - `experiments/`: consult the relevant README for audio preparation, effects labs, or stereo experiments.

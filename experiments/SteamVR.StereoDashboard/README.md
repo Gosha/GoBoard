@@ -1,6 +1,6 @@
 # SteamVR stereo dashboard experiment
 
-Independent executable and dashboard entry named **Stereo Experiment**. Shares only the vendored OpenVR SDK and pinned SkiaSharp version with GoBoard. No project reference to the keyboard POC, startup registration, or persistent SteamVR settings.
+Independent executable and dashboard entry named **Stereo Experiment**. Shares only the vendored OpenVR SDK and pinned SkiaSharp version with GoBoard. No project reference to the keyboard app, startup registration, or persistent SteamVR settings.
 
 Requires Windows x64, .NET 10 SDK, and SteamVR with a connected headset. From the repository root:
 

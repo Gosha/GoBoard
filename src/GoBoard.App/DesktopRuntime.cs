@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 
 namespace GoBoard.App;
@@ -23,8 +22,6 @@ internal static class DesktopRuntime
                     default: throw new ArgumentException("Usage: GoBoard --desktop [--stop-file PATH] [--seconds N]");
                 }
             }
-            if (Process.GetProcessesByName("GoBoard.Poc").Any())
-                throw new InvalidOperationException("The GoBoard POC is running. Close it before starting desktop mode.");
             using var instance = new Mutex(false, "Local\\GoBoard.Desktop", out var first);
             if (!first) throw new InvalidOperationException("GoBoard desktop mode is already running.");
             ApplicationConfiguration.Initialize();

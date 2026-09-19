@@ -81,9 +81,6 @@ public static int Run(string[] args)
             return 0;
         }
 
-        if (Process.GetProcessesByName("GoBoard.Poc").Any())
-            throw new InvalidOperationException("The GoBoard POC is already running. Close it with .\\stop-poc.ps1 before starting the production app.");
-
         if (!OpenVR.IsRuntimeInstalled()) throw new InvalidOperationException("SteamVR is not installed or its runtime path is not registered.");
         var error = EVRInitError.None;
         var system = OpenVR.Init(ref error, EVRApplicationType.VRApplication_Overlay);

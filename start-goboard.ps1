@@ -7,10 +7,6 @@ $runtime = Join-Path $PSScriptRoot '.runtime\app'
 $stopFile = Join-Path $runtime 'stop'
 $pidFile = Join-Path $runtime 'goboard.pid'
 
-if (!$BuildOnly -and (Get-Process -Name 'GoBoard.Poc' -ErrorAction SilentlyContinue)) {
-    throw 'The POC is running. Close it with .\stop-poc.ps1 before starting GoBoard.'
-}
-
 if (!$BuildOnly -and (Test-Path -LiteralPath $pidFile)) {
     $existingId = [int](Get-Content -LiteralPath $pidFile)
     $existing = Get-Process -Id $existingId -ErrorAction SilentlyContinue
