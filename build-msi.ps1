@@ -45,7 +45,9 @@ try {
     }
     $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $publishDir 'release.json') -Encoding utf8
 
-    $installerProperties = @("-p:BaseIntermediateOutputPath=$installerArtifacts\obj\", "-p:OutputPath=$installerArtifacts\bin\", "-p:PublishDir=$publishDir\", "-p:ProductVersion=$($release.MsiVersion)", "-p:ReleaseVersion=$Version", "-p:ReleaseChannel=$Channel")
+    $payloadFragment = Join-Path $buildRoot 'Payload.wxs'
+    & (Join-Path $PSScriptRoot 'installer\New-PayloadFragment.ps1') -PublishDir $publishDir -OutputPath $payloadFragment
+    $installerProperties = @("-p:BaseIntermediateOutputPath=$installerArtifacts\obj\", "-p:OutputPath=$installerArtifacts\bin\", "-p:PublishDir=$publishDir\", "-p:PayloadFragment=$payloadFragment", "-p:ProductVersion=$($release.MsiVersion)", "-p:ReleaseVersion=$Version", "-p:ReleaseChannel=$Channel")
     dotnet restore $installer --locked-mode @installerProperties
     if ($LASTEXITCODE -ne 0) { throw 'Installer restore failed.' }
     dotnet build $installer -c Release --no-restore @installerProperties

@@ -58,8 +58,9 @@ if ($shortcuts.Count -ne 3) { throw 'Expected three Start menu shortcuts.' }
 foreach ($entry in @(@('GoBoard VR', ''), @('GoBoard Desktop', '--desktop'), @('GoBoard Settings', '--settings'))) {
     $shortcut = @($shortcuts | Where-Object { $_.GetAttribute('Name') -eq $entry[0] })
     if ($shortcut.Count -ne 1 -or $shortcut[0].GetAttribute('Arguments') -ne $entry[1] -or
-        $shortcut[0].GetAttribute('Advertise') -ne 'yes' -or
-        !$shortcut[0].ParentNode.SelectSingleNode("w:File[@Id='GoBoardExe' and @KeyPath='yes']", $ns)) {
+        $shortcut[0].GetAttribute('Advertise') -eq 'yes' -or
+        $shortcut[0].GetAttribute('Target') -ne '[INSTALLFOLDER]GoBoard.exe' -or
+        !$shortcut[0].ParentNode.SelectSingleNode("w:RegistryValue[@Root='HKCU' and @KeyPath='yes']", $ns)) {
         throw "Incorrect shortcut target/arguments: $($entry[0])"
     }
 }
@@ -83,6 +84,36 @@ if ([Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $payload 'GoBoard.d
 $engine = New-Object -ComObject WindowsInstaller.Installer
 $db = $engine.OpenDatabase($msi, 0)
 try {
+    # Test the compiled privilege bit and properties, not just source authoring.
+    $summary = $db.SummaryInformation(0)
+    try {
+        if (($summary.Property(15) -band 8) -eq 0) { throw 'MSI requests elevated privileges.' }
+    } finally { [Runtime.InteropServices.Marshal]::FinalReleaseComObject($summary) | Out-Null }
+    $view = $db.OpenView('SELECT `Property`, `Value` FROM `Property`')
+    $view.Execute()
+    $properties = @{}
+    while ($record = $view.Fetch()) { $properties[$record.StringData(1)] = $record.StringData(2) }
+    $view.Close()
+    if ($properties['ALLUSERS'] -or $properties['MSIINSTALLPERUSER']) { throw 'MSI must be strictly per-user.' }
+    if (!$document.SelectSingleNode("//w:Launch[@Condition='NOT ALLUSERS']", $ns)) { throw 'MSI must reject an all-users override.' }
+    if (!$document.SelectSingleNode("//w:StandardDirectory[@Id='LocalAppDataFolder']/w:Directory[@Name='Programs']/w:Directory[@Id='INSTALLFOLDER' and @Name='GoBoard']", $ns)) {
+        throw 'Default install folder must be LocalAppData\\Programs\\GoBoard.'
+    }
+    if (!$document.SelectSingleNode("//w:Property[@Id='INSTALLFOLDER']/w:RegistrySearch[@Root='HKCU' and @Key='Software\GoBoard' and @Name='InstallFolder']", $ns)) {
+        throw 'Previous install location must come from HKCU.'
+    }
+    if (!$document.SelectSingleNode("//w:Property[@Id='GOBOARD_MACHINE_INSTALL']/w:RegistrySearch[@Root='HKLM' and @Key='Software\GoBoard' and @Name='InstallFolder']", $ns) -or
+        !$document.SelectSingleNode("//w:Launch[@Condition='Installed OR NOT GOBOARD_MACHINE_INSTALL']", $ns)) {
+        throw 'Missing migration guard for an old all-users installation.'
+    }
+    foreach ($registry in $document.SelectNodes('//w:RegistryValue', $ns)) {
+        if ($registry.GetAttribute('Root') -ne 'HKCU') { throw 'MSI must only write current-user registry values.' }
+    }
+    foreach ($component in $document.SelectNodes('//w:Component', $ns)) {
+        if (!$component.SelectSingleNode("w:RegistryValue[@Root='HKCU' and @KeyPath='yes']", $ns)) {
+            throw "Per-user component has no HKCU key path: $($component.GetAttribute('Id'))"
+        }
+    }
     $view = $db.OpenView('SELECT `UpgradeCode`, `VersionMin`, `VersionMax`, `Attributes`, `Remove`, `ActionProperty` FROM `Upgrade`')
     $view.Execute()
     $crossChannelFound = $false
@@ -120,5 +151,5 @@ foreach ($mode in @('render', 'render-desktop')) {
         throw "Extracted MSI payload failed --$mode."
     }
 }
-Write-Output "MSI verified: $($files.Count) files match publish output; runtime, native libraries, credits, shortcuts, versions, and both render modes passed."
+Write-Output "MSI verified: $($files.Count) files match publish output; per-user scope/privileges, registry, migration guard, runtime, native libraries, credits, shortcuts, versions, and both render modes passed."
 Write-Output "Inspection artifacts: $checkRoot"

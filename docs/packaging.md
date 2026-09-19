@@ -4,7 +4,7 @@ Choose release numbers using [the versioning policy](versioning.md). This docume
 
 GoBoard releases are explicit Git tags. Stable tags such as `v1.0.0` publish normal releases; tags such as `v1.0.1-beta.1` publish Beta prereleases. Merging to `main` does not build or publish an MSI.
 
-Stable and Beta share one installation and settings file. Installing either channel replaces the other, even when returning to an older Stable release. Within the same channel, downgrades and separately rebuilt packages of the same version are blocked.
+Stable and Beta share one installation and settings file per Windows user. Installing either channel replaces the other for that user, even when returning to an older Stable release. Within the same channel, downgrades and separately rebuilt packages of the same version are blocked.
 
 ## Publish a release
 
@@ -90,12 +90,14 @@ See [SemVer precedence](https://semver.org/#spec-item-11) and [MSI ProductVersio
 ## Installed behavior
 
 - Self-contained, untrimmed .NET 10 Windows x64 app with native SkiaSharp, GLFW, OpenVR, its license, and sound credits. No preinstalled .NET is required.
-- One all-users installation, normally `%ProgramFiles%\GoBoard`, with a folder chooser and Windows Installer elevation. The folder is remembered across channel changes.
-- Shared Start menu entries **GoBoard VR**, **GoBoard Desktop**, and **GoBoard Settings**. Installed apps names include the readable release version, such as **GoBoard 1.0.1-beta.1**; its numeric version field uses the MSI mapping above.
+- One per-user installation, normally `%LOCALAPPDATA%\Programs\GoBoard`, without requesting administrator access or UAC elevation. The folder chooser must point to a location writable by that user. The folder is remembered in `HKCU\Software\GoBoard` across channel changes; the MSI only writes current-user registry values.
+- Current-user Start menu entries **GoBoard VR**, **GoBoard Desktop**, and **GoBoard Settings**. Installed apps names include the readable release version, such as **GoBoard 1.0.1-beta.1**; its numeric version field uses the MSI mapping above.
 - Shared settings at `%LOCALAPPDATA%\GoBoard\settings.json` are never owned or removed by the MSI. Future Beta settings migrations must remain compatible with Stable.
 - Installation does not launch the app or enable autostart. Repository launchers and their `.runtime/app` logs and stop signals remain development facilities.
 
 The installer accepts Windows 10 21H2 or later; use a Windows version supported by the bundled runtime. VR requires SteamVR and a headset. Self-contained releases need rebuilding and redistribution when updating the SDK/runtime for security fixes.
+
+Older all-users installations must be uninstalled from Windows Installed apps before installing this per-user package. That one-time removal may require administrator approval; it retains `%LOCALAPPDATA%\GoBoard\settings.json`. The installer detects the old machine install-location key and blocks installation with these instructions. Windows Installer [major upgrades cannot change installation context](https://learn.microsoft.com/en-us/windows/win32/msi/major-upgrades). Channel replacement applies within the new per-user context; it cannot silently remove another user's or an all-users installation. `ALLUSERS` overrides are rejected.
 
 ## Dependencies and validation
 
@@ -107,16 +109,19 @@ dotnet restore src/GoBoard.App/GoBoard.App.csproj --runtime win-x64 --artifacts-
 
 WiX SDK and UI extension are pinned together at 5.0.2. Review the [maintenance fee terms](https://docs.firegiant.com/wix/osmf/) before moving to WiX 6 or later. After changing the installer dependency, refresh its lock with `dotnet restore installer/GoBoard.Installer.wixproj --force-evaluate`.
 
-CI runs locked restore, the Release build, regression tests, and release tests covering numeric ordering, bounds, and event-to-package selection. Every MSI build runs WiX ICE validation with warnings as errors, extracts the actual MSI without installing it, compares every file to the publish output, checks runtime/native/credit files, shortcuts, versions/provenance, cross-channel removal and transaction order, then renders VR and desktop PNGs.
+CI runs locked restore, the Release build, regression tests, and release tests covering numeric ordering, bounds, and event-to-package selection. Every MSI build runs WiX ICE validation with warnings as errors, extracts the actual MSI without installing it, compares every file to the publish output, checks the no-elevation summary flag, per-user properties/path, HKCU registry key paths, legacy migration guard, runtime/native/credit files, shortcuts, versions/provenance, cross-channel removal and transaction order, then renders VR and desktop PNGs.
+
+`New-PayloadFragment.ps1` generates one component per published file with stable relative-path identities and HKCU registry key paths, plus empty-directory cleanup. WiX's standard `Files` harvesting uses file key paths that fail per-user ICE validation. Shortcuts use an HKCU-backed component and explicit executable targets. Only [ICE91](https://learn.microsoft.com/en-us/windows/win32/msi/ice91) is suppressed: it warns that profile files cannot support an all-users install, which this package explicitly rejects. All other ICE checks remain enabled with warnings as errors.
 
 Before distribution, use a disposable Windows x64 VM to verify:
 
-1. Wizard installation, including on a machine without .NET; all shortcuts, readable version names, Desktop, and Settings as a normal user.
+1. Wizard and silent installation from a non-elevated standard-user account, including on a machine without .NET: no UAC prompt, current-user files/registry/shortcuts, readable version names, Desktop, and Settings. Verify another account has no GoBoard shortcuts or installed entry.
 2. Settings and a custom install folder survive Stable → Beta → Stable, including a numerically lower destination. Verify one installed entry and actual replacement of the previous files.
 3. Beta.1 → Beta.2 and Stable patch upgrades work; same-channel downgrades and separately rebuilt same-version packages are rejected. Repair using the original MSI.
 4. Uninstall removes app files/shortcuts and retains settings. Check files-in-use and rollback separately.
 5. Real VR, input focus, sound routing, and presentation latency.
+6. An older all-users installation blocks the new installer with migration instructions; uninstall the old copy, then install per-user and verify settings survive. Verify per-user repair and uninstall also work without elevation.
 
-Silent VM checks can use `msiexec /i <msi> /qn /norestart /L*v install.log` and `msiexec /x <msi> /qn /norestart /L*v uninstall.log` from an elevated terminal.
+Silent VM checks can use `msiexec /i <msi> /qn /norestart /L*v install.log` and `msiexec /x <msi> /qn /norestart /L*v uninstall.log` from a normal, non-elevated terminal. Do not pass `ALLUSERS`.
 
 Packages are unsigned. Sign the app before packaging and the MSI afterward once a certificate is available, then regenerate the checksum. See [WiX signing guidance](https://docs.firegiant.com/wix/tools/signing/). Extraction and PNG checks do not establish successful installation/channel switching, and release publication needs a real tagged workflow run.

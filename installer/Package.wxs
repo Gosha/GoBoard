@@ -12,7 +12,7 @@
     <?define OtherUpgradeCode = "56804E91-13DF-4698-908A-604D44D7320A" ?>
   <?endif?>
   <Package Name="$(var.ProductName)" Manufacturer="GoBoard" Version="$(var.ProductVersion)"
-           UpgradeCode="$(var.UpgradeCode)" Scope="perMachine"
+           UpgradeCode="$(var.UpgradeCode)" Scope="perUser"
            Language="1033">
     <MajorUpgrade DowngradeErrorMessage="A newer version of $(var.ProductName) is already installed."
                   Schedule="afterInstallInitialize" />
@@ -36,6 +36,14 @@
             Message="This version of $(var.ProductName) is already installed. Use the original MSI to repair it, or install a newer version." />
     <Launch Condition="Installed OR (VersionNT64 AND GOBOARD_WINDOWS_BUILD &gt;= 19044)"
             Message="GoBoard requires Windows 10 21H2 or later (x64)." />
+    <Launch Condition="NOT ALLUSERS" Message="GoBoard installs for the current user only. Run this installer without ALLUSERS." />
+    <!-- MSI upgrades cannot change installation context. -->
+    <Property Id="GOBOARD_MACHINE_INSTALL" Secure="yes">
+      <RegistrySearch Id="MachineInstallFolder" Root="HKLM" Key="Software\GoBoard"
+                      Name="InstallFolder" Type="raw" Bitness="always64" />
+    </Property>
+    <Launch Condition="Installed OR NOT GOBOARD_MACHINE_INSTALL"
+            Message="An all-users GoBoard installation already exists. Uninstall it from Windows Installed apps first (this may require administrator approval), then run this per-user installer. Your settings will be kept." />
 
     <Icon Id="GoBoard.exe" SourceFile="$(var.PublishDir)GoBoard.exe" />
     <Property Id="ARPPRODUCTICON" Value="GoBoard.exe" />
@@ -43,11 +51,13 @@
     <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Open GoBoard from the Start menu. VR mode requires SteamVR and a connected headset." />
 
     <Property Id="INSTALLFOLDER" Secure="yes">
-      <RegistrySearch Id="PreviousInstallFolder" Root="HKLM" Key="Software\GoBoard"
+      <RegistrySearch Id="PreviousInstallFolder" Root="HKCU" Key="Software\GoBoard"
                       Name="InstallFolder" Type="raw" Bitness="always64" />
     </Property>
-    <StandardDirectory Id="ProgramFiles64Folder">
-      <Directory Id="INSTALLFOLDER" Name="GoBoard" />
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="UserProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="GoBoard" />
+      </Directory>
     </StandardDirectory>
     <StandardDirectory Id="ProgramMenuFolder">
       <Directory Id="GoBoardMenuFolder" Name="GoBoard" />
@@ -55,24 +65,23 @@
 
     <Feature Id="GoBoard" Title="GoBoard" Level="1">
       <Component Directory="INSTALLFOLDER" Id="InstallationLocation" Guid="*">
-        <RegistryValue Root="HKLM" Key="Software\GoBoard" Name="InstallFolder"
+        <RegistryValue Root="HKCU" Key="Software\GoBoard" Name="InstallFolder"
                        Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+        <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
+        <RemoveFolder Id="RemoveEmptyUserPrograms" Directory="UserProgramsFolder" On="uninstall" />
       </Component>
-      <Component Directory="INSTALLFOLDER" Id="GoBoardExecutable" Guid="*">
-        <File Id="GoBoardExe" Source="$(var.PublishDir)GoBoard.exe" KeyPath="yes">
-          <Shortcut Id="VrShortcut" Directory="GoBoardMenuFolder" Name="GoBoard VR"
-                    Advertise="yes" WorkingDirectory="INSTALLFOLDER" Icon="GoBoard.exe" />
-          <Shortcut Id="DesktopShortcut" Directory="GoBoardMenuFolder" Name="GoBoard Desktop"
-                    Arguments="--desktop" Advertise="yes" WorkingDirectory="INSTALLFOLDER" Icon="GoBoard.exe" />
-          <Shortcut Id="SettingsShortcut" Directory="GoBoardMenuFolder" Name="GoBoard Settings"
-                    Arguments="--settings" Advertise="yes" WorkingDirectory="INSTALLFOLDER" Icon="GoBoard.exe" />
-        </File>
-        <RemoveFolder Id="RemoveGoBoardMenu" Directory="GoBoardMenuFolder" On="uninstall" />
+      <Component Directory="GoBoardMenuFolder" Id="GoBoardShortcuts" Guid="*">
+        <RegistryValue Root="HKCU" Key="Software\GoBoard" Name="Shortcuts"
+                       Type="integer" Value="1" KeyPath="yes" />
+        <Shortcut Id="VrShortcut" Name="GoBoard VR" Target="[INSTALLFOLDER]GoBoard.exe"
+                  WorkingDirectory="INSTALLFOLDER" Icon="GoBoard.exe" />
+        <Shortcut Id="DesktopShortcut" Name="GoBoard Desktop" Target="[INSTALLFOLDER]GoBoard.exe"
+                  Arguments="--desktop" WorkingDirectory="INSTALLFOLDER" Icon="GoBoard.exe" />
+        <Shortcut Id="SettingsShortcut" Name="GoBoard Settings" Target="[INSTALLFOLDER]GoBoard.exe"
+                  Arguments="--settings" WorkingDirectory="INSTALLFOLDER" Icon="GoBoard.exe" />
+        <RemoveFolder Id="RemoveGoBoardMenu" On="uninstall" />
       </Component>
-      <Files Directory="INSTALLFOLDER" Include="$(var.PublishDir)**">
-        <Exclude Files="$(var.PublishDir)GoBoard.exe" />
-        <Exclude Files="$(var.PublishDir)**\*.pdb" />
-      </Files>
+      <ComponentGroupRef Id="PublishedFiles" />
     </Feature>
 
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
