@@ -4,7 +4,7 @@ using Valve.VR;
 
 namespace GoBoard.Vr;
 
-internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong handle, GrabHandle grab)
+internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong handle, GrabHandle grab, ResizeHandle resize)
 {
     // SteamVR's dashboard bar overlay key is not a public SDK contract. Keep this
     // compatibility dependency in one place; fail visibly if it disappears.
@@ -32,13 +32,19 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         ulong anchor = 0;
         var scale = new HmdVector2_t();
         var rawParent = new HmdMatrix34_t();
-        if (!overlay.IsDashboardVisible()) { grab.Update(false, default); SetVisible(false); return false; }
+        if (!overlay.IsDashboardVisible())
+        {
+            grab.Update(false, default); resize.Update(false, default);
+            SetScale(resize.Scale); SetVisible(false); return false;
+        }
         if (overlay.FindOverlay(DashboardKey, ref anchor) != EVROverlayError.None ||
             overlay.GetOverlayMouseScale(anchor, ref scale) != EVROverlayError.None ||
             overlay.GetTransformForOverlayCoordinates(anchor, Origin, new HmdVector2_t { v0 = scale.v0 / 2, v1 = 0 }, ref rawParent) != EVROverlayError.None ||
             !OpenVrPose.TryRigid(rawParent, out var parent))
         {
             grab.Update(false, default);
+            resize.Update(false, default);
+            SetScale(resize.Scale);
             SetVisible(false);
             if (!warned) Console.Error.WriteLine($"Waiting for the SteamVR dashboard anchor ({DashboardKey}). Open the SteamVR menu; a changed/legacy dashboard may be unsupported.");
             warned = true;
@@ -52,13 +58,17 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         }
 
         var update = pose.Update(parent);
-        var dragged = grab.Update(true, update.World);
+        // An existing resize owns the interaction. For simultaneous fresh presses,
+        // moving wins this frame and the resize queue is drained without capture.
+        var dragged = grab.Update(true, update.World, interactive: !resize.Active);
         if (dragged.HasValue)
         {
             pose.SetWorld(parent, dragged.Value);
             var dragUpdate = pose.Update(parent);
             update = (dragUpdate.World, update.Write || dragUpdate.Write);
         }
+        resize.Update(true, update.World, canStart: grab.ActiveGrab == null);
+        SetScale(resize.Scale);
         if (grab.ActiveGrab != null)
         {
             // Bind once per grab. SteamVR now tracks the controller at compositor
@@ -69,6 +79,8 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(panel, grab.Controller, ref relative), "Attach panel to controller");
                 var barRelative = OpenVrPose.ToOpenVr(OverlayGeometry.GrabFromScaledPanel(panelScale) * grab.ActiveGrab.ControllerOffset);
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(handle, grab.Controller, ref barRelative), "Attach handle to controller");
+                var resizeRelative = OpenVrPose.ToOpenVr(OverlayGeometry.ResizeFromScaledPanel(panelScale) * grab.ActiveGrab.ControllerOffset);
+                Check(overlay.SetOverlayTransformTrackedDeviceRelative(resize.Handle, grab.Controller, ref resizeRelative), "Attach resize handle to controller");
                 boundGrab = grab.ActiveGrab;
                 Console.WriteLine($"SteamVR now tracks the held panel directly on controller {grab.Controller}; no app smoothing.");
             }
@@ -79,6 +91,8 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
             Check(overlay.SetOverlayTransformAbsolute(panel, Origin, ref raw), "Follow dashboard pose");
             var bar = OpenVrPose.ToOpenVr(OverlayGeometry.GrabFromScaledPanel(panelScale) * update.World);
             Check(overlay.SetOverlayTransformAbsolute(handle, Origin, ref bar), "Place grab handle");
+            var corner = OpenVrPose.ToOpenVr(OverlayGeometry.ResizeFromScaledPanel(panelScale) * update.World);
+            Check(overlay.SetOverlayTransformAbsolute(resize.Handle, Origin, ref corner), "Place resize handle");
             boundGrab = null;
         }
         SetVisible(true);
@@ -91,6 +105,7 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         if (value == visible) return;
         Check(value ? overlay.ShowOverlay(panel) : overlay.HideOverlay(panel), "Set panel visibility");
         Check(value ? overlay.ShowOverlay(handle) : overlay.HideOverlay(handle), "Set grab handle visibility");
+        Check(value ? overlay.ShowOverlay(resize.Handle) : overlay.HideOverlay(resize.Handle), "Set resize handle visibility");
         visible = value;
         Console.WriteLine($"Separate panel visible: {value}.");
     }

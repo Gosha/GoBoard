@@ -18,7 +18,7 @@ From the repository root in PowerShell:
 .\start-goboard.ps1
 ```
 
-Open the SteamVR dashboard, focus a text field in Desktop, then point at keys and pull the trigger to type. Drag the line beneath the keyboard to reposition it.
+Open the SteamVR dashboard, focus a text field in Desktop, then point at keys and pull the trigger to type. Drag the line beneath the keyboard to reposition it. Hold the trigger on the small bottom-right corner grip and drag to resize around the keyboard center (50–150%); release to save the size. Typing pauses while resizing.
 
 For a complete desktop application without SteamVR:
 

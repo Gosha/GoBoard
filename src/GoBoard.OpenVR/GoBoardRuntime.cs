@@ -132,9 +132,10 @@ public static int Run(string[] args)
         Check(overlay.SetOverlayFlag(grabHandle, VROverlayFlags.MultiCursor, true), "Enable both grab pointers");
         var grab = new GrabHandle(system, overlay, grabHandle, graphics);
         grab.Update(false, default);
-        var follower = new DashboardFollower(overlay, handle, grabHandle, grab);
-        using var keyboard = new KeyboardOverlay(system, overlay, handle, graphics);
         var settings = new SettingsStore();
+        using var resize = new ResizeHandle(system, overlay, graphics, settings);
+        var follower = new DashboardFollower(overlay, handle, grabHandle, grab, resize);
+        using var keyboard = new KeyboardOverlay(system, overlay, handle, graphics);
         var appliedSettings = settings.Current;
         follower.SetScale(appliedSettings.Scale);
         keyboard.ApplySettings(appliedSettings, false);
@@ -144,6 +145,7 @@ public static int Run(string[] args)
         Console.WriteLine($"Headset connected: {system.IsTrackedDeviceConnected(OpenVR.k_unTrackedDeviceIndex_Hmd)}.");
         Console.WriteLine("Open the SteamVR menu: GoBoard appears separately below it and follows dashboard movement.");
         Console.WriteLine("Point at the line below GoBoard and hold the trigger to move it. Release to keep its new dashboard-relative position.");
+        Console.WriteLine("Hold the bottom-right corner grip and drag to resize around the keyboard center (50–150%). Release to save.");
         Console.WriteLine("Open GoBoard Settings in the dashboard, or run GoBoard --settings on desktop. Ctrl+C or the stop script closes GoBoard.");
         Console.WriteLine($"Settings: {settings.FilePath}");
         Console.WriteLine("Focus a text field in SteamVR Desktop. Ctrl/Alt/AltGr/Shift: arm, lock, clear. Win: first click arms a shortcut; second taps Windows and clears.");
@@ -163,6 +165,8 @@ public static int Run(string[] args)
                     cancel.Cancel();
                 }
             }
+            // Do not process a resize release (and save it) after shutdown begins.
+            if (cancel.IsCancellationRequested) break;
             if (timer.Elapsed.TotalSeconds >= nextSettingsRead)
             {
                 settings.Reload();
@@ -174,12 +178,11 @@ public static int Run(string[] args)
             if (appliedSettings != settings.Current)
             {
                 keyboard.ApplySettings(settings.Current, appliedSettings.SizePercent != settings.Current.SizePercent);
-                follower.SetScale(settings.Current.Scale);
                 appliedSettings = settings.Current;
             }
             var visible = follower.Update();
             keyboard.BeginFrame(visible && !cancel.IsCancellationRequested,
-                grab.ActiveGrab != null ? grab.Controller : null);
+                grab.ActiveGrab != null ? grab.Controller : null, resize.Active);
             while (overlay.PollNextOverlayEvent(handle, ref vrEvent, eventSize))
             {
                 var type = (EVREventType)vrEvent.eventType;

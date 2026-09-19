@@ -13,7 +13,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private KeyboardState keyboard;
     private readonly OverlayPointers pointers = new();
     private readonly TrackedDevicePose_t[] devices = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
-    private bool enabled, faulted;
+    private bool enabled, faulted, resizing;
     private string theme = BoardThemes.Default;
     private EffectSettings effects = new();
     private readonly AnimatedKeyboardRenderer renderer = new();
@@ -47,8 +47,14 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         audio.Click();
     }
 
-    public void BeginFrame(bool active, uint? grabbingController = null)
+    public void BeginFrame(bool active, uint? grabbingController = null, bool isResizing = false)
     {
+        if (resizing != isResizing)
+        {
+            resizing = isResizing;
+            Cancel();
+            State.SetResizing(resizing, Now);
+        }
         var target = WindowsKeyboard.Foreground();
         if (target != output.Target)
         {

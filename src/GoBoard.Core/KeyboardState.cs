@@ -48,6 +48,16 @@ internal sealed class KeyboardState(IKeySink sink)
     private readonly Dictionary<ushort, HeldKey> held = new();
     private readonly Dictionary<ushort, ModifierMode> modifiers = new();
     private uint? grabOwner;
+    private bool resizing;
+    private double resizeWatermark = double.NegativeInfinity;
+    public void SetResizing(bool value, double now)
+    {
+        if (resizing == value) return;
+        resizing = value;
+        resizeWatermark = now;
+        Cancel(now);
+    }
+    private bool ResizeBlocks(double time) => resizing || time <= resizeWatermark + .001;
     private readonly Dictionary<uint, double> grabWatermarks = new();
     public void SetGrabOwner(uint? device, double now)
     {
@@ -86,6 +96,7 @@ internal sealed class KeyboardState(IKeySink sink)
 
     public void Enter(uint cursor, uint? device, double time)
     {
+        if (ResizeBlocks(time)) return;
         if (device.HasValue && (device == grabOwner || PredatesGrabRelease(device.Value, time))) return;
         var p = Get(cursor);
         if (time < p.Entered || time < p.Released) return;
@@ -110,6 +121,7 @@ internal sealed class KeyboardState(IKeySink sink)
 
     public void Move(uint cursor, uint? device, float x, float y)
     {
+        if (resizing) return;
         var p = Get(cursor);
         if (!p.Focused || Mismatch(p.Device, device)) return;
         Position(p, x, y);
@@ -121,6 +133,7 @@ internal sealed class KeyboardState(IKeySink sink)
 
     public void ObserveMotion(uint cursor, uint device, float x, float y, double time, double now, bool hoverTarget)
     {
+        if (ResizeBlocks(time)) return;
         if (device == grabOwner || PredatesGrabRelease(device, time)) return;
         var p = Get(cursor);
         if (!hoverTarget || !double.IsFinite(time) || now - time > .20 || time > now + .001 ||
@@ -140,6 +153,7 @@ internal sealed class KeyboardState(IKeySink sink)
 
     public bool Press(uint cursor, uint? device, float x, float y, double time, double now)
     {
+        if (ResizeBlocks(time)) return false;
         var p = Get(cursor);
         var source = device ?? p.Device;
         if (source.HasValue && (source == grabOwner || PredatesGrabRelease(source.Value, time))) return false;

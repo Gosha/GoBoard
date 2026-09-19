@@ -23,14 +23,23 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
     private int drawnState = -1;
     private readonly Dictionary<(uint Slot, uint Device), double> lastMotionLog = new();
     private Matrix4x4? displayedPanel;
+    private bool interactiveLastFrame;
+    private double acceptAfter;
     private readonly float displayFrequency = ReadDisplayProperty(system, ETrackedDeviceProperty.Prop_DisplayFrequency_Float);
     private readonly float vsyncToPhotons = ReadDisplayProperty(system, ETrackedDeviceProperty.Prop_SecondsFromVsyncToPhotons_Float);
     private readonly bool traceGrab = Environment.GetEnvironmentVariable("GOBOARD_TRACE_GRAB") == "1";
     public GrabPose ActiveGrab => grab;
     public uint Controller => owner;
 
-    public Matrix4x4? Update(bool visible, Matrix4x4 panel)
+    public Matrix4x4? Update(bool visible, Matrix4x4 panel, bool interactive = true)
     {
+        interactive &= visible;
+        if (interactive != interactiveLastFrame)
+        {
+            acceptAfter = Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
+            interactiveLastFrame = interactive;
+        }
+        if (!interactive) { End("input suspended"); input.Reset(); }
         if (visible) system.GetDeviceToAbsoluteTrackingPose(ETrackingUniverseOrigin.TrackingUniverseStanding, PredictionSeconds(), devices);
         else { End("dashboard hidden"); input.Reset(); displayedPanel = null; }
 
@@ -40,11 +49,12 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
         {
             var type = (EVREventType)e.eventType;
             if (type == EVREventType.VREvent_ImageFailed) throw new InvalidOperationException("SteamVR failed to load the grab handle.");
-            if (!visible) continue;
+            if (!interactive) continue;
             if (type is not (EVREventType.VREvent_FocusEnter or EVREventType.VREvent_FocusLeave or
                 EVREventType.VREvent_MouseMove or EVREventType.VREvent_MouseButtonDown or EVREventType.VREvent_MouseButtonUp)) continue;
             var now = Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
             var time = now - e.eventAgeSeconds;
+            if (!double.IsFinite(time) || time <= acceptAfter) continue;
             var device = EventDevice(e);
             var focusEvent = type is EVREventType.VREvent_FocusEnter or EVREventType.VREvent_FocusLeave;
             if (focusEvent) device ??= FocusDevice(e.data.overlay.devicePath);
@@ -121,7 +131,7 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
                 }
             }
         }
-        var state = grab != null ? 2 : input.HasFocus && visible ? 1 : 0;
+        var state = grab != null ? 2 : input.HasFocus && interactive ? 1 : 0;
         if (drawnState != state)
         {
             using var bitmap = GrabHandleRenderer.Render(state);

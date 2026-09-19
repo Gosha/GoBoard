@@ -2,9 +2,11 @@ namespace GoBoard.Core;
 
 // Pure pointer ownership rules. The host drains the entire event queue before
 // committing Active to a controller transform, so a queued release wins.
-internal sealed class GrabInput
+internal sealed class GrabInput(float width = OverlayGeometry.GrabWidth,
+    float height = OverlayGeometry.GrabHeight, bool retainCaptureOnLeave = false,
+    Func<float, float, bool> hitTest = null)
 {
-    internal sealed record Press(uint Cursor, uint Device, double Time);
+    internal sealed record Press(uint Cursor, uint Device, double Time, float X, float Y);
     private sealed class Pointer
     {
         public bool Focused;
@@ -18,7 +20,7 @@ internal sealed class GrabInput
     public void Enter(uint cursor, uint? device, double time)
     {
         var p = Get(cursor);
-        if (time < p.Entered || time < p.LastRelease) return;
+        if (!double.IsFinite(time) || time < p.Entered || time < p.LastRelease) return;
         if (Active?.Cursor == cursor && device.HasValue && Active.Device != device.Value) Cancel();
         p.Focused = true;
         p.Device = device;
@@ -28,10 +30,10 @@ internal sealed class GrabInput
     public void Leave(uint cursor, uint? device, double time)
     {
         var p = Get(cursor);
-        if (time < p.Entered || Mismatch(p.Device, device)) return;
+        if (!double.IsFinite(time) || time < p.Entered || Mismatch(p.Device, device)) return;
         p.Focused = false;
         p.LastRelease = Math.Max(p.LastRelease, time);
-        if (Active?.Cursor == cursor) Cancel();
+        if (Active?.Cursor == cursor && !retainCaptureOnLeave) Cancel();
     }
 
     public string Down(uint cursor, uint? device, float x, float y, double time, double now)
@@ -44,17 +46,18 @@ internal sealed class GrabInput
         if (Mismatch(p.Device, device)) return "controller does not own this pointer";
         var source = device ?? p.Device;
         if (!source.HasValue) return "unknown controller";
-        if (!float.IsFinite(x) || !float.IsFinite(y) || x < 0 || y < 0 || x > OverlayGeometry.GrabWidth || y > OverlayGeometry.GrabHeight)
+        if (!float.IsFinite(x) || !float.IsFinite(y) || x < 0 || y < 0 || x > width || y > height ||
+            (hitTest != null && !hitTest(x, y)))
             return "press outside handle target";
         p.Device = source;
-        Active = new Press(cursor, source.Value, time);
+        Active = new Press(cursor, source.Value, time, x, y);
         return null;
     }
 
     public void Up(uint cursor, uint? device, double time)
     {
         var p = Get(cursor);
-        if (Mismatch(p.Device, device)) return;
+        if (!double.IsFinite(time) || Mismatch(p.Device, device)) return;
         p.LastRelease = Math.Max(p.LastRelease, time);
         if (Active?.Cursor == cursor && !Mismatch(Active.Device, device) && time + 0.001 >= Active.Time) Cancel();
     }
@@ -64,7 +67,8 @@ internal sealed class GrabInput
         var p = Get(cursor);
         if (!hoverTarget || !double.IsFinite(time) || now - time > .20 || time > now + .001 ||
             time < p.Entered || time <= p.LastRelease + .001 ||
-            !float.IsFinite(x) || !float.IsFinite(y) || x < 0 || y < 0 || x > OverlayGeometry.GrabWidth || y > OverlayGeometry.GrabHeight) return;
+            !float.IsFinite(x) || !float.IsFinite(y) || x < 0 || y < 0 || x > width || y > height ||
+            (hitTest != null && !hitTest(x, y))) return;
         if (!p.Focused) Enter(cursor, device, time);
     }
 

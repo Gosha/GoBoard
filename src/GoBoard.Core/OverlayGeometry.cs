@@ -15,6 +15,26 @@ internal static class OverlayGeometry
     public const int GrabWidth = 180;
     public const int GrabHeight = 60;
     public const float GrabWidthInMeters = 0.18f;
+    public const int ResizeSize = 70;
+    public const float ResizeSizeInMeters = 0.07f;
+    public const float ResizeCornerSpacingInMeters = 0.006f;
+    // Offset slightly outward from the corner while keeping the grip close to both edges.
+    public static Matrix4x4 ResizeFromScaledPanel(float scale) =>
+        Matrix4x4.CreateTranslation(PanelWidthInMeters * scale / 2 + ResizeCornerSpacingInMeters,
+            -(PanelHeightInMeters * scale / 2 + ResizeCornerSpacingInMeters), 0.002f);
+
+    // OpenVR mouse coordinates start at the bottom left. Exclude the upper-left
+    // quadrant over the keyboard so the transparent overlay cannot steal key clicks.
+    public static readonly IReadOnlyList<KeyBounds> ResizeTargets =
+        [new(ResizeSize / 2, 0, ResizeSize / 2, ResizeSize), new(0, 0, ResizeSize / 2, ResizeSize / 2)];
+    // Native intersection masks use top-left texture coordinates, unlike mouse events.
+    public static readonly IReadOnlyList<KeyBounds> ResizeMaskTargets = ResizeTargets
+        .Select(r => r with { Y = ResizeSize - r.Y - r.Height }).ToArray();
+    public static bool ResizeHit(float x, float y) => ResizeTargets.Any(r => r.Contains(x, y));
+
+    public static Vector3 ResizePoint(float scale, float x, float y) =>
+        Vector3.Transform(new Vector3((x / ResizeSize - .5f) * ResizeSizeInMeters,
+            (y / ResizeSize - .5f) * ResizeSizeInMeters, 0), ResizeFromScaledPanel(scale));
     public static readonly Matrix4x4 GrabFromPanel =
         GrabFromScaledPanel(1);
 
