@@ -5,7 +5,7 @@
 - [x] Make sure keys are always sent, even when no textbox is selected. For instance, (double) pressing the windows key while the settings window is open, should open the windows menu.
 - [x] Spacing looks odd; spacing between keys is smaller than above/below. Let's make it consistent. Prefer smaller margins
 - [x] Implement automatic Windows keyboard layouts (see [implementation and validation](docs/automatic-keyboard-layouts.md)).
-- [ ] Auto-hide/show when steamvr native keyboard is toggled
+- [x] Hide GoBoard while the SteamVR native keyboard is visible and restore it when closed (see [behavior and validation](docs/development.md#native-steamvr-keyboard-visibility)).
 - [x] Investigate and fix stale Notepad layout labels: follow the focused editor thread's HKL instead of the frame thread's retained language (see [findings and validation](docs/automatic-keyboard-layouts.md#following-the-focused-editor)).
 - [x] Programmable keys in a floating left palette with an expand/collapse button, 1–4 columns and 1–5 rows, and layout-aware preset/custom shortcut editing on desktop and in VR.
   - [x] Ctrl-Win-Left/Right for switching virtual desktops

@@ -35,12 +35,12 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         pose.Reset();
     }
 
-    public bool Update(bool externalGrab = false)
+    public bool Update(bool externalGrab = false, bool nativeKeyboardVisible = false)
     {
         ulong anchor = 0;
         var scale = new HmdVector2_t();
         var rawParent = new HmdMatrix34_t();
-        if (!overlay.IsDashboardVisible())
+        if (nativeKeyboardVisible || !overlay.IsDashboardVisible())
         {
             grab.Update(false, default); resize.Update(false, default);
             SetScale(resize.Scale); SetVisible(false); return false;
