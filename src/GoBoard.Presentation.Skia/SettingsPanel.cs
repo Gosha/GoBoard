@@ -1,3 +1,4 @@
+using System.Reflection;
 using GoBoard.Core;
 using SkiaSharp;
 
@@ -5,6 +6,10 @@ namespace GoBoard.Presentation.Skia;
 
 internal static class SettingsPanel
 {
+    // Packaging embeds the readable release version; assembly/file versions use MSI's numeric mapping.
+    private static readonly string VersionLabel = "v" + (typeof(SettingsPanel).Assembly
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "unknown");
+
     public static SKBitmap Render(BoardSettings settings, SettingsPointerState pointers = null, string error = null, bool desktopMode = false, AutostartState autostart = null)
     {
         autostart ??= AutostartState.Preview;
@@ -17,6 +22,7 @@ internal static class SettingsPanel
         using var heading = new SKFont(face, 38);
         using var label = new SKFont(face, 25);
         using var small = new SKFont(face, 19);
+        using var version = new SKFont(face, 16);
         var text = new SKColor(0xf1, 0xf6, 0xfc);
         var accent = new SKColor(0x66, 0xc0, 0xf4);
         void Text(string value, float x, float y, SKFont font, SKColor color)
@@ -25,6 +31,7 @@ internal static class SettingsPanel
             canvas.DrawText(value, x, y, SKTextAlign.Left, font, paint);
         }
         Text("GoBoard", 64, 72, heading, text);
+        Text(VersionLabel, 64, 904, version, new SKColor(0x81, 0x90, 0x9e));
         var effectsPage = pointers?.Page == SettingsPage.Effects;
         var shortcutsPage = pointers?.Page is SettingsPage.Shortcuts or SettingsPage.ShortcutKey or SettingsPage.ShortcutPreset;
         var choosingPreset = pointers?.Page == SettingsPage.ShortcutPreset;
