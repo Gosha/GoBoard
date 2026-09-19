@@ -4,40 +4,111 @@ using GoBoard.Core;
 
 namespace GoBoard.Platform.Windows;
 
-// The auditioned "Cushioned wood" sound, with "Soft low thud" retained.
-// Async playback keeps the VR
-// loop moving; the pinned WAVE buffer stays alive until playback is stopped.
+// Called on the host's input/UI thread. Async playback keeps the VR loop moving;
+// every pinned WAVE buffer stays alive until this process's playback is stopped.
 internal sealed class KeyAudio : IDisposable
 {
-    private GCHandle downWave;
+    private GCHandle[] downWaves = [];
     private GCHandle upWave;
-    private bool warned;
+    private int nextVariant;
+    private bool warned, warnedSample, disposed;
     private BoardSettings settings;
+    private readonly Func<nint, uint, bool> play;
+    private readonly Func<string, Stream> openSample;
+    private readonly Func<byte[][], IPairedSamplePlayer> createPairs;
+    private readonly Func<int> randomPitchStep;
+    private IPairedSamplePlayer pairs;
+    private readonly Dictionary<uint, int> heldPairs = new(64);
 
-    public KeyAudio()
+    public KeyAudio(Func<nint, uint, bool> playback = null, Func<string, Stream> openSample = null,
+        Func<byte[][], IPairedSamplePlayer> createPairs = null, Func<int> randomPitchStep = null)
     {
+        play = playback ?? ((wave, flags) => PlaySound(wave, 0, flags));
+        this.openSample = openSample;
+        this.createPairs = createPairs ?? (waves => new PairedSamplePlayer(waves));
+        this.randomPitchStep = randomPitchStep ?? (() => Random.Shared.Next(-2, 3));
         Apply(BoardSettings.Defaults);
     }
 
     public void Apply(BoardSettings next)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
         next = next.Normalize();
         if (settings != null && settings.Sound == next.Sound && settings.SoundEnabled == next.SoundEnabled &&
             settings.VolumePercent == next.VolumePercent) return;
-        Dispose(); // Stop playback before replacing pinned wave data.
-        settings = next;
-        if (!next.SoundEnabled || next.VolumePercent == 0) return;
-        downWave = GCHandle.Alloc(CreateClick(false, next.Sound, next.VolumePercent / 100f), GCHandleType.Pinned);
-        upWave = GCHandle.Alloc(CreateClick(true, next.Sound, next.VolumePercent / 100f), GCHandleType.Pinned);
+        ReleaseBuffers();
+        settings = null;
+        nextVariant = 0;
+        if (!next.SoundEnabled || next.VolumePercent == 0) { settings = next; return; }
+        var volume = next.VolumePercent / 100f;
+        var sampled = KeySounds.IsSampled(next.Sound);
+        byte[][] waves;
+        if (sampled)
+        {
+            try
+            {
+                if (KeySounds.HasPairedRelease(next.Sound))
+                {
+                    var bank = new byte[12][];
+                    for (var i = 0; i < 4; i++)
+                    {
+                        bank[i] = SampledKeySounds.Load(next.Sound, i, volume, openSample);
+                        bank[i + 4] = SampledKeySounds.Load(next.Sound, i, volume, openSample, released: true);
+                        bank[i + 8] = PairPreview(bank[i], bank[i + 4]);
+                    }
+                    pairs = createPairs(next.Sound == KeySound.CherryMxBlue ? bank : PairedPitch.Build(bank));
+                    settings = next;
+                    return;
+                }
+                waves = new byte[SampledKeySounds.Variants][];
+                for (var i = 0; i < waves.Length; i++)
+                    waves[i] = SampledKeySounds.Load(next.Sound, i, volume, openSample);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+            {
+                // Load the whole bank before pinning; a partial load cannot leak handles.
+                if (!warnedSample)
+                {
+                    warnedSample = true;
+                    Console.Error.WriteLine($"Keyboard samples unavailable; using Cushioned wood: {ex.Message}");
+                }
+                waves = [CreateClick(false, KeySound.CushionedWood, volume)];
+            }
+        }
+        else waves = [CreateClick(false, next.Sound, volume)];
+        try
+        {
+            downWaves = new GCHandle[waves.Length];
+            for (var i = 0; i < waves.Length; i++) downWaves[i] = GCHandle.Alloc(waves[i], GCHandleType.Pinned);
+            // Recorded cuts can contain both edges: key-up must not play or stop audio.
+            if (!sampled) upWave = GCHandle.Alloc(CreateClick(true, next.Sound, volume), GCHandleType.Pinned);
+            settings = next;
+        }
+        catch { ReleaseBuffers(); throw; }
     }
 
-    public bool Click(bool released = false)
+    public bool Click(bool released = false, uint pointerId = 0, KeyboardKey key = null)
     {
-        var wave = released ? upWave : downWave;
+        if (disposed) return false;
+        if (pairs != null)
+        {
+            if (released) return heldPairs.Remove(pointerId, out var variant) && pairs.Play(variant + 4);
+            if (heldPairs.ContainsKey(pointerId)) return false;
+            var blue = settings.Sound == KeySound.CherryMxBlue;
+            var large = blue && KeySounds.UsesLargeKeySound(key);
+            var pitch = blue ? 0 : Math.Clamp(KeySounds.BasePitchSteps(key) + Math.Clamp(randomPitchStep(), -2, 2), PairedPitch.Minimum, PairedPitch.Maximum);
+            var selected = large ? 3 : PairedPitch.PressIndex(nextVariant, pitch);
+            heldPairs.Add(pointerId, selected);
+            if (!large) nextVariant = (nextVariant + 1) % (blue ? 3 : 4);
+            return pairs.Play(selected);
+        }
+        if (downWaves.Length == 0) return false;
+        var wave = released ? upWave : downWaves[nextVariant];
         if (!wave.IsAllocated) return false;
+        if (!released) nextVariant = (nextVariant + 1) % downWaves.Length;
         // ASYNC | NODEFAULT | MEMORY. Rapid presses replace the previous click
         // rather than building an audio queue. Other applications are unaffected.
-        var played = PlaySound(wave.AddrOfPinnedObject(), 0, 0x0001 | 0x0002 | 0x0004);
+        var played = play(wave.AddrOfPinnedObject(), 0x0001 | 0x0002 | 0x0004);
         if (!played && !warned)
         {
             warned = true;
@@ -46,8 +117,10 @@ internal sealed class KeyAudio : IDisposable
         return played;
     }
 
-    internal static byte[] CreateClick(bool released, KeySound sound = KeySound.CushionedWood, float volume = 1)
+    internal static byte[] CreateClick(bool released, KeySound sound = KeySound.CushionedWood, float volume = 1, int variant = 0)
     {
+        if (KeySounds.IsSampled(sound)) return released && !KeySounds.HasPairedRelease(sound) ? [] : SampledKeySounds.Load(sound, variant, volume, released: released);
+        volume = float.IsFinite(volume) ? Math.Clamp(volume, 0, 1) : 0;
         const int rate = 48000;
         var samples = released ? 1680 : 2880; // 35/60 ms, mono 16-bit PCM.
         var thud = sound == KeySound.SoftLowThud;
@@ -91,10 +164,49 @@ internal sealed class KeyAudio : IDisposable
 
     public void Dispose()
     {
-        if (!downWave.IsAllocated && !upWave.IsAllocated) return;
-        PlaySound(0, 0, 0); // Stop this process's playback before unpinning.
-        if (downWave.IsAllocated) downWave.Free();
+        if (disposed) return;
+        ReleaseBuffers();
+        disposed = true;
+    }
+
+    private void ReleaseBuffers()
+    {
+        heldPairs.Clear();
+        pairs?.Dispose();
+        pairs = null;
+        if (downWaves.Length == 0 && !upWave.IsAllocated) return;
+        play(0, 0); // Synchronous stop before releasing any buffer referenced by native playback.
+        foreach (var wave in downWaves) if (wave.IsAllocated) wave.Free();
+        downWaves = [];
         if (upWave.IsAllocated) upWave.Free();
+    }
+
+    public bool Preview()
+    {
+        if (disposed) return false;
+        if (pairs == null) return Click();
+        var variant = nextVariant;
+        nextVariant = (nextVariant + 1) % (settings.Sound == KeySound.CherryMxBlue ? 3 : 4);
+        return pairs.Play(variant + 8);
+    }
+
+    public void Cancel(uint? pointerId = null)
+    {
+        if (pointerId.HasValue) heldPairs.Remove(pointerId.Value);
+        else { heldPairs.Clear(); pairs?.Stop(); }
+    }
+
+    private static byte[] PairPreview(byte[] press, byte[] release)
+    {
+        const int releaseOffset = 44100 * 2 / 5; // Saved preview hold: 200 ms.
+        var length = Math.Max(press.Length - 44, releaseOffset + release.Length - 44);
+        var wave = new byte[44 + length];
+        press.AsSpan(0, 44).CopyTo(wave);
+        BitConverter.GetBytes(wave.Length - 8).CopyTo(wave, 4);
+        BitConverter.GetBytes(length).CopyTo(wave, 40);
+        press.AsSpan(44).CopyTo(wave.AsSpan(44));
+        release.AsSpan(44).CopyTo(wave.AsSpan(44 + releaseOffset));
+        return wave;
     }
 
     [DllImport("winmm.dll", EntryPoint = "PlaySoundW")]

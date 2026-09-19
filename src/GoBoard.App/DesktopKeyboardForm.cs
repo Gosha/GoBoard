@@ -179,7 +179,10 @@ internal sealed class DesktopKeyboardForm : Form
         {
             keyboard.Enter(0, 0, now);
             if (keyboard.Press(0, 0, point.X, point.Y, now, now))
-            { keyCapture = true; Capture = true; audio.Click(); }
+            {
+                keyCapture = true; Capture = true;
+                audio.Click(key: KeyboardLayout.HitOpenVr(point.X, point.Y, keyboard.Layout.Keys));
+            }
         }
         catch (Exception ex) { Failed(ex); }
         RenderFrame();
@@ -215,6 +218,7 @@ internal sealed class DesktopKeyboardForm : Form
 
     private void CancelKeyboard()
     {
+        audio.Cancel();
         keyboard.Cancel(Now);
         keyCapture = false;
         try { output.ReleaseAll(); }

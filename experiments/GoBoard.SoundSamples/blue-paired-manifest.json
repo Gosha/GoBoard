@@ -1,0 +1,162 @@
+{
+  "preset": "CherryMxBlue",
+  "license": "CC0 1.0",
+  "variants": [
+    {
+      "role": "regular",
+      "favoriteId": "84c8cf2d-3459-4f01-bfcf-5616f18e5e43",
+      "sampleId": "BO3",
+      "source": "https://freesound.org/people/SamsterBirdies/sounds/489424/",
+      "sourceHash": "687ef4711469633d64299e87c8783956786edf4f20a46a4542d5e7a9f8fcecfd",
+      "contextHash": "2ba9b908fd4e7e6c123e7f1b385686d5d2a593c49f729eef06a1d3d5358fbc5f",
+      "settings": {
+        "start": 76,
+        "end": 232,
+        "fade": 6,
+        "pitch": 0,
+        "volume": 65,
+        "match": true,
+        "overlap": true,
+        "paired": true,
+        "split": 181,
+        "releaseStart": 181,
+        "releaseGain": 70,
+        "holdMs": 200
+      },
+      "gain": 0.23445874649624393,
+      "outputs": [
+        {
+          "file": "press-1.wav",
+          "sha256": "3b80b4df519ad8536e142df726c5f9861e34144abb04d92c087bcc200f436ea2",
+          "frames": 4630,
+          "sourceStartSeconds": 44.65451247165533,
+          "sourceEndSeconds": 44.75950113378685
+        },
+        {
+          "file": "release-1.wav",
+          "sha256": "2367854ae94cec20c9e460cad7942013d2ebbf409a5f33dd862fc4755b0ebed2",
+          "frames": 2249,
+          "sourceStartSeconds": 44.75950113378685,
+          "sourceEndSeconds": 44.81049886621315
+        }
+      ]
+    },
+    {
+      "role": "regular",
+      "favoriteId": "84da2ddc-6337-47bf-8d5b-4075c72f0084",
+      "sampleId": "B01",
+      "source": "https://freesound.org/people/SamsterBirdies/sounds/489424/",
+      "sourceHash": "687ef4711469633d64299e87c8783956786edf4f20a46a4542d5e7a9f8fcecfd",
+      "contextHash": "c350fcbacc2a529e3e153c17750922d1a75887804d835df3371d4520f0ee033a",
+      "settings": {
+        "start": 68,
+        "end": 266,
+        "fade": 6,
+        "pitch": 0,
+        "volume": 65,
+        "match": true,
+        "overlap": true,
+        "paired": true,
+        "split": 156,
+        "releaseStart": 156,
+        "releaseGain": 70,
+        "holdMs": 200
+      },
+      "gain": 0.21294530975030024,
+      "outputs": [
+        {
+          "file": "press-2.wav",
+          "sha256": "4b5af22a8ac54c88e0d15b40ae083bc915f27f9e0af95bcb2eda162496551836",
+          "frames": 3881,
+          "sourceStartSeconds": 10.628820861678003,
+          "sourceEndSeconds": 10.716825396825396
+        },
+        {
+          "file": "release-2.wav",
+          "sha256": "5a087b128b99b8b05b42144721db28ccffcdfb57d0e80408721c3abd475cf6d6",
+          "frames": 4851,
+          "sourceStartSeconds": 10.716825396825396,
+          "sourceEndSeconds": 10.826825396825395
+        }
+      ]
+    },
+    {
+      "role": "regular",
+      "favoriteId": "1e1eea5c-9ffd-48e9-ae7e-ce4dbea328b6",
+      "sampleId": "B03",
+      "source": "https://freesound.org/people/SamsterBirdies/sounds/489424/",
+      "sourceHash": "687ef4711469633d64299e87c8783956786edf4f20a46a4542d5e7a9f8fcecfd",
+      "contextHash": "d98aa7cb9819a5d58680cf6e9069eb8f7920e6eea9ed0d8764d52f64b7c0b628",
+      "settings": {
+        "start": 68,
+        "end": 280,
+        "fade": 6,
+        "pitch": 0,
+        "volume": 65,
+        "match": true,
+        "overlap": true,
+        "paired": true,
+        "split": 177,
+        "releaseStart": 177,
+        "releaseGain": 70,
+        "holdMs": 200
+      },
+      "gain": 0.2134067491084074,
+      "outputs": [
+        {
+          "file": "press-3.wav",
+          "sha256": "502ad39abe7b1ac3f3c48c68fe7b209a1b0e5bf488d0351cc25ef19a03da6ac9",
+          "frames": 4807,
+          "sourceStartSeconds": 42.67997732426304,
+          "sourceEndSeconds": 42.788979591836735
+        },
+        {
+          "file": "release-3.wav",
+          "sha256": "7ee9ce472d810b0fd23d12475de5f3015566900146b6e769f4380ca18fa7cf62",
+          "frames": 4542,
+          "sourceStartSeconds": 42.788979591836735,
+          "sourceEndSeconds": 42.89197278911565
+        }
+      ]
+    },
+    {
+      "role": "large-keys",
+      "favoriteId": "309aac15-87dd-4848-8079-3ad4fb7da371",
+      "sampleId": "B07",
+      "source": "https://freesound.org/people/SamsterBirdies/sounds/489424/",
+      "sourceHash": "687ef4711469633d64299e87c8783956786edf4f20a46a4542d5e7a9f8fcecfd",
+      "contextHash": "5cdb851361f0df8debcdd4be0848821cb532c8b013f782851acbcfe1cb684a74",
+      "settings": {
+        "start": 240,
+        "end": 454,
+        "fade": 6,
+        "pitch": 0,
+        "volume": 65,
+        "match": true,
+        "overlap": true,
+        "paired": true,
+        "split": 330,
+        "releaseStart": 330,
+        "releaseGain": 70,
+        "holdMs": 200
+      },
+      "gain": 0.4558896173795993,
+      "outputs": [
+        {
+          "file": "press-4.wav",
+          "sha256": "b5fd9f475e07615af5a469c34b4634a68b9297325ade546ffc5fdecaf81cb00f",
+          "frames": 3969,
+          "sourceStartSeconds": 71.51183673469387,
+          "sourceEndSeconds": 71.60183673469388
+        },
+        {
+          "file": "release-4.wav",
+          "sha256": "eeae35b272de98fd2fb018204070b3050aa686165fd649676b13a859a83dee7c",
+          "frames": 5468,
+          "sourceStartSeconds": 71.60183673469388,
+          "sourceEndSeconds": 71.72582766439909
+        }
+      ]
+    }
+  ]
+}

@@ -40,8 +40,18 @@ internal static class SettingsInputCheck
                 Click(SettingsAction.Geometry);
                 Require(store.Current.Geometry == (KeyboardGeometry)(((int)geometry + 1) % 3), "Arrangement selection");
                 Require(new SettingsStore(path).Current.Geometry == store.Current.Geometry, "Saved arrangement");
-                Click(SettingsAction.Thud);
-                Require(store.Current.Sound == KeySound.SoftLowThud, "Preset selection");
+                foreach (var sound in new[] { KeySound.SoftLowThud, KeySound.CherryMxBlue,
+                    KeySound.GateronYellowPairs, KeySound.CushionedWood })
+                {
+                    Click(SettingsAction.NextSound);
+                    Require(store.Current.Sound == sound, "Preset selection and wraparound");
+                    Require(new SettingsStore(path).Current.Sound == sound, "Saved sound preset");
+                }
+                Click(SettingsAction.PreviousSound);
+                Require(store.Current.Sound == KeySound.GateronYellowPairs, "Reverse preset wraparound");
+                Click(SettingsAction.PreviewSound);
+                Require(store.Current.Sound == KeySound.GateronYellowPairs, "Preview preserves selection");
+                Click(SettingsAction.NextSound);
                 Click(SettingsAction.SteamFlat);
                 Require(store.Current.Theme == BoardThemes.SteamFlat, "Flat theme selection");
                 Require(new SettingsStore(path).Current.Theme == BoardThemes.SteamFlat, "Saved theme selection");

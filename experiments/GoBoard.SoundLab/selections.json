@@ -1,0 +1,156 @@
+{
+  "cherry-mx-blue": {
+    "active": [
+      {
+        "id": "B01",
+        "startSeconds": 10.640816326530611,
+        "endSeconds": 10.781496598639455
+      },
+      {
+        "id": "B02",
+        "startSeconds": 27.49251700680272,
+        "endSeconds": 27.633197278911563
+      },
+      {
+        "id": "B03",
+        "startSeconds": 42.691972789115646,
+        "endSeconds": 43.04816326530612
+      },
+      {
+        "id": "B04",
+        "startSeconds": 59.04680272108843,
+        "endSeconds": 59.20843537414966
+      },
+      {
+        "id": "B05",
+        "startSeconds": 64.72190476190477,
+        "endSeconds": 65.01823129251702
+      },
+      {
+        "id": "B06",
+        "startSeconds": 66.34421768707483,
+        "endSeconds": 66.64054421768708
+      },
+      {
+        "id": "B07",
+        "startSeconds": 71.35183673469388,
+        "endSeconds": 71.66312925170068
+      },
+      {
+        "id": "B08",
+        "startSeconds": 88.46993197278911,
+        "endSeconds": 88.79319727891156
+      }
+    ],
+    "retired": []
+  },
+  "cherry-mx-clear": {
+    "active": [
+      {
+        "id": "C02",
+        "startSeconds": 2.0653061224489795,
+        "endSeconds": 2.484353741496599
+      },
+      {
+        "id": "C03",
+        "startSeconds": 11.990748299319728,
+        "endSeconds": 12.32
+      },
+      {
+        "id": "C04",
+        "startSeconds": 13.18204081632653,
+        "endSeconds": 13.496326530612246
+      },
+      {
+        "id": "C05",
+        "startSeconds": 14.166802721088436,
+        "endSeconds": 14.606802721088435
+      },
+      {
+        "id": "C06",
+        "startSeconds": 17.68081632653061,
+        "endSeconds": 17.980136054421767
+      },
+      {
+        "id": "C09",
+        "startSeconds": 24.648956916099774,
+        "endSeconds": 24.82095238095238
+      },
+      {
+        "id": "C10",
+        "startSeconds": 27.387732426303856,
+        "endSeconds": 27.559727891156463
+      },
+      {
+        "id": "C11",
+        "startSeconds": 31.47045351473923,
+        "endSeconds": 31.642448979591837
+      }
+    ],
+    "retired": [
+      {
+        "id": "C01",
+        "startSeconds": 1.0057142857142858,
+        "endSeconds": 1.1254421768707483,
+        "reason": "Background noise; no clear keystroke transient"
+      },
+      {
+        "id": "C07",
+        "startSeconds": 21.392380952380954,
+        "endSeconds": 21.655782312925172,
+        "reason": "Background noise; no clear keystroke transient"
+      },
+      {
+        "id": "C08",
+        "startSeconds": 32.42231292517007,
+        "endSeconds": 32.62285714285714,
+        "reason": "Background noise; no clear keystroke transient"
+      }
+    ]
+  },
+  "gateron-yellow": {
+    "active": [
+      {
+        "id": "G01",
+        "startSeconds": 11.368163265306123,
+        "endSeconds": 11.700408163265307
+      },
+      {
+        "id": "G02",
+        "startSeconds": 12.72408163265306,
+        "endSeconds": 13.14312925170068
+      },
+      {
+        "id": "G03",
+        "startSeconds": 19.57251700680272,
+        "endSeconds": 19.66829931972789
+      },
+      {
+        "id": "G04",
+        "startSeconds": 20.419591836734693,
+        "endSeconds": 20.763809523809524
+      },
+      {
+        "id": "G05",
+        "startSeconds": 23.66421768707483,
+        "endSeconds": 23.90367346938776
+      },
+      {
+        "id": "G06",
+        "startSeconds": 24.355646258503402,
+        "endSeconds": 24.804625850340138
+      },
+      {
+        "id": "G07",
+        "startSeconds": 25.609795918367347,
+        "endSeconds": 25.66965986394558
+      },
+      {
+        "id": "G08",
+        "startSeconds": 40.69850340136055,
+        "endSeconds": 40.949931972789116
+      }
+    ],
+    "retired": []
+  }
+}

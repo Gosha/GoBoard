@@ -1,0 +1,683 @@
+{
+  "version": 2,
+  "license": "CC0 1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "families": [
+    {
+      "id": "cherry-mx-blue",
+      "name": "Cherry MX Blue",
+      "prefix": "B",
+      "author": "SamsterBirdies",
+      "source": "https://freesound.org/people/SamsterBirdies/sounds/489424/",
+      "sourceHash": "687ef4711469633d64299e87c8783956786edf4f20a46a4542d5e7a9f8fcecfd",
+      "samples": [
+        {
+          "id": "B01",
+          "existing": false,
+          "url": "audio/cherry-mx-blue/B01.wav",
+          "durationMs": 380.68027210884355,
+          "startMs": 80.0,
+          "endMs": 220.68027210884352,
+          "sourceStartSeconds": 10.560816326530611,
+          "sourceCoreSeconds": 10.640816326530611,
+          "sourceEndSeconds": 10.941496598639455,
+          "sha256": "c350fcbacc2a529e3e153c17750922d1a75887804d835df3371d4520f0ee033a",
+          "activity": {
+            "peakDbfs": -8.143844281321707,
+            "rmsDbfs": -29.12852442847541,
+            "crestDb": 20.984680147153703
+          }
+        },
+        {
+          "id": "B02",
+          "existing": false,
+          "url": "audio/cherry-mx-blue/B02.wav",
+          "durationMs": 380.68027210884355,
+          "startMs": 80.0,
+          "endMs": 220.68027210884352,
+          "sourceStartSeconds": 27.41251700680272,
+          "sourceCoreSeconds": 27.49251700680272,
+          "sourceEndSeconds": 27.793197278911563,
+          "sha256": "b01c8ebbe6eecf0771c817c8372eb4866d43f95b1cd580476890d6990b5e3346",
+          "activity": {
+            "peakDbfs": -11.018184562426814,
+            "rmsDbfs": -32.08821383637031,
+            "crestDb": 21.070029273943494
+          }
+        },
+        {
+          "id": "B03",
+          "existing": false,
+          "url": "audio/cherry-mx-blue/B03.wav",
+          "durationMs": 596.1904761904761,
+          "startMs": 80.0,
+          "endMs": 436.1904761904762,
+          "sourceStartSeconds": 42.61197278911565,
+          "sourceCoreSeconds": 42.691972789115646,
+          "sourceEndSeconds": 43.20816326530612,
+          "sha256": "d98aa7cb9819a5d58680cf6e9069eb8f7920e6eea9ed0d8764d52f64b7c0b628",
+          "activity": {
+            "peakDbfs": -8.054947319349042,
+            "rmsDbfs": -31.7960488544546,
+            "crestDb": 23.741101535105557
+          }
+        },
+        {
+          "id": "B04",
+          "existing": false,
+          "url": "audio/cherry-mx-blue/B04.wav",
+          "durationMs": 401.63265306122446,
+          "startMs": 80.0,
+          "endMs": 241.6326530612245,
+          "sourceStartSeconds": 58.966802721088435,
+          "sourceCoreSeconds": 59.04680272108843,
+          "sourceEndSeconds": 59.36843537414966,
+          "sha256": "9928d04bdd2c056926cfd4a3cd46ba51b2a30db3609ab16b336370042457ccd9",
+          "activity": {
+            "peakDbfs": -10.339050682193596,
+            "rmsDbfs": -32.35554867654099,
+            "crestDb": 22.016497994347397
+          }
+        },
+        {
+          "id": "B05",
+          "existing": false,
+          "url": "audio/cherry-mx-blue/B05.wav",
+          "durationMs": 536.3265306122449,
+          "startMs": 80.0,
+          "endMs": 376.32653061224494,
+          "sourceStartSeconds": 64.64190476190477,
+          "sourceCoreSeconds": 64.72190476190477,
+          "sourceEndSeconds": 65.17823129251701,
+          "sha256": "0fbbd3ee8ac4c549eb16c6be9d3f4d2f729c2701914688c4d39628d5ff5409e5",
+          "activity": {
+            "peakDbfs": -9.451646022947997,
+            "rmsDbfs": -32.83903530877324,
+            "crestDb": 23.387389285825243
+          }
+        },
+        {
+          "id": "B06",
+          "existing": false,
+          "url": "audio/cherry-mx-blue/B06.wav",
+          "durationMs": 536.3265306122449,
+          "startMs": 80.0,
+          "endMs": 376.32653061224494,
+          "sourceStartSeconds": 66.26421768707483,
+          "sourceCoreSeconds": 66.34421768707483,
+          "sourceEndSeconds": 66.80054421768708,
+          "sha256": "4522bf6274d067045b4ca6283b77dbc66f6cb8756dfa8d5d9928cd95fe958d54",
+          "activity": {
+            "peakDbfs": -7.6875526494774356,
+            "rmsDbfs": -32.79013674423303,
+            "crestDb": 25.102584094755596
+          }
+        },
+        {
+          "id": "B07",
+          "existing": false,
+          "url": "audio/cherry-mx-blue/B07.wav",
+          "durationMs": 551.2925170068027,
+          "startMs": 80.0,
+          "endMs": 391.2925170068027,
+          "sourceStartSeconds": 71.27183673469388,
+          "sourceCoreSeconds": 71.35183673469388,
+          "sourceEndSeconds": 71.82312925170068,
+          "sha256": "5cdb851361f0df8debcdd4be0848821cb532c8b013f782851acbcfe1cb684a74",
+          "activity": {
+            "peakDbfs": -11.17719294626301,
+            "rmsDbfs": -32.921858967435476,
+            "crestDb": 21.74466602117246
+          }
+        },
+        {
+          "id": "B08",
+          "existing": false,
+          "url": "audio/cherry-mx-blue/B08.wav",
+          "durationMs": 563.2653061224489,
+          "startMs": 80.0,
+          "endMs": 403.265306122449,
+          "sourceStartSeconds": 88.38993197278911,
+          "sourceCoreSeconds": 88.46993197278911,
+          "sourceEndSeconds": 88.95319727891156,
+          "sha256": "979618e779cb8ad8c95639ff5c38a212977a884fee0af29655bd2aca9b6c7949",
+          "activity": {
+            "peakDbfs": -6.585006755998925,
+            "rmsDbfs": -30.6937447133865,
+            "crestDb": 24.108737957387575
+          }
+        },
+        {
+          "id": "BO1",
+          "existing": true,
+          "url": "audio/cherry-mx-blue/BO1.wav",
+          "durationMs": 299.8866213151927,
+          "startMs": 80.0,
+          "endMs": 139.88662131519274,
+          "sourceStartSeconds": 11.381950113378684,
+          "sourceCoreSeconds": 11.461950113378684,
+          "sourceEndSeconds": 11.681836734693878,
+          "sha256": "ad636108bf47a168ba991a56eb76021e5d74ec2d0d9c9226935291a246923526",
+          "activity": {
+            "peakDbfs": -7.103242299197428,
+            "rmsDbfs": -27.948304746980433,
+            "crestDb": 20.845062447783004
+          },
+          "currentUrl": "audio/cherry-mx-blue/BO1-current.wav"
+        },
+        {
+          "id": "BO2",
+          "existing": true,
+          "url": "audio/cherry-mx-blue/BO2.wav",
+          "durationMs": 297.891156462585,
+          "startMs": 80.0,
+          "endMs": 137.89115646258503,
+          "sourceStartSeconds": 41.47954648526077,
+          "sourceCoreSeconds": 41.55954648526077,
+          "sourceEndSeconds": 41.77743764172335,
+          "sha256": "87509a98ecc3128678849551a71e91c5fb791fc4ad9707d990a4de598cb5e12d",
+          "activity": {
+            "peakDbfs": -5.620921094406349,
+            "rmsDbfs": -26.682585343078806,
+            "crestDb": 21.061664248672457
+          },
+          "currentUrl": "audio/cherry-mx-blue/BO2-current.wav"
+        },
+        {
+          "id": "BO3",
+          "existing": true,
+          "url": "audio/cherry-mx-blue/BO3.wav",
+          "durationMs": 301.8820861678004,
+          "startMs": 80.0,
+          "endMs": 141.88208616780045,
+          "sourceStartSeconds": 44.57850340136054,
+          "sourceCoreSeconds": 44.65850340136054,
+          "sourceEndSeconds": 44.88038548752834,
+          "sha256": "2ba9b908fd4e7e6c123e7f1b385686d5d2a593c49f729eef06a1d3d5358fbc5f",
+          "activity": {
+            "peakDbfs": -7.351065081889101,
+            "rmsDbfs": -26.45003479159351,
+            "crestDb": 19.09896970970441
+          },
+          "currentUrl": "audio/cherry-mx-blue/BO3-current.wav"
+        },
+        {
+          "id": "BO4",
+          "existing": true,
+          "url": "audio/cherry-mx-blue/BO4.wav",
+          "durationMs": 317.8458049886621,
+          "startMs": 80.0,
+          "endMs": 157.84580498866214,
+          "sourceStartSeconds": 92.10049886621316,
+          "sourceCoreSeconds": 92.18049886621316,
+          "sourceEndSeconds": 92.41834467120181,
+          "sha256": "e3a4321718a967026554d5f453b8dc4effc970c757f64511f2f8a81decd7cfd7",
+          "activity": {
+            "peakDbfs": -7.319458942773211,
+            "rmsDbfs": -26.022695036559952,
+            "crestDb": 18.703236093786742
+          },
+          "currentUrl": "audio/cherry-mx-blue/BO4-current.wav"
+        }
+      ],
+      "retired": []
+    },
+    {
+      "id": "cherry-mx-clear",
+      "name": "Cherry MX Clear",
+      "prefix": "C",
+      "author": "humi74",
+      "source": "https://freesound.org/people/humi74/sounds/412923/",
+      "sourceHash": "84efab4f441290637b9613efdbd52e7ed7d38bc1eb3b6f6683ab886321fcf94f",
+      "samples": [
+        {
+          "id": "C02",
+          "existing": false,
+          "url": "audio/cherry-mx-clear/C02.wav",
+          "durationMs": 659.047619047619,
+          "startMs": 80.0,
+          "endMs": 499.0476190476191,
+          "sourceStartSeconds": 1.9853061224489796,
+          "sourceCoreSeconds": 2.0653061224489795,
+          "sourceEndSeconds": 2.6443537414965985,
+          "sha256": "f3fd673a52e0b915e37b061e5604d9a9602d2a8a2699faba2d886cbaa8d34ab5",
+          "activity": {
+            "peakDbfs": -18.517220881491237,
+            "rmsDbfs": -44.217981107224446,
+            "crestDb": 25.700760225733205
+          }
+        },
+        {
+          "id": "C03",
+          "existing": false,
+          "url": "audio/cherry-mx-clear/C03.wav",
+          "durationMs": 569.251700680272,
+          "startMs": 80.0,
+          "endMs": 409.2517006802721,
+          "sourceStartSeconds": 11.910748299319728,
+          "sourceCoreSeconds": 11.990748299319728,
+          "sourceEndSeconds": 12.48,
+          "sha256": "09b2d4bffc15ffcddb072249ada971bc3af679cace016124a0877841515d84af",
+          "activity": {
+            "peakDbfs": -21.168842241955605,
+            "rmsDbfs": -45.11089760165476,
+            "crestDb": 23.942055359699154
+          }
+        },
+        {
+          "id": "C04",
+          "existing": false,
+          "url": "audio/cherry-mx-clear/C04.wav",
+          "durationMs": 554.2857142857142,
+          "startMs": 80.0,
+          "endMs": 394.2857142857143,
+          "sourceStartSeconds": 13.10204081632653,
+          "sourceCoreSeconds": 13.18204081632653,
+          "sourceEndSeconds": 13.656326530612246,
+          "sha256": "5c47a77456f378ed81656f7f46c30e52e4679e5945c60332984e601504be9eb4",
+          "activity": {
+            "peakDbfs": -21.072216470388398,
+            "rmsDbfs": -46.900872651251966,
+            "crestDb": 25.828656180863568
+          }
+        },
+        {
+          "id": "C05",
+          "existing": false,
+          "url": "audio/cherry-mx-clear/C05.wav",
+          "durationMs": 680.0,
+          "startMs": 80.0,
+          "endMs": 520.0,
+          "sourceStartSeconds": 14.086802721088436,
+          "sourceCoreSeconds": 14.166802721088436,
+          "sourceEndSeconds": 14.766802721088435,
+          "sha256": "f3a0bdde221ec4cc53676431b44665cef2d8c6780b624494738229f7e77fd564",
+          "activity": {
+            "peakDbfs": -10.427735285391186,
+            "rmsDbfs": -39.68531476268497,
+            "crestDb": 29.25757947729378
+          }
+        },
+        {
+          "id": "C06",
+          "existing": false,
+          "url": "audio/cherry-mx-clear/C06.wav",
+          "durationMs": 539.3197278911565,
+          "startMs": 80.0,
+          "endMs": 379.3197278911565,
+          "sourceStartSeconds": 17.600816326530612,
+          "sourceCoreSeconds": 17.68081632653061,
+          "sourceEndSeconds": 18.14013605442177,
+          "sha256": "893301e2d4ba12c569d5bf8c47d05a8e0f4d5efb9b1eaa5b55e95dd215559bc5",
+          "activity": {
+            "peakDbfs": -15.645421972790466,
+            "rmsDbfs": -39.03079587314821,
+            "crestDb": 23.38537390035774
+          }
+        },
+        {
+          "id": "C09",
+          "existing": false,
+          "url": "audio/cherry-mx-clear/C09.wav",
+          "durationMs": 411.9954648526077,
+          "startMs": 80.0,
+          "endMs": 251.9954648526077,
+          "sourceStartSeconds": 24.568956916099772,
+          "sourceCoreSeconds": 24.648956916099774,
+          "sourceEndSeconds": 24.98095238095238,
+          "sha256": "31aadd9641e400234132cd4a57e2d9f82534afd534126f48654c17910e4b58c1",
+          "activity": {
+            "peakDbfs": -15.894618461834614,
+            "rmsDbfs": -37.250371684625556,
+            "crestDb": 21.355753222790938
+          }
+        },
+        {
+          "id": "C10",
+          "existing": false,
+          "url": "audio/cherry-mx-clear/C10.wav",
+          "durationMs": 411.9954648526077,
+          "startMs": 80.0,
+          "endMs": 251.9954648526077,
+          "sourceStartSeconds": 27.307732426303854,
+          "sourceCoreSeconds": 27.387732426303856,
+          "sourceEndSeconds": 27.719727891156463,
+          "sha256": "82561c52a0c24c0835af717e5636063b4ea6acda928497bc3dba82ad9cf96ddc",
+          "activity": {
+            "peakDbfs": -7.107597561616391,
+            "rmsDbfs": -34.544553489624676,
+            "crestDb": 27.43695592800828
+          }
+        },
+        {
+          "id": "C11",
+          "existing": false,
+          "url": "audio/cherry-mx-clear/C11.wav",
+          "durationMs": 411.9954648526077,
+          "startMs": 80.0,
+          "endMs": 251.9954648526077,
+          "sourceStartSeconds": 31.390453514739228,
+          "sourceCoreSeconds": 31.47045351473923,
+          "sourceEndSeconds": 31.802448979591837,
+          "sha256": "2ce1c543476dc4e97ceb792a8e85f621ad4907b2eddb5ba001bdbde76f0fd5b7",
+          "activity": {
+            "peakDbfs": -13.42973825161522,
+            "rmsDbfs": -38.05215186526549,
+            "crestDb": 24.622413613650274
+          }
+        },
+        {
+          "id": "CO1",
+          "existing": true,
+          "url": "audio/cherry-mx-clear/CO1.wav",
+          "durationMs": 325.827664399093,
+          "startMs": 80.0,
+          "endMs": 165.82766439909295,
+          "sourceStartSeconds": 3.066848072562358,
+          "sourceCoreSeconds": 3.146848072562358,
+          "sourceEndSeconds": 3.392675736961451,
+          "sha256": "19137199271cf7e2a377d754caf21dc51593ed67e73041b80d95fb01e322db2b",
+          "activity": {
+            "peakDbfs": -7.335236700415695,
+            "rmsDbfs": -30.84411431708318,
+            "crestDb": 23.508877616667483
+          },
+          "currentUrl": "audio/cherry-mx-clear/CO1-current.wav"
+        },
+        {
+          "id": "CO2",
+          "existing": true,
+          "url": "audio/cherry-mx-clear/CO2.wav",
+          "durationMs": 447.55102040816325,
+          "startMs": 80.0,
+          "endMs": 287.55102040816325,
+          "sourceStartSeconds": 5.742766439909297,
+          "sourceCoreSeconds": 5.822766439909297,
+          "sourceEndSeconds": 6.19031746031746,
+          "sha256": "f5b422b20e30ce7e78596498cae75cd44fd3bd29051031124a873c5f56a19a0c",
+          "activity": {
+            "peakDbfs": -2.6257922254358377,
+            "rmsDbfs": -29.443784282092608,
+            "crestDb": 26.817992056656767
+          },
+          "currentUrl": "audio/cherry-mx-clear/CO2-current.wav"
+        },
+        {
+          "id": "CO3",
+          "existing": true,
+          "url": "audio/cherry-mx-clear/CO3.wav",
+          "durationMs": 421.609977324263,
+          "startMs": 80.0,
+          "endMs": 261.60997732426307,
+          "sourceStartSeconds": 6.896145124716553,
+          "sourceCoreSeconds": 6.976145124716553,
+          "sourceEndSeconds": 7.317755102040817,
+          "sha256": "33d60b39b97b53d06092503bab43d1488c899548bf4f0b6a903e46340916f2d8",
+          "activity": {
+            "peakDbfs": -0.6618964055645287,
+            "rmsDbfs": -29.499371683064048,
+            "crestDb": 28.837475277499518
+          },
+          "currentUrl": "audio/cherry-mx-clear/CO3-current.wav"
+        },
+        {
+          "id": "CO4",
+          "existing": true,
+          "url": "audio/cherry-mx-clear/CO4.wav",
+          "durationMs": 365.73696145124717,
+          "startMs": 80.0,
+          "endMs": 205.73696145124717,
+          "sourceStartSeconds": 16.181043083900228,
+          "sourceCoreSeconds": 16.261043083900226,
+          "sourceEndSeconds": 16.546780045351476,
+          "sha256": "1051e488bc3db21a8ba7e5dfde0dbb36ebe5c7cac8a52bb4f90d3f1f36f24384",
+          "activity": {
+            "peakDbfs": -2.7859563367243005,
+            "rmsDbfs": -26.75992368224957,
+            "crestDb": 23.973967345525274
+          },
+          "currentUrl": "audio/cherry-mx-clear/CO4-current.wav"
+        }
+      ],
+      "retired": [
+        {
+          "id": "C01",
+          "startSeconds": 1.0057142857142858,
+          "endSeconds": 1.1254421768707483,
+          "reason": "Background noise; no clear keystroke transient"
+        },
+        {
+          "id": "C07",
+          "startSeconds": 21.392380952380954,
+          "endSeconds": 21.655782312925172,
+          "reason": "Background noise; no clear keystroke transient"
+        },
+        {
+          "id": "C08",
+          "startSeconds": 32.42231292517007,
+          "endSeconds": 32.62285714285714,
+          "reason": "Background noise; no clear keystroke transient"
+        }
+      ]
+    },
+    {
+      "id": "gateron-yellow",
+      "name": "Modified Gateron Yellow",
+      "prefix": "G",
+      "author": "zrrion",
+      "source": "https://freesound.org/people/zrrion/sounds/665075/",
+      "sourceHash": "b3c4f2794e7d187675a67f887bad12d42a7aedc3984933c475a72f828f1895bd",
+      "samples": [
+        {
+          "id": "G01",
+          "existing": false,
+          "url": "audio/gateron-yellow/G01.wav",
+          "durationMs": 572.2448979591836,
+          "startMs": 80.0,
+          "endMs": 412.2448979591837,
+          "sourceStartSeconds": 11.288163265306123,
+          "sourceCoreSeconds": 11.368163265306123,
+          "sourceEndSeconds": 11.860408163265307,
+          "sha256": "486c224eebf977f4cd481b7792b5b31b15b63841421b777c1ab99f04ecca7666",
+          "activity": {
+            "peakDbfs": -13.991264512006198,
+            "rmsDbfs": -38.69489750797464,
+            "crestDb": 24.703632995968434
+          }
+        },
+        {
+          "id": "G02",
+          "existing": false,
+          "url": "audio/gateron-yellow/G02.wav",
+          "durationMs": 659.047619047619,
+          "startMs": 80.0,
+          "endMs": 499.0476190476191,
+          "sourceStartSeconds": 12.64408163265306,
+          "sourceCoreSeconds": 12.72408163265306,
+          "sourceEndSeconds": 13.30312925170068,
+          "sha256": "8fd11c9954f538ca5eeee58469b2a7257cb5f067823772f4b4e0b8aeaee0147d",
+          "activity": {
+            "peakDbfs": -13.488130820044365,
+            "rmsDbfs": -37.23290975569625,
+            "crestDb": 23.744778935651883
+          }
+        },
+        {
+          "id": "G03",
+          "existing": false,
+          "url": "audio/gateron-yellow/G03.wav",
+          "durationMs": 335.78231292517006,
+          "startMs": 80.0,
+          "endMs": 175.7823129251701,
+          "sourceStartSeconds": 19.49251700680272,
+          "sourceCoreSeconds": 19.57251700680272,
+          "sourceEndSeconds": 19.82829931972789,
+          "sha256": "a9859b7b15fb749868600b46a393a96a5e9b4f6046ea533dbe068304eedc396f",
+          "activity": {
+            "peakDbfs": -17.88351357961045,
+            "rmsDbfs": -36.74298678421008,
+            "crestDb": 18.859473204599627
+          }
+        },
+        {
+          "id": "G04",
+          "existing": false,
+          "url": "audio/gateron-yellow/G04.wav",
+          "durationMs": 584.2176870748299,
+          "startMs": 80.0,
+          "endMs": 424.21768707482994,
+          "sourceStartSeconds": 20.339591836734694,
+          "sourceCoreSeconds": 20.419591836734693,
+          "sourceEndSeconds": 20.923809523809524,
+          "sha256": "f10b7dfa4738f21d8e8d91a27b23b17db64403df33986a7428fb977df040c5fe",
+          "activity": {
+            "peakDbfs": -12.002176223637424,
+            "rmsDbfs": -36.64577091715025,
+            "crestDb": 24.643594693512824
+          }
+        },
+        {
+          "id": "G05",
+          "existing": false,
+          "url": "audio/gateron-yellow/G05.wav",
+          "durationMs": 479.4557823129252,
+          "startMs": 80.0,
+          "endMs": 319.4557823129252,
+          "sourceStartSeconds": 23.58421768707483,
+          "sourceCoreSeconds": 23.66421768707483,
+          "sourceEndSeconds": 24.063673469387755,
+          "sha256": "e001aba7e2ae6ffffa6c4421391283fe9c5e64e8092800b57349dace3c47cf05",
+          "activity": {
+            "peakDbfs": -13.755529153571661,
+            "rmsDbfs": -37.38649191450239,
+            "crestDb": 23.63096276093073
+          }
+        },
+        {
+          "id": "G06",
+          "existing": false,
+          "url": "audio/gateron-yellow/G06.wav",
+          "durationMs": 688.9795918367347,
+          "startMs": 80.0,
+          "endMs": 528.9795918367347,
+          "sourceStartSeconds": 24.2756462585034,
+          "sourceCoreSeconds": 24.355646258503402,
+          "sourceEndSeconds": 24.964625850340138,
+          "sha256": "a06760221ea293b8314d4028c1e5a54603883c11a55c4a9968cce28da62714a1",
+          "activity": {
+            "peakDbfs": -6.250995660893581,
+            "rmsDbfs": -32.8776816390198,
+            "crestDb": 26.62668597812622
+          }
+        },
+        {
+          "id": "G07",
+          "existing": false,
+          "url": "audio/gateron-yellow/G07.wav",
+          "durationMs": 299.8639455782313,
+          "startMs": 80.0,
+          "endMs": 139.8639455782313,
+          "sourceStartSeconds": 25.52979591836735,
+          "sourceCoreSeconds": 25.609795918367347,
+          "sourceEndSeconds": 25.82965986394558,
+          "sha256": "031501aa88d2db2848a99bf21b86fe3a47403c891cf094dd3ce08afa0cc2c166",
+          "activity": {
+            "peakDbfs": -8.78690684800695,
+            "rmsDbfs": -32.42019961039345,
+            "crestDb": 23.633292762386503
+          }
+        },
+        {
+          "id": "G08",
+          "existing": false,
+          "url": "audio/gateron-yellow/G08.wav",
+          "durationMs": 491.42857142857144,
+          "startMs": 80.0,
+          "endMs": 331.4285714285714,
+          "sourceStartSeconds": 40.61850340136054,
+          "sourceCoreSeconds": 40.69850340136055,
+          "sourceEndSeconds": 41.10993197278911,
+          "sha256": "8b6c0c16d0dce12b2bf987a4f470be5e1fb6099ac5aa91f7856fad9862271508",
+          "activity": {
+            "peakDbfs": -24.717320975039318,
+            "rmsDbfs": -43.7171902058411,
+            "crestDb": 18.99986923080178
+          }
+        },
+        {
+          "id": "GO1",
+          "existing": true,
+          "url": "audio/gateron-yellow/GO1.wav",
+          "durationMs": 327.8231292517007,
+          "startMs": 80.0,
+          "endMs": 167.82312925170066,
+          "sourceStartSeconds": 9.342585034013606,
+          "sourceCoreSeconds": 9.422585034013606,
+          "sourceEndSeconds": 9.670408163265305,
+          "sha256": "89e07aba3977b93ce16fa93e03ddcfe916fc589ee54f1047a71325c917604a35",
+          "activity": {
+            "peakDbfs": -10.35058656132695,
+            "rmsDbfs": -33.484433648070116,
+            "crestDb": 23.133847086743167
+          },
+          "currentUrl": "audio/gateron-yellow/GO1-current.wav"
+        },
+        {
+          "id": "GO2",
+          "existing": true,
+          "url": "audio/gateron-yellow/GO2.wav",
+          "durationMs": 415.6235827664399,
+          "startMs": 80.0,
+          "endMs": 255.62358276643994,
+          "sourceStartSeconds": 18.840997732426302,
+          "sourceCoreSeconds": 18.920997732426304,
+          "sourceEndSeconds": 19.256621315192742,
+          "sha256": "46ede1187a2e04ac4def8cc339d80ed4b2e84ae9d3b235df672ff8c295453cbd",
+          "activity": {
+            "peakDbfs": -0.175478486150103,
+            "rmsDbfs": -27.616854908777903,
+            "crestDb": 27.4413764226278
+          },
+          "currentUrl": "audio/gateron-yellow/GO2-current.wav"
+        },
+        {
+          "id": "GO3",
+          "existing": true,
+          "url": "audio/gateron-yellow/GO3.wav",
+          "durationMs": 291.90476190476187,
+          "startMs": 80.0,
+          "endMs": 131.90476190476193,
+          "sourceStartSeconds": 22.568526077097506,
+          "sourceCoreSeconds": 22.648526077097507,
+          "sourceEndSeconds": 22.860430839002266,
+          "sha256": "7602a3eadefc98ee57f08b5572800215d48d914450f27b9a1472e7aed31dcf28",
+          "activity": {
+            "peakDbfs": -13.96966643010141,
+            "rmsDbfs": -33.3718428379663,
+            "crestDb": 19.402176407864882
+          },
+          "currentUrl": "audio/gateron-yellow/GO3-current.wav"
+        },
+        {
+          "id": "GO4",
+          "existing": true,
+          "url": "audio/gateron-yellow/GO4.wav",
+          "durationMs": 371.7233560090703,
+          "startMs": 80.0,
+          "endMs": 211.7233560090703,
+          "sourceStartSeconds": 36.14566893424036,
+          "sourceCoreSeconds": 36.22566893424036,
+          "sourceEndSeconds": 36.51739229024943,
+          "sha256": "94f36f3aa9ca244b9737c955afba8ef3d5027de1d83ec478c068e134c4b08521",
+          "activity": {
+            "peakDbfs": -10.418735739159178,
+            "rmsDbfs": -33.35972154006078,
+            "crestDb": 22.940985800901608
+          },
+          "currentUrl": "audio/gateron-yellow/GO4-current.wav"
+        }
+      ],
+      "retired": []
+    }
+  ]
+}

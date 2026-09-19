@@ -1,0 +1,201 @@
+{
+  "preset": "GateronYellowPairs",
+  "license": "CC0 1.0",
+  "variants": [
+    {
+      "role": "regular",
+      "favoriteId": "97e795f0-ec4c-4b93-902f-563a3e5c5683",
+      "sampleId": "G02",
+      "source": "https://freesound.org/people/zrrion/sounds/665075/",
+      "sourceHash": "b3c4f2794e7d187675a67f887bad12d42a7aedc3984933c475a72f828f1895bd",
+      "contextHash": "8fd11c9954f538ca5eeee58469b2a7257cb5f067823772f4b4e0b8aeaee0147d",
+      "settings": {
+        "start": 68,
+        "end": 306,
+        "fade": 6,
+        "pitch": 0,
+        "volume": 65,
+        "match": true,
+        "overlap": true,
+        "paired": true,
+        "split": 228,
+        "releaseStart": 228,
+        "releaseGain": 70,
+        "holdMs": 200
+      },
+      "gain": 0.4244269720485919,
+      "outputs": [
+        {
+          "file": "press-1.wav",
+          "sha256": "450fa2a2f03ea40199de547d165ade36d8de4d530dd6798e164b98d4c42bdb3c",
+          "frames": 7056,
+          "sourceStartSeconds": 12.712086167800452,
+          "sourceEndSeconds": 12.872086167800452
+        },
+        {
+          "file": "release-1.wav",
+          "sha256": "c716f849d902c37edf14a31af9a6ea1a5d85b199c9c8413ad873663404689422",
+          "frames": 3440,
+          "sourceStartSeconds": 12.872086167800452,
+          "sourceEndSeconds": 12.950090702947845
+        }
+      ]
+    },
+    {
+      "role": "regular",
+      "favoriteId": "df2aea4a-4bae-48e0-9e21-167bec662bbc",
+      "sampleId": "GO1",
+      "source": "https://freesound.org/people/zrrion/sounds/665075/",
+      "sourceHash": "b3c4f2794e7d187675a67f887bad12d42a7aedc3984933c475a72f828f1895bd",
+      "contextHash": "89e07aba3977b93ce16fa93e03ddcfe916fc589ee54f1047a71325c917604a35",
+      "settings": {
+        "start": 82,
+        "end": 311,
+        "fade": 6,
+        "pitch": 0,
+        "volume": 65,
+        "match": true,
+        "overlap": true,
+        "paired": true,
+        "split": 227,
+        "releaseStart": 227,
+        "releaseGain": 70,
+        "holdMs": 200
+      },
+      "gain": 0.3716724291171708,
+      "outputs": [
+        {
+          "file": "press-2.wav",
+          "sha256": "efd0a82603943727adafd832243c1f6643da5411d3bca95fc4410f103cca5e73",
+          "frames": 6395,
+          "sourceStartSeconds": 9.424580498866213,
+          "sourceEndSeconds": 9.569591836734695
+        },
+        {
+          "file": "release-2.wav",
+          "sha256": "fc907fe00eb50dc846c7a7ea549694858a491afd6ccf7fb86a9a37b9cc7833d8",
+          "frames": 3704,
+          "sourceStartSeconds": 9.569591836734695,
+          "sourceEndSeconds": 9.653582766439909
+        }
+      ]
+    },
+    {
+      "role": "regular",
+      "favoriteId": "c6d5acc3-467a-4fb7-80f6-8aa8d1281a17",
+      "sampleId": "GO3",
+      "source": "https://freesound.org/people/zrrion/sounds/665075/",
+      "sourceHash": "b3c4f2794e7d187675a67f887bad12d42a7aedc3984933c475a72f828f1895bd",
+      "contextHash": "7602a3eadefc98ee57f08b5572800215d48d914450f27b9a1472e7aed31dcf28",
+      "settings": {
+        "start": 84,
+        "end": 286,
+        "fade": 6,
+        "pitch": 0,
+        "volume": 65,
+        "match": true,
+        "overlap": true,
+        "paired": true,
+        "split": 225,
+        "releaseStart": 225,
+        "releaseGain": 70,
+        "holdMs": 200
+      },
+      "gain": 0.525464905794054,
+      "outputs": [
+        {
+          "file": "press-3.wav",
+          "sha256": "7124cef3cd02d99d04974a403a9796f13bff0d8acc7d9cf93b5973709c32b727",
+          "frames": 6219,
+          "sourceStartSeconds": 22.65251700680272,
+          "sourceEndSeconds": 22.793537414965986
+        },
+        {
+          "file": "release-3.wav",
+          "sha256": "11a2038e26c85a5f0f31c60fe9b41f11ba73c4aaddc01079499cc76b0ebc2847",
+          "frames": 2690,
+          "sourceStartSeconds": 22.793537414965986,
+          "sourceEndSeconds": 22.85453514739229
+        }
+      ]
+    },
+    {
+      "role": "regular",
+      "favoriteId": "71297a1d-3469-460a-b4a9-3695a84e6358",
+      "sampleId": "GO4",
+      "source": "https://freesound.org/people/zrrion/sounds/665075/",
+      "sourceHash": "b3c4f2794e7d187675a67f887bad12d42a7aedc3984933c475a72f828f1895bd",
+      "contextHash": "94f36f3aa9ca244b9737c955afba8ef3d5027de1d83ec478c068e134c4b08521",
+      "settings": {
+        "start": 75,
+        "end": 257,
+        "fade": 6,
+        "pitch": 0,
+        "volume": 65,
+        "match": true,
+        "overlap": true,
+        "paired": true,
+        "split": 170,
+        "releaseStart": 170,
+        "releaseGain": 70,
+        "holdMs": 200
+      },
+      "gain": 0.35934885460828014,
+      "outputs": [
+        {
+          "file": "press-4.wav",
+          "sha256": "e8e16d052c13c9d958bdee9fa16d01b360344376f45a0802301827481b98919f",
+          "frames": 4189,
+          "sourceStartSeconds": 36.220680272108844,
+          "sourceEndSeconds": 36.315668934240364
+        },
+        {
+          "file": "release-4.wav",
+          "sha256": "2873abf2c2235ede183d8a85049d076114d2ca74f93eb7b7ece795df8eec70fc",
+          "frames": 3837,
+          "sourceStartSeconds": 36.315668934240364,
+          "sourceEndSeconds": 36.40267573696145
+        }
+      ]
+    },
+    {
+      "role": "large-keys",
+      "favoriteId": "2a1aec17-2688-4187-82f0-f69a9f86e255",
+      "sampleId": "G05",
+      "source": "https://freesound.org/people/zrrion/sounds/665075/",
+      "sourceHash": "b3c4f2794e7d187675a67f887bad12d42a7aedc3984933c475a72f828f1895bd",
+      "contextHash": "e001aba7e2ae6ffffa6c4421391283fe9c5e64e8092800b57349dace3c47cf05",
+      "settings": {
+        "start": 68,
+        "end": 364,
+        "fade": 37,
+        "pitch": 0,
+        "volume": 65,
+        "match": true,
+        "overlap": true,
+        "paired": true,
+        "split": 216,
+        "releaseStart": 216,
+        "releaseGain": 70,
+        "holdMs": 200
+      },
+      "gain": 0.42353690811145883,
+      "outputs": [
+        {
+          "file": "press-5.wav",
+          "sha256": "d2eb1bbc07eded220035644f65009ee675219d7b38a070b571daf0e1e153caa4",
+          "frames": 6527,
+          "sourceStartSeconds": 23.65222222222222,
+          "sourceEndSeconds": 23.800226757369614
+        },
+        {
+          "file": "release-5.wav",
+          "sha256": "a4aa0deba7d8f23c1a38c22162438e2b5a23e1ced09d2b72eafd135ec3558a2f",
+          "frames": 6526,
+          "sourceStartSeconds": 23.800226757369614,
+          "sourceEndSeconds": 23.948208616780047
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+[
+  {
+    "title": "Cherry MX Blue",
+    "author": "SamsterBirdies",
+    "url": "https://freesound.org/people/SamsterBirdies/sounds/489424/",
+    "license": "CC0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "original_file": "489424__samsterbirdies__typing-on-a-keyboard.flac",
+    "original_sha256": "687ef4711469633d64299e87c8783956786edf4f20a46a4542d5e7a9f8fcecfd",
+    "sample_rate": 44100,
+    "samples": [
+      {
+        "file": "cherry-mx-blue/key-01.wav",
+        "start_seconds": 11.46195,
+        "end_seconds": 11.521837,
+        "isolation_ratio": 10.02
+      },
+      {
+        "file": "cherry-mx-blue/key-02.wav",
+        "start_seconds": 41.559546,
+        "end_seconds": 41.617438,
+        "isolation_ratio": 10.69
+      },
+      {
+        "file": "cherry-mx-blue/key-03.wav",
+        "start_seconds": 44.658503,
+        "end_seconds": 44.720385,
+        "isolation_ratio": 10.1
+      },
+      {
+        "file": "cherry-mx-blue/key-04.wav",
+        "start_seconds": 92.180499,
+        "end_seconds": 92.258345,
+        "isolation_ratio": 9.99
+      }
+    ],
+    "excerpt_start_seconds": 11.36195,
+    "audition": "cherry-mx-blue-audition.wav"
+  },
+  {
+    "title": "Cherry MX Clear",
+    "author": "humi74",
+    "url": "https://freesound.org/people/humi74/sounds/412923/",
+    "license": "CC0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "original_file": "412923__humi74__mechanical-keyboard-clicking.wav",
+    "original_sha256": "84efab4f441290637b9613efdbd52e7ed7d38bc1eb3b6f6683ab886321fcf94f",
+    "sample_rate": 44100,
+    "samples": [
+      {
+        "file": "cherry-mx-clear/key-01.wav",
+        "start_seconds": 3.146848,
+        "end_seconds": 3.232676,
+        "isolation_ratio": 16.28
+      },
+      {
+        "file": "cherry-mx-clear/key-02.wav",
+        "start_seconds": 5.822766,
+        "end_seconds": 6.030317,
+        "isolation_ratio": 20.31
+      },
+      {
+        "file": "cherry-mx-clear/key-03.wav",
+        "start_seconds": 6.976145,
+        "end_seconds": 7.157755,
+        "isolation_ratio": 15.47
+      },
+      {
+        "file": "cherry-mx-clear/key-04.wav",
+        "start_seconds": 16.261043,
+        "end_seconds": 16.38678,
+        "isolation_ratio": 19.2
+      }
+    ],
+    "excerpt_start_seconds": 3.046848,
+    "audition": "cherry-mx-clear-audition.wav"
+  },
+  {
+    "title": "Modified Gateron Yellow",
+    "author": "zrrion",
+    "url": "https://freesound.org/people/zrrion/sounds/665075/",
+    "license": "CC0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "original_file": "665075__zrrion__keyboard-typing-sounds-unidentified-technics-keyboard.ogg",
+    "original_sha256": "b3c4f2794e7d187675a67f887bad12d42a7aedc3984933c475a72f828f1895bd",
+    "sample_rate": 44100,
+    "samples": [
+      {
+        "file": "gateron-yellow/key-01.wav",
+        "start_seconds": 9.422585,
+        "end_seconds": 9.510408,
+        "isolation_ratio": 26.05
+      },
+      {
+        "file": "gateron-yellow/key-02.wav",
+        "start_seconds": 18.920998,
+        "end_seconds": 19.096621,
+        "isolation_ratio": 43.91
+      },
+      {
+        "file": "gateron-yellow/key-03.wav",
+        "start_seconds": 22.648526,
+        "end_seconds": 22.700431,
+        "isolation_ratio": 25.42
+      },
+      {
+        "file": "gateron-yellow/key-04.wav",
+        "start_seconds": 36.225669,
+        "end_seconds": 36.357392,
+        "isolation_ratio": 24.1
+      }
+    ],
+    "excerpt_start_seconds": 9.322585,
+    "audition": "gateron-yellow-audition.wav"
+  }
+]

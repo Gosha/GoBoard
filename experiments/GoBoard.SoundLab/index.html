@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GoBoard · Sound lab</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css?v=5">
+</head>
+<body>
+<header><div><span class="eyebrow">GOBOARD / EXPERIMENTS</span><h1>Find the right keystroke.</h1><p>Listen, shape the tail, and keep what feels right.</p></div><button id="stop" class="quiet">Stop all <kbd>Esc</kbd></button></header>
+<main>
+<aside><h2>Recordings</h2><nav id="families" aria-label="Keyboard recording"></nav><div class="aside-note">24 recording candidates<br>12 current samples<br>24 ready-made pairs<br><span>CC0 recordings · MIT kbsim packs</span></div><a id="source" target="_blank" rel="noopener">Source recording ↗</a><p class="small">License: <a id="license" target="_blank" rel="noopener"></a></p><p id="sourceHint" class="small"></p></aside>
+<section class="workspace" aria-label="Sample editor">
+<div class="section-head"><div><span id="familyLabel" class="eyebrow"></span><h2 id="sampleTitle">Loading recordings…</h2></div><span id="kind" class="badge"></span></div>
+<div class="wave"><div class="wave-labels"><label><input id="autofit" type="checkbox" checked> Zoom waveform to fit</label><span id="scaleLabel"></span></div><canvas id="waveform" height="150" role="img" aria-label="Source waveform with trim and press/release regions"></canvas><div class="wave-labels"><span id="waveHint">Source context</span><span id="duration"></span></div><p id="levels" class="small"></p><p id="activityWarning" class="small" role="status"></p></div>
+<div class="preset-row" aria-label="Trim starting points"><span>Starting point</span><button data-trim="short">Short</button><button data-trim="natural" class="selected">More decay</button><button data-trim="long">Wide context</button><button id="reset">Reset controls</button></div>
+<div class="controls">
+<label>Start <output id="startValue"></output><input id="start" type="range" min="0" max="500" step="1" value="68"></label>
+<label>End <output id="endValue"></output><input id="end" type="range" min="20" max="700" step="1" value="300"></label>
+<label>Tail fade <output id="fadeValue"></output><input id="fade" type="range" min="1" max="40" step="1" value="6"></label>
+<label>Pitch <output id="pitchValue"></output><input id="pitch" type="range" min="-3" max="3" step="0.25" value="0"></label>
+</div>
+<section class="split-panel" aria-label="Press and release experiment">
+<label class="split-toggle"><input id="paired" type="checkbox"> Split into press / release</label>
+<p id="splitHint" class="small">Place the split between the two sounds. Mint is press; amber is release. A second attack may also be another keystroke—listen to each part.</p>
+<div id="splitControls" hidden>
+<div class="controls">
+<label>Press ends / split <output id="splitValue"></output><input id="split" type="range" min="5" max="500" step="1" value="150"></label>
+<label>Release starts <output id="releaseStartValue"></output><input id="releaseStart" type="range" min="5" max="500" step="1" value="150"></label>
+<label>Release volume <output id="releaseGainValue"></output><input id="releaseGain" type="range" min="0" max="150" step="5" value="70"></label>
+<label>Preview hold time <output id="holdMsValue"></output><input id="holdMs" type="range" min="30" max="1000" step="10" value="200"></label>
+</div>
+<p class="small">Click or drag the waveform to place both boundaries. Move Release starts later to skip silence before the return sound.</p>
+<div class="split-actions"><button id="pressOnly">▶ Press only</button><button id="releaseOnly">▶ Release only</button><button id="hold" type="button">Hold to press · let go to release</button></div>
+<p id="partLevels" class="small"></p>
+</div></section>
+<div class="playbar"><button id="play" class="primary">▶ Play variation</button><button id="context">Hear source context</button><label class="inline">Volume <input id="volume" type="range" min="0" max="100" value="65"><output id="volumeValue">65%</output></label></div>
+<div class="options"><label><input id="match" type="checkbox" checked> Match sample energy</label><label><input id="overlap" type="checkbox" checked> Let tails overlap</label><span id="status" role="status" aria-live="polite">Ready</span></div>
+<div class="compare"><label>Compare with <select id="reference" aria-label="Current sample reference"></select></label><button id="ab">A: current → B: variation</button><button id="burst">Typing burst</button><label>Spacing <select id="spacing"><option value="90">90 ms · very fast</option><option value="150" selected>150 ms · fast</option><option value="300">300 ms · relaxed</option></select></label></div>
+<label class="typing-label" for="typing">Try typing with this variation <span id="typingHint">Only this field makes key sounds.</span></label>
+<textarea id="typing" rows="2" placeholder="The quick brown fox jumps over the lazy dog…" spellcheck="false"></textarea>
+<div class="savebar"><input id="note" type="text" aria-label="Favorite note" placeholder="A note for this version, e.g. softer, good tail…"><button id="save">☆ Save variation</button></div>
+<div class="section-head catalog-head"><h2>Choose a cut</h2><span class="small">Select a card, then play or type.</span></div>
+<div id="candidates" class="candidates" aria-label="Candidate samples"></div>
+<div class="section-head saved-head"><h2>Saved variations <span id="favoriteCount">0</span></h2><button id="export">Export favorites</button></div>
+<div id="favorites" class="favorites"><p class="small">Keep a few variations to compare. Saved in this browser.</p></div>
+<p class="footnote">This lab does not change your GoBoard settings. “Match sample energy” is an approximate level comparison, not equal perceived loudness. Export your favorites to preserve exact cuts and notes.</p>
+</section>
+</main>
+<script src="app.js?v=6"></script>
+</body></html>

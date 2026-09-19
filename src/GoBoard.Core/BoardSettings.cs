@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace GoBoard.Core;
 
-internal enum KeySound { CushionedWood, SoftLowThud }
+internal enum KeySound { CushionedWood, SoftLowThud, CherryMxBlue, CherryMxClear, GateronYellowModified, GateronYellowPairs }
 
 internal sealed record BoardSettings
 {
@@ -22,7 +22,7 @@ internal sealed record BoardSettings
     {
         SizePercent = Math.Clamp(SizePercent, 50, 150),
         VolumePercent = Math.Clamp(VolumePercent, 0, 100),
-        Sound = Enum.IsDefined(Sound) ? Sound : KeySound.CushionedWood,
+        Sound = Enum.IsDefined(Sound) ? KeySounds.Canonical(Sound) : KeySound.CushionedWood,
         Geometry = Enum.IsDefined(Geometry) ? Geometry : KeyboardGeometry.Auto,
         Theme = BoardThemes.Normalize(Theme),
         Effects = (Effects ?? new()).Normalize()

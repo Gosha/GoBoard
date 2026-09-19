@@ -81,8 +81,8 @@ internal sealed class SettingsForm : Form
             var saved = store.Update(s => SettingsControls.Enabled(action.Value, s) ? SettingsControls.Apply(action.Value, s) : s);
             actionError = saved ? null : store.Error;
             audio.Apply(store.Current);
-            if (saved && action.Value is SettingsAction.Wood or SettingsAction.Thud or SettingsAction.ToggleSound or SettingsAction.Quieter or SettingsAction.Louder)
-                audio.Click();
+            if (saved && SettingsControls.AuditionsSound(action.Value))
+                audio.Preview();
         }
         RenderFrame();
     }

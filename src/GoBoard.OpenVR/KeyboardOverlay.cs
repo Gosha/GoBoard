@@ -44,7 +44,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     public void PreviewSound(BoardSettings settings)
     {
         audio.Apply(settings);
-        audio.Click();
+        audio.Preview();
     }
 
     public void BeginFrame(bool active, uint? grabbingController = null, bool isResizing = false)
@@ -105,6 +105,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
                     break;
                 case EVREventType.VREvent_FocusLeave:
                     State.Leave(pointer.Value, device, time);
+                    audio.Cancel(pointer.Value);
                     break;
                 case EVREventType.VREvent_MouseMove when e.eventAgeSeconds <= 0.20f:
                     // This controller-identified event was delivered to this
@@ -114,10 +115,11 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
                 case EVREventType.VREvent_MouseButtonDown when enabled && !faulted && e.data.mouse.button == (uint)EVRMouseButton.Left:
                     if (!State.Press(pointer.Value, device, e.data.mouse.x, e.data.mouse.y, time, now))
                         Console.WriteLine($"Keyboard down rejected: controller {device}, laser slot {slot}, age {e.eventAgeSeconds:F3}s.");
-                    else audio.Click();
+                    else audio.Click(pointerId: pointer.Value,
+                        key: KeyboardLayout.HitOpenVr(e.data.mouse.x, e.data.mouse.y, State.Layout.Keys));
                     break;
                 case EVREventType.VREvent_MouseButtonUp when e.data.mouse.button == (uint)EVRMouseButton.Left:
-                    if (State.Up(pointer.Value, device, time)) audio.Click(released: true);
+                    if (State.Up(pointer.Value, device, time)) audio.Click(released: true, pointerId: pointer.Value);
                     break;
             }
         }
@@ -138,7 +140,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
                     system.GetDeviceToAbsoluteTrackingPose(ETrackingUniverseOrigin.TrackingUniverseStanding, 0, devices);
                     foreach (var device in State.FocusedDevices)
                         if (device >= devices.Length || !devices[device].bDeviceIsConnected || !devices[device].bPoseIsValid)
-                            State.LoseDevice(device, Now);
+                        { State.LoseDevice(device, Now); audio.Cancel(device); }
                     State.Tick(Now);
                 }
             }
@@ -156,6 +158,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
 
     private void Cancel(bool clearFocus = true)
     {
+        audio.Cancel();
         try { State.Cancel(Now, clearFocus); output.ReleaseAll(); }
         catch (Exception ex) { faulted = true; status = ex.Message; lastErrorTime = Now; Console.Error.WriteLine(status); }
     }

@@ -7,7 +7,8 @@ internal enum SettingsAction
     GeneralTab, EffectsTab, Afterglow, Spotlight, Edges, Ripples, PressFlash,
     TransitionNone, Crossfade, Lift, TransitionFaster, TransitionSlower, TravelLess, TravelMore,
     EnterFaster, EnterSlower, LeaveFaster, LeaveSlower, RadiusLess, RadiusMore,
-    StrengthLess, StrengthMore, RippleFaster, RippleSlower, ResetEffects
+    StrengthLess, StrengthMore, RippleFaster, RippleSlower, ResetEffects,
+    PreviousSound, NextSound, PreviewSound
 }
 internal sealed record SettingsControl(SettingsAction Action, string Label, KeyBounds Bounds);
 
@@ -36,8 +37,9 @@ internal static class SettingsControls
         new(SettingsAction.Smaller, "−", new(588, 158, 100, 64)),
         new(SettingsAction.Larger, "+", new(704, 158, 100, 64)),
         new(SettingsAction.ToggleSound, "", new(588, 260, 216, 64)),
-        new(SettingsAction.Wood, "Cushioned wood", new(64, 368, 340, 68)),
-        new(SettingsAction.Thud, "Soft low thud", new(420, 368, 384, 68)),
+        new(SettingsAction.PreviousSound, "‹", new(64, 368, 84, 68)),
+        new(SettingsAction.PreviewSound, "", new(164, 368, 540, 68)),
+        new(SettingsAction.NextSound, "›", new(720, 368, 84, 68)),
         new(SettingsAction.Quieter, "−", new(588, 474, 100, 64)),
         new(SettingsAction.Louder, "+", new(704, 474, 100, 64)),
         new(SettingsAction.Geometry, "", new(588, 550, 216, 64)),
@@ -98,6 +100,9 @@ internal static class SettingsControls
         >= SettingsAction.TransitionFaster and <= SettingsAction.RippleSlower => Apply(action, s) != s,
         _ => true
     };
+    public static bool AuditionsSound(SettingsAction action) => action is
+        SettingsAction.Wood or SettingsAction.Thud or SettingsAction.PreviousSound or SettingsAction.NextSound or
+        SettingsAction.PreviewSound or SettingsAction.ToggleSound or SettingsAction.Quieter or SettingsAction.Louder;
     public static BoardSettings Apply(SettingsAction action, BoardSettings s) => (action switch
     {
         SettingsAction.Smaller => s with { SizePercent = s.SizePercent - 5 },
@@ -105,6 +110,8 @@ internal static class SettingsControls
         SettingsAction.ToggleSound => s with { SoundEnabled = !s.SoundEnabled },
         SettingsAction.Wood => s with { Sound = KeySound.CushionedWood },
         SettingsAction.Thud => s with { Sound = KeySound.SoftLowThud },
+        SettingsAction.PreviousSound => s with { Sound = KeySounds.Next(s.Sound, previous: true) },
+        SettingsAction.NextSound => s with { Sound = KeySounds.Next(s.Sound) },
         SettingsAction.Quieter => s with { VolumePercent = s.VolumePercent - 10 },
         SettingsAction.Louder => s with { VolumePercent = s.VolumePercent + 10 },
         SettingsAction.SteamSoft => s with { Theme = BoardThemes.SteamSoft },

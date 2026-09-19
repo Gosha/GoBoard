@@ -157,6 +157,13 @@ public sealed class SettingsTests : IDisposable
             var half = KeyAudio.CreateClick(released, sound, .5f);
             var mute = KeyAudio.CreateClick(released, sound, 0);
             Assert.Equal(full.Length, half.Length);
+            if (released && KeySounds.IsSampled(sound) && !KeySounds.HasPairedRelease(sound))
+            {
+                Assert.Empty(full);
+                Assert.Empty(mute);
+                continue;
+            }
+            Assert.True(full.Length > 44);
             for (var i = 44; i < full.Length; i += 2)
             {
                 Assert.InRange(Math.Abs(BitConverter.ToInt16(half, i) - BitConverter.ToInt16(full, i) / 2d), 0, 1);

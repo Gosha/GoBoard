@@ -43,6 +43,7 @@ internal static class SettingsPanel
         Text(desktopMode ? "Desktop scale · 50–150%" : $"{OverlayGeometry.PanelWidthInMeters * settings.Scale * 100:F0} cm wide · 50–150%", 64, 216, small, accent);
         Text("Key sounds", 64, 290, label, text);
         Text("Sound preset", 64, 347, small, accent);
+        Text("Use arrows to choose · Click the name to preview", 64, 461, small, accent);
         Text($"Volume   {settings.VolumePercent}%", 64, 511, label, text);
         Text("Keyboard arrangement", 64, 578, label, text);
         Text("Auto · ANSI · ISO", 64, 608, small, accent);
@@ -52,8 +53,7 @@ internal static class SettingsPanel
             64, 760, small, error == null ? accent : new SKColor(0xff, 0xb0, 0xa0));
         foreach (var c in SettingsControls.ForPage(pointers?.Page ?? SettingsPage.General))
         {
-            var selected = c.Action == SettingsAction.Wood && settings.Sound == KeySound.CushionedWood ||
-                c.Action == SettingsAction.Thud && settings.Sound == KeySound.SoftLowThud ||
+            var selected = c.Action == SettingsAction.PreviewSound ||
                 c.Action == SettingsAction.ToggleSound && settings.SoundEnabled ||
                 c.Action == SettingsAction.SteamSoft && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamSoft ||
                 c.Action == SettingsAction.SteamFlat && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamFlat ||
@@ -81,10 +81,19 @@ internal static class SettingsPanel
             }
             paint.Color = !enabled ? new SKColor(0x66, 0x78, 0x82) : selected ? new SKColor(0x09, 0x19, 0x23) : text;
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
+            if (c.Action == SettingsAction.PreviewSound) title = KeySounds.Name(settings.Sound);
             if (c.Action == SettingsAction.Geometry) title = settings.Geometry switch
             { KeyboardGeometry.Ansi => "ANSI", KeyboardGeometry.Iso => "ISO", _ => "Auto" };
             var font = effectsPage || c.Action is SettingsAction.Defaults or SettingsAction.GeneralTab or SettingsAction.EffectsTab ? small : label;
-            canvas.DrawText(title, rect.MidX, rect.MidY - (font.Metrics.Ascent + font.Metrics.Descent) / 2, SKTextAlign.Center, font, paint);
+            var baseline = rect.MidY - (font.Metrics.Ascent + font.Metrics.Descent) / 2;
+            if (c.Action == SettingsAction.PreviewSound)
+            {
+                var contentWidth = SoundPresetIcon.Size + SoundPresetIcon.LabelGap + font.MeasureText(title);
+                var left = rect.MidX - contentWidth / 2;
+                SoundPresetIcon.Draw(canvas, settings.Sound, left, rect.MidY - SoundPresetIcon.Size / 2);
+                canvas.DrawText(title, left + SoundPresetIcon.Size + SoundPresetIcon.LabelGap, baseline, SKTextAlign.Left, font, paint);
+            }
+            else canvas.DrawText(title, rect.MidX, baseline, SKTextAlign.Center, font, paint);
         }
         return bitmap;
     }

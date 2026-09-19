@@ -6,6 +6,9 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="../../assets/audio/mechanical/cherry-blue-pairs/*.wav" LogicalName="GoBoard.Audio.cherry-blue-pairs.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../assets/audio/mechanical/gateron-pairs/*.wav" LogicalName="GoBoard.Audio.gateron-pairs.%(Filename)%(Extension)" />
+    <None Include="../../assets/audio/mechanical/CREDITS.md" Link="SOUND-CREDITS.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <ProjectReference Include="../GoBoard.Core/GoBoard.Core.csproj" />
     <InternalsVisibleTo Include="GoBoard.OpenVR" />
     <InternalsVisibleTo Include="GoBoard.Tests" />

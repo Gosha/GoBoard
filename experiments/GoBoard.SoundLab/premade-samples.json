@@ -1,0 +1,1267 @@
+{
+  "version": 1,
+  "revision": "ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4",
+  "license": "MIT",
+  "families": [
+    {
+      "id": "kbsim-blackink",
+      "name": "Gateron Black Ink",
+      "author": "Thomas Lai / kbsim",
+      "source": "https://github.com/tplai/kbsim/tree/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink",
+      "sourceHash": "ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4",
+      "license": "MIT",
+      "licenseUrl": "upstream/kbsim/LICENSE.md",
+      "premade": true,
+      "samples": [
+        {
+          "id": "BI01",
+          "label": "Ordinary 0",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-blackink/BI01.wav",
+          "durationMs": 170,
+          "startMs": 0,
+          "endMs": 170,
+          "sha256": "d87bc25cecda9813557fdd1e59ebcf4102fc6cbd4a5fef53360719d482aaa6bf",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/blackink/press/GENERIC_R0.mp3",
+              "sha256": "4a50e78bb7502423f1ef8ba7c6fa235f9bf51f59bb3d5581b666074d7d9cc211",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/press/GENERIC_R0.mp3",
+              "frames": 2886,
+              "sampleRate": 44100,
+              "peakDbfs": -12.43,
+              "rmsDbfs": -36.49
+            },
+            "release": {
+              "path": "upstream/kbsim/blackink/release/GENERIC.mp3",
+              "sha256": "cc45a0954eb9f3925f66dc874b38954416b96128d3eacd7e76ee0ee211b8c66a",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/release/GENERIC.mp3",
+              "frames": 2780,
+              "sampleRate": 44100,
+              "peakDbfs": -18.66,
+              "rmsDbfs": -39.99
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 66,
+            "releaseStartMs": 106,
+            "endMs": 170,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 170,
+            "split": 66,
+            "releaseStart": 106,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "BI02",
+          "label": "Ordinary 1",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-blackink/BI02.wav",
+          "durationMs": 170,
+          "startMs": 0,
+          "endMs": 170,
+          "sha256": "a8e7e3ab00190737d517960b2c742e3081b6469a67a5782f1d8c60729a91cf6d",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/blackink/press/GENERIC_R1.mp3",
+              "sha256": "66a3876ba178f41c8cf41333df8c616ac530138830df5349e8945c462a102ead",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/press/GENERIC_R1.mp3",
+              "frames": 2886,
+              "sampleRate": 44100,
+              "peakDbfs": -12.6,
+              "rmsDbfs": -36.18
+            },
+            "release": {
+              "path": "upstream/kbsim/blackink/release/GENERIC.mp3",
+              "sha256": "cc45a0954eb9f3925f66dc874b38954416b96128d3eacd7e76ee0ee211b8c66a",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/release/GENERIC.mp3",
+              "frames": 2780,
+              "sampleRate": 44100,
+              "peakDbfs": -18.66,
+              "rmsDbfs": -39.99
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 66,
+            "releaseStartMs": 106,
+            "endMs": 170,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 170,
+            "split": 66,
+            "releaseStart": 106,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "BI03",
+          "label": "Ordinary 2",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-blackink/BI03.wav",
+          "durationMs": 170,
+          "startMs": 0,
+          "endMs": 170,
+          "sha256": "7d5d846d899eb8da753509729180333afbf977d78a21797d29be935109b3154f",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/blackink/press/GENERIC_R2.mp3",
+              "sha256": "e00b6d20cb56995025632a197124f37f1ef191acd2a562e967712e19505a79be",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/press/GENERIC_R2.mp3",
+              "frames": 2886,
+              "sampleRate": 44100,
+              "peakDbfs": -12.82,
+              "rmsDbfs": -36.19
+            },
+            "release": {
+              "path": "upstream/kbsim/blackink/release/GENERIC.mp3",
+              "sha256": "cc45a0954eb9f3925f66dc874b38954416b96128d3eacd7e76ee0ee211b8c66a",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/release/GENERIC.mp3",
+              "frames": 2780,
+              "sampleRate": 44100,
+              "peakDbfs": -18.66,
+              "rmsDbfs": -39.99
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 66,
+            "releaseStartMs": 106,
+            "endMs": 170,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 170,
+            "split": 66,
+            "releaseStart": 106,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "BI04",
+          "label": "Ordinary 3",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-blackink/BI04.wav",
+          "durationMs": 170,
+          "startMs": 0,
+          "endMs": 170,
+          "sha256": "7d5d846d899eb8da753509729180333afbf977d78a21797d29be935109b3154f",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/blackink/press/GENERIC_R3.mp3",
+              "sha256": "e00b6d20cb56995025632a197124f37f1ef191acd2a562e967712e19505a79be",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/press/GENERIC_R3.mp3",
+              "frames": 2886,
+              "sampleRate": 44100,
+              "peakDbfs": -12.82,
+              "rmsDbfs": -36.19
+            },
+            "release": {
+              "path": "upstream/kbsim/blackink/release/GENERIC.mp3",
+              "sha256": "cc45a0954eb9f3925f66dc874b38954416b96128d3eacd7e76ee0ee211b8c66a",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/release/GENERIC.mp3",
+              "frames": 2780,
+              "sampleRate": 44100,
+              "peakDbfs": -18.66,
+              "rmsDbfs": -39.99
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 66,
+            "releaseStartMs": 106,
+            "endMs": 170,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 170,
+            "split": 66,
+            "releaseStart": 106,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "BI05",
+          "label": "Ordinary 4",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-blackink/BI05.wav",
+          "durationMs": 170,
+          "startMs": 0,
+          "endMs": 170,
+          "sha256": "0df7d4d262fd08e44fe73ad6c0400016961115e5930895f897abf73083c167f2",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/blackink/press/GENERIC_R4.mp3",
+              "sha256": "26aebf55daa50e98c254e73b3ea4a824aaa232c33e9187d09aa1441cc1435363",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/press/GENERIC_R4.mp3",
+              "frames": 2886,
+              "sampleRate": 44100,
+              "peakDbfs": -12.93,
+              "rmsDbfs": -36.19
+            },
+            "release": {
+              "path": "upstream/kbsim/blackink/release/GENERIC.mp3",
+              "sha256": "cc45a0954eb9f3925f66dc874b38954416b96128d3eacd7e76ee0ee211b8c66a",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/release/GENERIC.mp3",
+              "frames": 2780,
+              "sampleRate": 44100,
+              "peakDbfs": -18.66,
+              "rmsDbfs": -39.99
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 66,
+            "releaseStartMs": 106,
+            "endMs": 170,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 170,
+            "split": 66,
+            "releaseStart": 106,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "BI06",
+          "label": "SPACE",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-blackink/BI06.wav",
+          "durationMs": 171,
+          "startMs": 0,
+          "endMs": 171,
+          "sha256": "fa27c7cb11898698bd09a3efe9e6558f319f59913bee327a78e9e90dcc812298",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/blackink/press/SPACE.mp3",
+              "sha256": "9d8dbd1e65503e67d7dfa384bb3f696624ac641ad589b1f92d6a1ebc1450d3cd",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/press/SPACE.mp3",
+              "frames": 2871,
+              "sampleRate": 44100,
+              "peakDbfs": -9.14,
+              "rmsDbfs": -31.8
+            },
+            "release": {
+              "path": "upstream/kbsim/blackink/release/SPACE.mp3",
+              "sha256": "6a2070501972ae9baaee79bf44d7ede6689c648d3649deefde656ca3df16b996",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/release/SPACE.mp3",
+              "frames": 2841,
+              "sampleRate": 44100,
+              "peakDbfs": -19.67,
+              "rmsDbfs": -41.41
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 66,
+            "releaseStartMs": 106,
+            "endMs": 171,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 171,
+            "split": 66,
+            "releaseStart": 106,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "BI07",
+          "label": "ENTER",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-blackink/BI07.wav",
+          "durationMs": 182,
+          "startMs": 0,
+          "endMs": 182,
+          "sha256": "6982b8ad1ecc451fd4cddb12d5a550ae35dd629fa6b8fd66fe28c153bbd4b448",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/blackink/press/ENTER.mp3",
+              "sha256": "deabdc71c306a94e684f166f0a90c20dc61483c3d8b5a87a681890195b076d37",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/press/ENTER.mp3",
+              "frames": 2946,
+              "sampleRate": 44100,
+              "peakDbfs": -16.21,
+              "rmsDbfs": -40.17
+            },
+            "release": {
+              "path": "upstream/kbsim/blackink/release/ENTER.mp3",
+              "sha256": "d4b3ebbe0fe7d10849ddaab71893328fda345d3d5b4332c53df4e16f92cc8dd4",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/release/ENTER.mp3",
+              "frames": 3265,
+              "sampleRate": 44100,
+              "peakDbfs": -38.35,
+              "rmsDbfs": -56.04
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 67,
+            "releaseStartMs": 107,
+            "endMs": 182,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 182,
+            "split": 67,
+            "releaseStart": 107,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "BI08",
+          "label": "BACKSPACE",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-blackink/BI08.wav",
+          "durationMs": 193,
+          "startMs": 0,
+          "endMs": 193,
+          "sha256": "412af9295832192e2d1e1dd5e6bb1cf44dc2c87eb467d4c018bea76ae344087c",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/blackink/press/BACKSPACE.mp3",
+              "sha256": "9e956add9665d10364505517cdfa664af0eac19b748648067092e83e1fbecf6f",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/press/BACKSPACE.mp3",
+              "frames": 3212,
+              "sampleRate": 44100,
+              "peakDbfs": -19.61,
+              "rmsDbfs": -39.22
+            },
+            "release": {
+              "path": "upstream/kbsim/blackink/release/BACKSPACE.mp3",
+              "sha256": "74d8fd0811ac70043a81ee7c6f4a3956450c096556ccc86de29b57e5ef723c59",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/blackink/release/BACKSPACE.mp3",
+              "frames": 3488,
+              "sampleRate": 44100,
+              "peakDbfs": -26.1,
+              "rmsDbfs": -46.18
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 73,
+            "releaseStartMs": 113,
+            "endMs": 193,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 193,
+            "split": 73,
+            "releaseStart": 113,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "kbsim-holypanda",
+      "name": "Holy Panda",
+      "author": "Thomas Lai / kbsim",
+      "source": "https://github.com/tplai/kbsim/tree/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda",
+      "sourceHash": "ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4",
+      "license": "MIT",
+      "licenseUrl": "upstream/kbsim/LICENSE.md",
+      "premade": true,
+      "samples": [
+        {
+          "id": "HP01",
+          "label": "Ordinary 0",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-holypanda/HP01.wav",
+          "durationMs": 162,
+          "startMs": 0,
+          "endMs": 162,
+          "sha256": "8cedb783473be0682b7d2cf03a48f00250fe3145938bea94606c2b8a0bd7e665",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/holypanda/press/GENERIC_R0.mp3",
+              "sha256": "79b2811f3061c406ac9dcf802ae83d68f5fac78f8ed588a515e2550d2fcd05df",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/press/GENERIC_R0.mp3",
+              "frames": 3013,
+              "sampleRate": 44100,
+              "peakDbfs": -11.99,
+              "rmsDbfs": -33.24
+            },
+            "release": {
+              "path": "upstream/kbsim/holypanda/release/GENERIC.mp3",
+              "sha256": "9b0859c4ccb2adabdd9e9447aa0684f3ba12f59551aaf1a4d867d458d4ca56b1",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/release/GENERIC.mp3",
+              "frames": 2321,
+              "sampleRate": 44100,
+              "peakDbfs": -29.38,
+              "rmsDbfs": -45.99
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 69,
+            "releaseStartMs": 109,
+            "endMs": 162,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 162,
+            "split": 69,
+            "releaseStart": 109,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "HP02",
+          "label": "Ordinary 1",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-holypanda/HP02.wav",
+          "durationMs": 162,
+          "startMs": 0,
+          "endMs": 162,
+          "sha256": "d270e881df6ddc4fef5eb0b57ad4473bdb1f78c10f6623cc0327d8ee11467cdb",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/holypanda/press/GENERIC_R1.mp3",
+              "sha256": "cb9aefe55a81c48d6680d2ab8960220c20439e31ba1e32fd570106ed15c7fd40",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/press/GENERIC_R1.mp3",
+              "frames": 3013,
+              "sampleRate": 44100,
+              "peakDbfs": -11.93,
+              "rmsDbfs": -33.07
+            },
+            "release": {
+              "path": "upstream/kbsim/holypanda/release/GENERIC.mp3",
+              "sha256": "9b0859c4ccb2adabdd9e9447aa0684f3ba12f59551aaf1a4d867d458d4ca56b1",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/release/GENERIC.mp3",
+              "frames": 2321,
+              "sampleRate": 44100,
+              "peakDbfs": -29.38,
+              "rmsDbfs": -45.99
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 69,
+            "releaseStartMs": 109,
+            "endMs": 162,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 162,
+            "split": 69,
+            "releaseStart": 109,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "HP03",
+          "label": "Ordinary 2",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-holypanda/HP03.wav",
+          "durationMs": 162,
+          "startMs": 0,
+          "endMs": 162,
+          "sha256": "3fa1e93a58bea671237f1829ca52902607d70ccde591899fd332483892216384",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/holypanda/press/GENERIC_R2.mp3",
+              "sha256": "d346d76ef4c32f09be58556ccce843d7a88199214f9ebfdbf8b95226faf7ba3e",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/press/GENERIC_R2.mp3",
+              "frames": 3013,
+              "sampleRate": 44100,
+              "peakDbfs": -12.05,
+              "rmsDbfs": -33.07
+            },
+            "release": {
+              "path": "upstream/kbsim/holypanda/release/GENERIC.mp3",
+              "sha256": "9b0859c4ccb2adabdd9e9447aa0684f3ba12f59551aaf1a4d867d458d4ca56b1",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/release/GENERIC.mp3",
+              "frames": 2321,
+              "sampleRate": 44100,
+              "peakDbfs": -29.38,
+              "rmsDbfs": -45.99
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 69,
+            "releaseStartMs": 109,
+            "endMs": 162,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 162,
+            "split": 69,
+            "releaseStart": 109,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "HP04",
+          "label": "Ordinary 3",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-holypanda/HP04.wav",
+          "durationMs": 162,
+          "startMs": 0,
+          "endMs": 162,
+          "sha256": "1628d6612d76048429a0592ece13206858e78bcc08b42535dc67f7899ecc1c82",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/holypanda/press/GENERIC_R3.mp3",
+              "sha256": "4141524713fc19942166866c093777351f6f122acb9d79c7503981a5b906c7dc",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/press/GENERIC_R3.mp3",
+              "frames": 3013,
+              "sampleRate": 44100,
+              "peakDbfs": -11.95,
+              "rmsDbfs": -33.06
+            },
+            "release": {
+              "path": "upstream/kbsim/holypanda/release/GENERIC.mp3",
+              "sha256": "9b0859c4ccb2adabdd9e9447aa0684f3ba12f59551aaf1a4d867d458d4ca56b1",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/release/GENERIC.mp3",
+              "frames": 2321,
+              "sampleRate": 44100,
+              "peakDbfs": -29.38,
+              "rmsDbfs": -45.99
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 69,
+            "releaseStartMs": 109,
+            "endMs": 162,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 162,
+            "split": 69,
+            "releaseStart": 109,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "HP05",
+          "label": "Ordinary 4",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-holypanda/HP05.wav",
+          "durationMs": 162,
+          "startMs": 0,
+          "endMs": 162,
+          "sha256": "4bc7709e40dcd9490ac3afd7798d8c609798d9e1375065140e3b1f3895bf626b",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/holypanda/press/GENERIC_R4.mp3",
+              "sha256": "60ac51060cc0f1880016be2dffa05d3e3cf928290df37be998fb081bdf1ea66f",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/press/GENERIC_R4.mp3",
+              "frames": 3013,
+              "sampleRate": 44100,
+              "peakDbfs": -13.27,
+              "rmsDbfs": -34.41
+            },
+            "release": {
+              "path": "upstream/kbsim/holypanda/release/GENERIC.mp3",
+              "sha256": "9b0859c4ccb2adabdd9e9447aa0684f3ba12f59551aaf1a4d867d458d4ca56b1",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/release/GENERIC.mp3",
+              "frames": 2321,
+              "sampleRate": 44100,
+              "peakDbfs": -29.38,
+              "rmsDbfs": -45.99
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 69,
+            "releaseStartMs": 109,
+            "endMs": 162,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 162,
+            "split": 69,
+            "releaseStart": 109,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "HP06",
+          "label": "SPACE",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-holypanda/HP06.wav",
+          "durationMs": 349,
+          "startMs": 0,
+          "endMs": 349,
+          "sha256": "e105ccdb352f17a670720c4a570c86c220229e0d774c382186361f71a242f4c5",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/holypanda/press/SPACE.mp3",
+              "sha256": "bcba046d707877095ff2fc6d031091348515f9a6f724ee73c029831d105b71a6",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/press/SPACE.mp3",
+              "frames": 12936,
+              "sampleRate": 44100,
+              "peakDbfs": -11.0,
+              "rmsDbfs": -37.0
+            },
+            "release": {
+              "path": "upstream/kbsim/holypanda/release/SPACE.mp3",
+              "sha256": "980bfca97b89f2dc114f23cdb440c956a62137430d5e22682e011d16d43f2153",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/release/SPACE.mp3",
+              "frames": 626,
+              "sampleRate": 44100,
+              "peakDbfs": -20.64,
+              "rmsDbfs": -35.08
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 294,
+            "releaseStartMs": 334,
+            "endMs": 349,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 349,
+            "split": 294,
+            "releaseStart": 334,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "HP07",
+          "label": "ENTER",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-holypanda/HP07.wav",
+          "durationMs": 127,
+          "startMs": 0,
+          "endMs": 127,
+          "sha256": "60c71dce31aac240b88ae6b68ad1eb96ee3d2b7e69437196e4240e2bdcc59fb7",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/holypanda/press/ENTER.mp3",
+              "sha256": "56d78f9b2b662ddd07255e2e130410536a0e877bdc639fef7e205edfd73558a1",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/press/ENTER.mp3",
+              "frames": 2915,
+              "sampleRate": 44100,
+              "peakDbfs": -9.56,
+              "rmsDbfs": -28.29
+            },
+            "release": {
+              "path": "upstream/kbsim/holypanda/release/ENTER.mp3",
+              "sha256": "be0f86e85d17dce47a607960c37eb54240ff1648b8eb54b6293cb8beb38c17ed",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/release/ENTER.mp3",
+              "frames": 867,
+              "sampleRate": 44100,
+              "peakDbfs": -22.79,
+              "rmsDbfs": -38.14
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 67,
+            "releaseStartMs": 107,
+            "endMs": 127,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 127,
+            "split": 67,
+            "releaseStart": 107,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "HP08",
+          "label": "BACKSPACE",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-holypanda/HP08.wav",
+          "durationMs": 159,
+          "startMs": 0,
+          "endMs": 159,
+          "sha256": "04f93226afe085e2df8d43b4caed605a5c73447ac50429a018ca533cd1083bf1",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/holypanda/press/BACKSPACE.mp3",
+              "sha256": "293a4fb1ab19605348018c2e8fea805ef9454963aa69e2d26a06ed7217636889",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/press/BACKSPACE.mp3",
+              "frames": 3010,
+              "sampleRate": 44100,
+              "peakDbfs": -9.92,
+              "rmsDbfs": -30.03
+            },
+            "release": {
+              "path": "upstream/kbsim/holypanda/release/BACKSPACE.mp3",
+              "sha256": "dd092c78c99322f3bf9c45c2095a91e6a91450889f2a0976fb9858397b360c06",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/holypanda/release/BACKSPACE.mp3",
+              "frames": 2171,
+              "sampleRate": 44100,
+              "peakDbfs": -18.03,
+              "rmsDbfs": -38.25
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 69,
+            "releaseStartMs": 109,
+            "endMs": 159,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 159,
+            "split": 69,
+            "releaseStart": 109,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "kbsim-topre",
+      "name": "Topre",
+      "author": "Thomas Lai / kbsim",
+      "source": "https://github.com/tplai/kbsim/tree/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre",
+      "sourceHash": "ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4",
+      "license": "MIT",
+      "licenseUrl": "upstream/kbsim/LICENSE.md",
+      "premade": true,
+      "samples": [
+        {
+          "id": "TP01",
+          "label": "Ordinary 0",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-topre/TP01.wav",
+          "durationMs": 250,
+          "startMs": 0,
+          "endMs": 250,
+          "sha256": "fbb41596fd457b78b135c4ca5d81c40feb6df8483532cdbe2b77b7239ff322f8",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/topre/press/GENERIC_R0.mp3",
+              "sha256": "a61130c11937d615179cdda1dc31497ed64138dae1dc931c331be74a82c62451",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/press/GENERIC_R0.mp3",
+              "frames": 5922,
+              "sampleRate": 44100,
+              "peakDbfs": -29.38,
+              "rmsDbfs": -47.07
+            },
+            "release": {
+              "path": "upstream/kbsim/topre/release/GENERIC.mp3",
+              "sha256": "0e8030c4e3c32bde47ec4873d30e2700611cea71de0ad9c5f0c48e5200b8a3cd",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/release/GENERIC.mp3",
+              "frames": 3305,
+              "sampleRate": 44100,
+              "peakDbfs": -22.32,
+              "rmsDbfs": -42.33
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 135,
+            "releaseStartMs": 175,
+            "endMs": 250,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 250,
+            "split": 135,
+            "releaseStart": 175,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "TP02",
+          "label": "Ordinary 1",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-topre/TP02.wav",
+          "durationMs": 250,
+          "startMs": 0,
+          "endMs": 250,
+          "sha256": "703ceef065b9e217c72ed3e010236fa91a78ff9340e307231b341a2cf6ebee7a",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/topre/press/GENERIC_R1.mp3",
+              "sha256": "7848f347aa76b850095ff03f98e04c325de28d6d30ed24b4451bd4bfcd73ecea",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/press/GENERIC_R1.mp3",
+              "frames": 5922,
+              "sampleRate": 44100,
+              "peakDbfs": -29.42,
+              "rmsDbfs": -46.89
+            },
+            "release": {
+              "path": "upstream/kbsim/topre/release/GENERIC.mp3",
+              "sha256": "0e8030c4e3c32bde47ec4873d30e2700611cea71de0ad9c5f0c48e5200b8a3cd",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/release/GENERIC.mp3",
+              "frames": 3305,
+              "sampleRate": 44100,
+              "peakDbfs": -22.32,
+              "rmsDbfs": -42.33
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 135,
+            "releaseStartMs": 175,
+            "endMs": 250,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 250,
+            "split": 135,
+            "releaseStart": 175,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "TP03",
+          "label": "Ordinary 2",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-topre/TP03.wav",
+          "durationMs": 250,
+          "startMs": 0,
+          "endMs": 250,
+          "sha256": "3b313abb92987469391797a7f315ec30f78232a732754f66e112f68c6d65f8a9",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/topre/press/GENERIC_R2.mp3",
+              "sha256": "3009e146a2f17e9eb98faf34050cf534bed24be2d2295b69a0cff28e5bc43f77",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/press/GENERIC_R2.mp3",
+              "frames": 5922,
+              "sampleRate": 44100,
+              "peakDbfs": -28.7,
+              "rmsDbfs": -46.65
+            },
+            "release": {
+              "path": "upstream/kbsim/topre/release/GENERIC.mp3",
+              "sha256": "0e8030c4e3c32bde47ec4873d30e2700611cea71de0ad9c5f0c48e5200b8a3cd",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/release/GENERIC.mp3",
+              "frames": 3305,
+              "sampleRate": 44100,
+              "peakDbfs": -22.32,
+              "rmsDbfs": -42.33
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 135,
+            "releaseStartMs": 175,
+            "endMs": 250,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 250,
+            "split": 135,
+            "releaseStart": 175,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "TP04",
+          "label": "Ordinary 3",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-topre/TP04.wav",
+          "durationMs": 250,
+          "startMs": 0,
+          "endMs": 250,
+          "sha256": "4a2003a5ccfa4c86183edd2cf493f5bb0e4f26e9d97f577aae70faf098895370",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/topre/press/GENERIC_R3.mp3",
+              "sha256": "f5b3b49d4f85c228b4be3fd1cf9c11a7aebee005a127b16d3cbd81dba9bb8003",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/press/GENERIC_R3.mp3",
+              "frames": 5922,
+              "sampleRate": 44100,
+              "peakDbfs": -29.99,
+              "rmsDbfs": -46.86
+            },
+            "release": {
+              "path": "upstream/kbsim/topre/release/GENERIC.mp3",
+              "sha256": "0e8030c4e3c32bde47ec4873d30e2700611cea71de0ad9c5f0c48e5200b8a3cd",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/release/GENERIC.mp3",
+              "frames": 3305,
+              "sampleRate": 44100,
+              "peakDbfs": -22.32,
+              "rmsDbfs": -42.33
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 135,
+            "releaseStartMs": 175,
+            "endMs": 250,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 250,
+            "split": 135,
+            "releaseStart": 175,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "TP05",
+          "label": "Ordinary 4",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-topre/TP05.wav",
+          "durationMs": 250,
+          "startMs": 0,
+          "endMs": 250,
+          "sha256": "3088ea280c879190d6a98faddb9aba1974919e86a5c73771d4a33dad9b644701",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/topre/press/GENERIC_R4.mp3",
+              "sha256": "6553b1182524edca8342dcdbc7a92eab9c5791bb9cf516c5494629d672425164",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/press/GENERIC_R4.mp3",
+              "frames": 5922,
+              "sampleRate": 44100,
+              "peakDbfs": -29.47,
+              "rmsDbfs": -47.21
+            },
+            "release": {
+              "path": "upstream/kbsim/topre/release/GENERIC.mp3",
+              "sha256": "0e8030c4e3c32bde47ec4873d30e2700611cea71de0ad9c5f0c48e5200b8a3cd",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/release/GENERIC.mp3",
+              "frames": 3305,
+              "sampleRate": 44100,
+              "peakDbfs": -22.32,
+              "rmsDbfs": -42.33
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 135,
+            "releaseStartMs": 175,
+            "endMs": 250,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 250,
+            "split": 135,
+            "releaseStart": 175,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "TP06",
+          "label": "SPACE",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-topre/TP06.wav",
+          "durationMs": 171,
+          "startMs": 0,
+          "endMs": 171,
+          "sha256": "1ad1c04541b7512c4cb51760d5081457b18b0388d83acd7bc28db3c4dc6b7c77",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/topre/press/SPACE.mp3",
+              "sha256": "1fd27ffd614b7f18205df601b0daf339d4dd5217663165a99667625a6c0b0311",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/press/SPACE.mp3",
+              "frames": 2948,
+              "sampleRate": 44100,
+              "peakDbfs": -10.64,
+              "rmsDbfs": -33.66
+            },
+            "release": {
+              "path": "upstream/kbsim/topre/release/SPACE.mp3",
+              "sha256": "07f21da1b02cf10b8ffe35f5d14bcc94feb57c9bc2a241ace3f429b443fbbe3a",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/release/SPACE.mp3",
+              "frames": 2808,
+              "sampleRate": 44100,
+              "peakDbfs": -16.63,
+              "rmsDbfs": -35.21
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 67,
+            "releaseStartMs": 107,
+            "endMs": 171,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 171,
+            "split": 67,
+            "releaseStart": 107,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "TP07",
+          "label": "ENTER",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-topre/TP07.wav",
+          "durationMs": 203,
+          "startMs": 0,
+          "endMs": 203,
+          "sha256": "26043f0337cdeb39b980d6c6c9d190ee19987a2193c8c1995b6eebb4b02ec697",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/topre/press/ENTER.mp3",
+              "sha256": "ebc1ae71ea8097cdde7e6e57732a24761cfaf94ed78a66e3da83d2ab1df0054d",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/press/ENTER.mp3",
+              "frames": 4475,
+              "sampleRate": 44100,
+              "peakDbfs": -15.97,
+              "rmsDbfs": -35.56
+            },
+            "release": {
+              "path": "upstream/kbsim/topre/release/ENTER.mp3",
+              "sha256": "17eb8334ed0907eec01e83ca4ab9f9ad7d9fe7bf4d273e95c747d272b6a568d8",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/release/ENTER.mp3",
+              "frames": 2683,
+              "sampleRate": 44100,
+              "peakDbfs": -12.87,
+              "rmsDbfs": -35.67
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 102,
+            "releaseStartMs": 142,
+            "endMs": 203,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 203,
+            "split": 102,
+            "releaseStart": 142,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        },
+        {
+          "id": "TP08",
+          "label": "BACKSPACE",
+          "existing": false,
+          "premade": true,
+          "url": "audio/kbsim-topre/TP08.wav",
+          "durationMs": 231,
+          "startMs": 0,
+          "endMs": 231,
+          "sha256": "4654211f9a49d492d57b4074a9e8ec13c0e170c2df29513b3051797bcdd3db31",
+          "sourceFiles": {
+            "press": {
+              "path": "upstream/kbsim/topre/press/BACKSPACE.mp3",
+              "sha256": "00db5edca14dc41ca89ed22ffc063d2bb30d5a5dfb829b014cc1fdfa88891c82",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/press/BACKSPACE.mp3",
+              "frames": 4728,
+              "sampleRate": 44100,
+              "peakDbfs": -22.28,
+              "rmsDbfs": -44.56
+            },
+            "release": {
+              "path": "upstream/kbsim/topre/release/BACKSPACE.mp3",
+              "sha256": "a52a3b72613388739bdc46b5ed18960382465dcadded4501a755ab478eb4be91",
+              "url": "https://github.com/tplai/kbsim/blob/ba103f3b0afa9dab80447aa2e7e2ed80b6bd80e4/src/assets/audio/topre/release/BACKSPACE.mp3",
+              "frames": 3634,
+              "sampleRate": 44100,
+              "peakDbfs": -16.72,
+              "rmsDbfs": -37.29
+            }
+          },
+          "assembly": {
+            "pressStartMs": 0,
+            "pressEndMs": 108,
+            "releaseStartMs": 148,
+            "endMs": 231,
+            "gapMs": 40
+          },
+          "defaultSettings": {
+            "start": 0,
+            "end": 231,
+            "split": 108,
+            "releaseStart": 148,
+            "paired": true,
+            "releaseGain": 100,
+            "holdMs": 200,
+            "fade": 1,
+            "pitch": 0,
+            "match": true,
+            "overlap": true
+          }
+        }
+      ]
+    }
+  ]
+}
