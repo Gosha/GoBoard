@@ -1,5 +1,7 @@
 # MSI packaging and tagged releases
 
+Choose release numbers using [the versioning policy](versioning.md). This document covers build mechanics, publishing, and the numeric MSI mapping.
+
 GoBoard releases are explicit Git tags. Stable tags such as `v1.0.0` publish normal releases; tags such as `v1.0.1-beta.1` publish Beta prereleases. Merging to `main` does not build or publish an MSI.
 
 Stable and Beta share one installation and settings file. Installing either channel replaces the other, even when returning to an older Stable release. Within the same channel, downgrades and separately rebuilt packages of the same version are blocked.
