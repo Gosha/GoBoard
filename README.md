@@ -6,7 +6,7 @@
 
 A keyboard for SteamVR and Windows desktop, inspired by [YuuBoard](https://yuuzami.itch.io/yuuboard). Labels follow your active Windows keyboard layout.
 
-![GoBoard keyboard](docs/images/goboard-keyboard.png)
+![GoBoard keyboard with Steam Soft on the left and Steam Flat on the right](docs/images/goboard-keyboard.png)
 
 ## Run
 
