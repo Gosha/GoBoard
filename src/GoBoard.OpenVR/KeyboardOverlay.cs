@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using GoBoard.Core;
 using GoBoard.Platform.Windows;
 using GoBoard.Presentation.Skia;
+using SkiaSharp;
 using Valve.VR;
 
 namespace GoBoard.Vr;
@@ -16,7 +17,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private KeyboardState keyboard;
     private readonly OverlayPointers pointers = new();
     private readonly TrackedDevicePose_t[] devices = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
-    private bool enabled, faulted, resizing;
+    private bool enabled, faulted, resizing, shortcutGeometryApplied;
     private string theme = BoardThemes.Default;
     private EffectSettings effects = new();
     private readonly AnimatedKeyboardRenderer renderer = new();
@@ -28,13 +29,20 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     internal KeyboardState State => keyboard ??= new KeyboardState(output, shortcutsOnly);
     private double acceptAfter;
+    // SteamVR's OpenGL sharing keeps the first submitted texture dimensions.
+    // Keep the palette raster fixed and use texel aspect to display its logical
+    // proportions. Full UV bounds retain the usual top/bottom orientation.
+    internal static readonly SKImageInfo ShortcutTextureInfo = new(
+        ProgrammableKeys.Width(new() { Columns = ProgrammableKeySettings.MaxColumns }) * Panel.RasterScale,
+        ProgrammableKeys.Height(new() { Rows = ProgrammableKeySettings.MaxRows }) * Panel.RasterScale,
+        SKColorType.Rgba8888, SKAlphaType.Unpremul);
 
     public void ApplySettings(BoardSettings settings, bool resized)
     {
         effects = settings.Effects;
         theme = BoardThemes.Normalize(settings.Theme);
         if (resized) Cancel();
-        if (shortcutsOnly && State.Shortcuts != settings.ProgrammableKeys)
+        if (shortcutsOnly && (!shortcutGeometryApplied || State.Shortcuts != settings.ProgrammableKeys))
         {
             Cancel();
             State.SetShortcuts(settings.ProgrammableKeys, Now);
@@ -49,6 +57,10 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize pointer coordinates: {error}");
             error = overlay.SetOverlayIntersectionMask(handle, ref mask, 1, (uint)Marshal.SizeOf<VROverlayIntersectionMaskPrimitive_t>());
             if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize input region: {error}");
+            error = overlay.SetOverlayTexelAspect(handle,
+                State.Width * (float)ShortcutTextureInfo.Height / (State.Height * ShortcutTextureInfo.Width));
+            if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize shortcut proportions: {error}");
+            shortcutGeometryApplied = true;
         }
         if (geometry != settings.Geometry)
         {
@@ -173,7 +185,8 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             (State.Mode(0x1d) != ModifierMode.Idle && State.Mode(0x38) != ModifierMode.Idle);
         var caps = WindowsKeyboard.CapsLock;
         var scrollLock = WindowsKeyboard.ScrollLock;
-        using var bitmap = renderer.Render(State, shift, status, altGr, caps, scrollLock, theme, effects, Now);
+        using var bitmap = renderer.Render(State, shift, status, altGr, caps, scrollLock, theme, effects, Now,
+            shortcutsOnly ? ShortcutTextureInfo : null);
         if (bitmap == null) return;
         graphics.Upload(overlay, handle, bitmap);
     }

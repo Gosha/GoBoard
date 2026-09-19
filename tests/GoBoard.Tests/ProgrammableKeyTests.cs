@@ -2,12 +2,69 @@ using GoBoard.Core;
 using GoBoard.Platform.Windows;
 using GoBoard.Presentation.Skia;
 using SkiaSharp;
+using GoBoard.Vr;
 using Xunit;
 
 namespace GoBoard.Tests;
 
 public sealed class ProgrammableKeyTests
 {
+    [Theory]
+    [InlineData(true, BoardThemes.SteamSoft)]
+    [InlineData(true, BoardThemes.SteamFlat)]
+    [InlineData(false, BoardThemes.SteamSoft)]
+    [InlineData(false, BoardThemes.SteamFlat)]
+    public void LiveGridResizeClearsOldCapturesAndRepaintsEverySize(bool vr, string theme)
+    {
+        var sink = new Sink();
+        var state = new KeyboardState(sink, shortcutsOnly: true, shortcutFooter: vr);
+        var settings = new ProgrammableKeySettings { Enabled = true, Columns = 4, Rows = 5, Key20 = new(0x1e) };
+        state.SetShortcuts(settings, 0);
+        using var renderer = new AnimatedKeyboardRenderer();
+        SKImageInfo Output() => vr ? KeyboardOverlay.ShortcutTextureInfo :
+            new(state.Width, state.Height, SKColorType.Bgra8888, SKAlphaType.Opaque);
+        SKBitmap Render(double now) => renderer.Render(state, false, null, false, false, false, theme, new(), now, Output());
+        using var initial = Render(1);
+        Assert.True(Press(state, "Shortcut20", 2));
+        using var pressed = Render(2);
+        var strokes = sink.Events.Count;
+        double time = 3;
+        var grids = GridSizes.Select(g => ((int)g[0], (int)g[1])).ToArray();
+        foreach (var (columns, rows) in grids.Concat(grids.Reverse().Skip(1)))
+        {
+            time++;
+            state.SetShortcuts(settings with { Columns = columns, Rows = rows }, time);
+            Assert.False(state.HasHeldKeys);
+            Assert.All(state.VisualPointers, p => Assert.False(p.Focused));
+            Assert.False(state.Up(0, 7, time + .1));
+            Assert.False(Press(state, "Shortcut1", time - .1, 1));
+            Assert.Equal(strokes, sink.Events.Count);
+            Assert.Equal(columns * rows, state.Keys.Count);
+            foreach (var key in state.Keys)
+            {
+                var b = key.Bounds;
+                Assert.Same(key, state.Hit(b.X + b.Width / 2, state.Height - b.Y - b.Height / 2));
+            }
+            using var actual = Render(time + .2);
+            Assert.NotNull(actual);
+            using var fresh = new AnimatedKeyboardRenderer();
+            using var expected = fresh.Render(state, false, null, false, false, false, theme, new(), time + .2, Output());
+            Assert.Equal(Output(), actual.Info);
+            Assert.Equal(expected.Bytes, actual.Bytes);
+            Assert.Null(Render(time + .3));
+            if (Environment.GetEnvironmentVariable("GOBOARD_SHORTCUT_ARTIFACTS") is { Length: > 0 } directory &&
+                !vr && (columns, rows) is (1, 1) or (4, 5))
+            {
+                Directory.CreateDirectory(directory);
+                using var png = actual.Encode(SKEncodedImageFormat.Png, 100);
+                using var file = File.Create(Path.Combine(directory, $"desktop-resize-{columns}x{rows}-{theme}.png"));
+                png.SaveTo(file);
+            }
+        }
+        state.SetShortcuts(settings, ++time);
+        Assert.Equal(settings.Key20, state.Keys.Single(k => k.Id == "Shortcut20").Shortcut);
+    }
+
     public static IEnumerable<object[]> GridSizes => Enumerable.Range(1, 4)
         .SelectMany(columns => Enumerable.Range(1, 5).Select(rows => new object[] { columns, rows }));
     [Theory]

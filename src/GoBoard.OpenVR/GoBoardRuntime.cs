@@ -26,6 +26,7 @@ public static int Run(string[] args)
         if (args.Length == 1 && args[0] == "--self-test") { RelativePose.Verify(); GrabPose.Verify(); GrabInput.Verify(); OverlayPointers.Verify(); return 0; }
         if (args is ["--render-benchmark"]) { PanelPreview.Benchmark(); return 0; }
         if (args is ["--effects-benchmark"]) { EffectsBenchmark.Run(); return 0; }
+        if (args is ["--shortcut-resize-check"]) return ShortcutResizeCheck.Run();
         if (args.Length == 1 && args[0] == "--input-check") { KeyboardInputCheck.Run(); return 0; }
         if (args.Length == 1 && args[0] == "--shell-check") { KeyboardInputCheck.Run(shell: true); return 0; }
         if (args.Length == 1 && args[0] == "--layout-check") { KeyboardInputCheck.Run(layouts: true); return 0; }
