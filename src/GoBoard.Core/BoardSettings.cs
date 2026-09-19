@@ -12,7 +12,7 @@ internal sealed record BoardSettings
     public int SizePercent { get; init; } = 100;
     public bool SoundEnabled { get; init; } = true;
     public int VolumePercent { get; init; } = 100;
-    public KeySound Sound { get; init; } = KeySound.CushionedWood;
+    public KeySound Sound { get; init; } = KeySound.SoftLowThud;
     public KeyboardGeometry Geometry { get; init; } = KeyboardGeometry.Auto;
     public string Theme { get; init; } = BoardThemes.Default;
     public EffectSettings Effects { get; init; } = new();
@@ -25,18 +25,14 @@ internal sealed record BoardSettings
     {
         SizePercent = Math.Clamp(SizePercent, 50, 150),
         VolumePercent = Math.Clamp(VolumePercent, 0, 100),
-        Sound = Enum.IsDefined(Sound) ? KeySounds.Canonical(Sound) : KeySound.CushionedWood,
+        Sound = Enum.IsDefined(Sound) ? KeySounds.Canonical(Sound) : KeySound.SoftLowThud,
         Geometry = Enum.IsDefined(Geometry) ? Geometry : KeyboardGeometry.Auto,
         Theme = BoardThemes.Normalize(Theme),
         Effects = (Effects ?? new()).Normalize(),
         ProgrammableKeys = (ProgrammableKeys ?? new()).Normalize()
     };
 
-    public static BoardSettings Defaults => new()
-    {
-        Sound = string.Equals(Environment.GetEnvironmentVariable("GOBOARD_KEY_SOUND"),
-            "soft-low-thud", StringComparison.OrdinalIgnoreCase) ? KeySound.SoftLowThud : KeySound.CushionedWood
-    };
+    public static BoardSettings Defaults => new();
 }
 
 // Each editor changes only its selected field against the latest saved values.

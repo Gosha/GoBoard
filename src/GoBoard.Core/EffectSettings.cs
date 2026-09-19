@@ -2,22 +2,22 @@ namespace GoBoard.Core;
 
 internal enum CharacterTransition { None, Crossfade, Lift }
 
-// Opt in to animation; existing installations retain their immediate feedback.
+// Shared defaults for new settings and Reset effects; saved values take precedence.
 internal sealed record EffectSettings
 {
-    public bool Afterglow { get; init; }
-    public bool Spotlight { get; init; }
+    public bool Afterglow { get; init; } = true;
+    public bool Spotlight { get; init; } = true;
     public bool Edges { get; init; }
-    public bool Ripples { get; init; }
+    public bool Ripples { get; init; } = true;
     public bool PressFlash { get; init; }
-    public int EnterMs { get; init; } = 0;
-    public int LeaveMs { get; init; } = 220;
-    public int Radius { get; init; } = 80;
-    public int Strength { get; init; } = 45;
-    public int RippleMs { get; init; } = 380;
-    public CharacterTransition Transition { get; init; }
-    public int TransitionMs { get; init; } = 300;
-    public int Travel { get; init; } = 8;
+    public int EnterMs { get; init; } = 80;
+    public int LeaveMs { get; init; } = 160;
+    public int Radius { get; init; } = 120;
+    public int Strength { get; init; } = 30;
+    public int RippleMs { get; init; } = 560;
+    public CharacterTransition Transition { get; init; } = CharacterTransition.Lift;
+    public int TransitionMs { get; init; } = 160;
+    public int Travel { get; init; } = 10;
     public bool PointerEnabled => Afterglow || Spotlight || Edges || Ripples || PressFlash;
     public EffectSettings Normalize() => this with
     {

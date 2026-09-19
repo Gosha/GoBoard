@@ -15,6 +15,12 @@ public sealed class EffectsTests
         public void Up(ushort scan) { }
         public void Stroke(ushort scan, ushort[] chord) => Strokes++;
     }
+    // Keep isolated renderer scenarios independent of the application's enabled defaults.
+    private static EffectSettings Baseline => new()
+    {
+        Afterglow = false, Spotlight = false, Ripples = false, Transition = CharacterTransition.None,
+        EnterMs = 0, LeaveMs = 220, Radius = 80, Strength = 45, RippleMs = 380, TransitionMs = 300, Travel = 8
+    };
     private static KeyboardState Keyboard() => new(new Sink());
     private static SKBitmap Render(AnimatedKeyboardRenderer r, KeyboardState k, EffectSettings e, double time,
         bool shift = false, bool altGr = false, bool caps = false, string theme = BoardThemes.SteamSoft)
@@ -46,7 +52,7 @@ public sealed class EffectsTests
     public void PointerOnlyMotionReusesTheCachedKeyboardButStateChangesStillRebuildIt()
     {
         using var r = new AnimatedKeyboardRenderer(); var k = Keyboard();
-        var e = new EffectSettings { Spotlight = true, Afterglow = true };
+        var e = Baseline with { Spotlight = true, Afterglow = true };
         using var first = Render(r, k, e, 0);
         var builds = r.BaselineBuildCount;
         foreach (var id in new[] { "a", "s", "d", "f", "j", "k" })
@@ -70,7 +76,7 @@ public sealed class EffectsTests
     [InlineData(1275, 423)]
     public void DesktopOutputUsesRequestedSizeAndColorWithoutChangingLogicalKeyGeometry(int width, int height)
     {
-        using var r = new AnimatedKeyboardRenderer(); var k = Keyboard(); var e = new EffectSettings();
+        using var r = new AnimatedKeyboardRenderer(); var k = Keyboard(); var e = Baseline;
         var output = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque);
         using var actual = r.Render(k, false, null, false, false, false, BoardThemes.SteamSoft, e, 0, output);
         using var source = Panel.Render(k);
@@ -108,8 +114,8 @@ public sealed class EffectsTests
             var saved = new SettingsStore(path);
             Assert.Null(saved.Error);
             Assert.Equal(CharacterTransition.Lift, saved.Current.Effects.Transition);
-            Assert.Equal(320, saved.Current.Effects.TransitionMs);
-            Assert.True(saved.Current.Effects.Spotlight);
+            Assert.Equal(180, saved.Current.Effects.TransitionMs);
+            Assert.False(saved.Current.Effects.Spotlight);
             Assert.False(saved.Reload()); // Nested values compare structurally.
             Assert.True(desktop.Update(s => SettingsControls.Apply(SettingsAction.ResetEffects, s)));
             saved.Reload();
@@ -168,7 +174,7 @@ public sealed class EffectsTests
     [InlineData(BoardThemes.SteamFlat)]
     public void DisabledEffectsMatchExistingRenderingAndIdleFramesAreSkipped(string theme)
     {
-        using var r = new AnimatedKeyboardRenderer(); var k = Keyboard(); var e = new EffectSettings();
+        using var r = new AnimatedKeyboardRenderer(); var k = Keyboard(); var e = Baseline;
         Move(k, "a");
         using var actual = Render(r, k, e, 1, theme: theme);
         using var expected = Panel.Render(k, theme: theme);
@@ -188,7 +194,7 @@ public sealed class EffectsTests
     {
         using var r = new AnimatedKeyboardRenderer(); var k = Keyboard();
         k.SetLayout(WindowsLayoutProvider.FromKlid((nint)WindowsLayout.SwedishHandle, "0000041d"), 0);
-        var e = new EffectSettings { Transition = (CharacterTransition)transition, TransitionMs = 300 };
+        var e = Baseline with { Transition = (CharacterTransition)transition, TransitionMs = 300 };
         using var first = Render(r, k, e, 0, theme: theme);
         using var start = Render(r, k, e, 1, shift: true, theme: theme);
         using var middle = Render(r, k, e, 1.15, shift: true, theme: theme);
@@ -217,7 +223,7 @@ public sealed class EffectsTests
     public void RapidRetargetStartsAtVisibleFrameAndZeroDurationIsImmediate(string theme)
     {
         using var r = new AnimatedKeyboardRenderer(); var k = Keyboard();
-        var e = new EffectSettings { Transition = CharacterTransition.Lift };
+        var e = Baseline with { Transition = CharacterTransition.Lift };
         using var first = Render(r, k, e, 0, theme: theme);
         using var start = Render(r, k, e, 1, shift: true, theme: theme);
         using var mid = Render(r, k, e, 1.15, shift: true, theme: theme);
@@ -233,7 +239,7 @@ public sealed class EffectsTests
     public void PointerLeaveFinishesFadingIncludingFromGapsAndHandsRemainIndependent()
     {
         using var r = new AnimatedKeyboardRenderer(); var k = Keyboard();
-        var e = new EffectSettings { Afterglow = true, Spotlight = true, Edges = true };
+        var e = Baseline with { Afterglow = true, Spotlight = true, Edges = true };
         using var empty = Render(r, k, e, 0);
         Move(k, "a", 0); Move(k, "l", 1);
         using var both = Render(r, k, e, 1);
@@ -257,7 +263,7 @@ public sealed class EffectsTests
     {
         using var r = new AnimatedKeyboardRenderer(); var k = Keyboard();
         k.SetLayout(WindowsLayoutProvider.FromKlid((nint)WindowsLayout.SwedishHandle, "0000041d"), 0);
-        var e = new EffectSettings { Transition = CharacterTransition.Lift };
+        var e = Baseline with { Transition = CharacterTransition.Lift };
         using var first = Render(r, k, e, 0);
         using var alt = Render(r, k, e, 1, altGr: true);
         using var caps = Render(r, k, e, 1.1, caps: true);
@@ -276,7 +282,7 @@ public sealed class EffectsTests
     public void PressFlashUsesTintInsteadOfObscuringTheEffectWithSolidPressedFill()
     {
         using var r = new AnimatedKeyboardRenderer(); var k = Keyboard();
-        var e = new EffectSettings { PressFlash = true };
+        var e = Baseline with { PressFlash = true };
         using var initial = Render(r, k, e, 0);
         Move(k, "a"); var p = k.VisualPointers.Single();
         Assert.True(k.Press(0, 7, p.X, OverlayGeometry.PanelHeight - p.Y, 1, 1));
@@ -296,7 +302,7 @@ public sealed class EffectsTests
     public void EffectsDoNotDelayStrokesAndCancellationClearsPulses()
     {
         var sink = new Sink(); var k = new KeyboardState(sink); using var r = new AnimatedKeyboardRenderer();
-        var e = new EffectSettings { Ripples = true, PressFlash = true, RippleMs = 1000 };
+        var e = Baseline with { Ripples = true, PressFlash = true, RippleMs = 1000 };
         using var first = Render(r, k, e, 0);
         Move(k, "a");
         var p = k.VisualPointers.Single();

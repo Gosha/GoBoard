@@ -12,14 +12,20 @@ internal static class EffectsBenchmark
         Console.WriteLine($"CPU rendering, {output?.Width ?? 2550} x {output?.Height ?? 846}; 30 warmup + 120 measured frames. " +
             (present == null ? "Excludes presentation/upload." : "Includes desktop bitmap wrapping and GDI paint; excludes compositor."));
         Console.WriteLine("Theme,Scenario,MedianMs,P95Ms,Frames");
+        // Keep the historical single-effect benchmark scenarios independent of user defaults.
+        var baseline = new EffectSettings
+        {
+            Afterglow = false, Spotlight = false, Ripples = false, Transition = CharacterTransition.None,
+            EnterMs = 0, LeaveMs = 220, Radius = 80, Strength = 45, RippleMs = 380, TransitionMs = 300, Travel = 8
+        };
         foreach (var theme in new[] { BoardThemes.SteamSoft, BoardThemes.SteamFlat })
         foreach (var (name, options) in new (string, EffectSettings)[] {
-            ("Off", new()), ("Afterglow", new() { Afterglow = true }),
-            ("Spotlight", new() { Spotlight = true }), ("Edges", new() { Edges = true }),
-            ("Ripple", new() { Ripples = true }), ("Flash", new() { PressFlash = true }),
-            ("Crossfade", new() { Transition = CharacterTransition.Crossfade }),
-            ("Lift", new() { Transition = CharacterTransition.Lift }),
-            ("Combined", new() { Afterglow = true, Spotlight = true, Edges = true, Ripples = true, PressFlash = true, Transition = CharacterTransition.Lift }) })
+            ("Off", baseline), ("Afterglow", baseline with { Afterglow = true }),
+            ("Spotlight", baseline with { Spotlight = true }), ("Edges", baseline with { Edges = true }),
+            ("Ripple", baseline with { Ripples = true }), ("Flash", baseline with { PressFlash = true }),
+            ("Crossfade", baseline with { Transition = CharacterTransition.Crossfade }),
+            ("Lift", baseline with { Transition = CharacterTransition.Lift }),
+            ("Combined", baseline with { Afterglow = true, Spotlight = true, Edges = true, Ripples = true, PressFlash = true, Transition = CharacterTransition.Lift }) })
         {
             var keyboard = new KeyboardState(new Sink());
             using var renderer = new AnimatedKeyboardRenderer();

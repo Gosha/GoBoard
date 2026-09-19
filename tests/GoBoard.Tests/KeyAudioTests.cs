@@ -151,7 +151,7 @@ public sealed class KeyAudioTests
             }
             Assert.Equal(KeySound.CushionedWood, store.Current.Sound);
             Assert.Equal(KeySounds.All.Count, seen.Count);
-            Assert.Equal(KeySound.CushionedWood, SettingsControls.Apply(SettingsAction.Defaults, store.Current).Sound);
+            Assert.Equal(KeySound.SoftLowThud, SettingsControls.Apply(SettingsAction.Defaults, store.Current).Sound);
             Assert.False(SettingsControls.AuditionsSound(SettingsAction.Spotlight));
         }
         finally { File.Delete(path); }

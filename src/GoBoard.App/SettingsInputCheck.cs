@@ -97,8 +97,8 @@ internal static class SettingsInputCheck
                 Click(SettingsAction.Spotlight);
                 Click(SettingsAction.Lift);
                 Click(SettingsAction.TransitionSlower);
-                Require(store.Current.Effects.Spotlight && store.Current.Effects.Transition == CharacterTransition.Lift &&
-                    store.Current.Effects.TransitionMs == 320, "Effects tab controls");
+                Require(!store.Current.Effects.Spotlight && store.Current.Effects.Transition == CharacterTransition.Lift &&
+                    store.Current.Effects.TransitionMs == 180, "Effects tab controls");
                 Require(new SettingsStore(path).Current == store.Current, "Saved effects selection and duration");
                 Click(SettingsAction.ResetEffects);
                 Require(store.Current == general, "Effects reset preserves general preferences");

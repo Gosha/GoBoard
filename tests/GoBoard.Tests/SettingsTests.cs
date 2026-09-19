@@ -140,7 +140,7 @@ public sealed class SettingsTests : IDisposable
         Assert.True(store.Update(_ => new BoardSettings { SizePercent = 500, VolumePercent = -5, Sound = (KeySound)99 }));
         Assert.Equal(150, store.Current.SizePercent);
         Assert.Equal(0, store.Current.VolumePercent);
-        Assert.Equal(KeySound.CushionedWood, store.Current.Sound);
+        Assert.Equal(KeySound.SoftLowThud, store.Current.Sound);
         // A parent that is a file reliably fails, including when tests run elevated.
         var blocked = new SettingsStore(Path.Combine(SettingsPath, "blocked.json"));
         var previous = blocked.Current;
