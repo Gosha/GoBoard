@@ -140,7 +140,7 @@ public static int Run(string[] args)
         follower.SetScale(appliedSettings.Scale);
         keyboard.ApplySettings(appliedSettings, false);
         using var settingsOverlay = new SettingsOverlay(system, overlay, graphics, settings, keyboard.PreviewSound);
-        Console.WriteLine($"Independent overlay: {transformType}; 10 cm grab line with an 18 x 6 cm hover target. Controller-relative movement; no smoothing.");
+        Console.WriteLine($"Independent overlay: {transformType}; 15 cm grab line with an 18 x 6 cm hover target. Controller-relative movement; no smoothing.");
         Console.WriteLine($"Panel: {Panel.WidthInMeters * 100:F1} x {Panel.HeightInMeters * 100:F1} cm, {panel.Width}x{panel.Height} texture; input coordinates remain {Panel.LayoutWidth}x{Panel.LayoutHeight}.");
         Console.WriteLine($"Headset connected: {system.IsTrackedDeviceConnected(OpenVR.k_unTrackedDeviceIndex_Hmd)}.");
         Console.WriteLine("Open the SteamVR menu: GoBoard appears separately below it and follows dashboard movement.");

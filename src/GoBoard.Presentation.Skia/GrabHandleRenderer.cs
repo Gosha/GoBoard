@@ -21,13 +21,16 @@ internal static class GrabHandleRenderer
             1 => new SKColor(241, 246, 252),
             _ => new SKColor(112, 122, 134)
         };
-        var lineWidth = state == 0 ? 100 : 120;
+        var lineWidth = state == 0 ? 150 : 180;
         var lineHeight = state == 0 ? 4 : 6;
+        // Halve the visible idle gap (35.5 mm -> 17.75 mm) while keeping the
+        // generous transparent target below the keyboard, clear of its keys.
+        const float lineCenterY = 12.25f;
         canvas.DrawRoundRect(new SKRect(
             (OverlayGeometry.GrabWidth - lineWidth) / 2f,
-            (OverlayGeometry.GrabHeight - lineHeight) / 2f,
+            lineCenterY - lineHeight / 2f,
             (OverlayGeometry.GrabWidth + lineWidth) / 2f,
-            (OverlayGeometry.GrabHeight + lineHeight) / 2f), lineHeight / 2f, lineHeight / 2f, paint);
+            lineCenterY + lineHeight / 2f), lineHeight / 2f, lineHeight / 2f, paint);
         canvas.Flush();
         return bitmap;
     }
