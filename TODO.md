@@ -18,4 +18,5 @@
 - [ ] Add in-app update checks with Stable/Beta preferences and a one-click update action in desktop and VR Settings. Keep GoBoard usable while downloading and verifying the update, then gracefully close running instances for installation. Preserve settings and automatically restart only the modes that were already running; do not launch the app if it was closed. Handle elevation, cancellation, and installation failures clearly.
 - [ ] Add reset button to keyboard that moves it back.
 - [ ] Validate actual German/French/US International typing and extend automatic layout support to complex scripts, additional lock modes, and IME/JIS arrangements.
+- [ ] Rethink the shortcut preset selection. Arrows for switching in a long list is tedious.
 - [ ] Maybe: Numpad
