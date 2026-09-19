@@ -77,7 +77,10 @@ public sealed class EffectsTests
         using var expected = new SKBitmap(output);
         using (var canvas = new SKCanvas(expected))
         using (var image = SKImage.FromBitmap(source))
+        {
+            canvas.Clear(KeyboardTheme.Soft.Background);
             canvas.DrawImage(image, new SKRect(0, 0, width, height), new SKSamplingOptions(SKFilterMode.Linear));
+        }
         Assert.Equal(output, actual.Info);
         Assert.Equal(expected.Bytes, actual.Bytes);
         Assert.Null(r.Render(k, false, null, false, false, false, BoardThemes.SteamSoft, e, 1, output));

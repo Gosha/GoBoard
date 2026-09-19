@@ -31,7 +31,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
         bool scroll, string theme, EffectSettings options, double now, SKImageInfo? outputInfo = null)
     {
         var output = outputInfo ?? new SKImageInfo(Panel.LayoutWidth * Panel.RasterScale, Panel.LayoutHeight * Panel.RasterScale,
-            SKColorType.Rgba8888, SKAlphaType.Opaque);
+            SKColorType.Rgba8888, SKAlphaType.Unpremul);
         var reset = bound != keyboard || layout != keyboard.Layout || this.theme != theme || this.options != options ||
             cancellationRevision != keyboard.CancellationRevision;
         if (reset)
@@ -98,10 +98,11 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
             outputBaseline?.Dispose(); outputBaseline = null;
             // Resize/swizzle the settled keyboard once, not once per animated
             // frame. Desktop usually needs far fewer pixels than the VR texture.
-            if (output.Width != baseline.Width || output.Height != baseline.Height || output.ColorType != baseline.ColorType)
+            if (output.Width != baseline.Width || output.Height != baseline.Height || output.ColorType != baseline.ColorType || output.AlphaType != baseline.AlphaType)
             {
                 using var pixels = new SKBitmap(output);
                 using var target = new SKCanvas(pixels);
+                target.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Background : SKColors.Transparent);
                 target.DrawImage(baseline, new SKRect(0, 0, output.Width, output.Height), new SKSamplingOptions(SKFilterMode.Linear));
                 outputBaseline = SKImage.FromBitmap(pixels);
             }
@@ -109,6 +110,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
         }
         var result = new SKBitmap(output);
         using var canvas = new SKCanvas(result);
+        canvas.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Background : SKColors.Transparent);
         canvas.DrawImage(outputBaseline ?? baseline, new SKRect(0, 0, output.Width, output.Height), new SKSamplingOptions(SKFilterMode.Nearest));
         canvas.Scale(output.Width / (float)Panel.LayoutWidth, output.Height / (float)Panel.LayoutHeight);
         if (surfaces != null) transitions.Draw(canvas, baseline, surfaces, keyboard, style, now, filledPress: !options.PressFlash);

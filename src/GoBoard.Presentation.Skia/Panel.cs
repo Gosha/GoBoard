@@ -16,7 +16,8 @@ internal static class Panel
         var Accent = style.Accent;
         var Ink = style.Ink;
         var layout = keyboard?.Layout ?? new WindowsLayout((nint)WindowsLayout.UsHandle);
-        var bitmap = new SKBitmap(new SKImageInfo(LayoutWidth * RasterScale, LayoutHeight * RasterScale, SKColorType.Rgba8888, SKAlphaType.Opaque));
+        // OpenVR consumes straight RGBA, including coverage at the rounded edge.
+        var bitmap = new SKBitmap(new SKImageInfo(LayoutWidth * RasterScale, LayoutHeight * RasterScale, SKColorType.Rgba8888, SKAlphaType.Unpremul));
         using var canvas = new SKCanvas(bitmap);
         canvas.Scale(RasterScale);
         using var paint = new SKPaint { IsAntialias = true };
@@ -28,12 +29,12 @@ internal static class Panel
         using var imeLabel = new SKFont(japaneseFace ?? face, 16);
         using var secondary = new SKFont(face, 12);
         using var notice = new SKFont(face, 9);
-        canvas.Clear(style.Background);
+        canvas.Clear(SKColors.Transparent);
+        var panelRect = new SKRect(.5f, .5f, LayoutWidth - .5f, LayoutHeight - .5f);
+        paint.Color = style.PanelFrame ? style.Surface : style.Background;
+        canvas.DrawRoundRect(panelRect, 6, 6, paint);
         if (style.PanelFrame)
         {
-            var panelRect = new SKRect(.5f, .5f, LayoutWidth - .5f, LayoutHeight - .5f);
-            paint.Color = style.Surface;
-            canvas.DrawRoundRect(panelRect, 6, 6, paint);
             paint.Color = style.Border;
             paint.Style = SKPaintStyle.Stroke;
             paint.StrokeWidth = .8f;
