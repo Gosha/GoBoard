@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using GoBoard.Core;
 using GoBoard.Platform.Windows;
 using GoBoard.Presentation.Skia;
+using GoBoard.Vr;
 using SkiaSharp;
 
 namespace GoBoard.App;
@@ -18,11 +19,12 @@ internal sealed class SettingsForm : Form
     private readonly System.Windows.Forms.Timer refresh = new() { Interval = 500 };
     private readonly ToolTip details = new();
     private readonly bool previewOnly, desktopMode;
+    private readonly AutostartController autostart;
     private string actionError;
     private bool releasingCapture;
     private Bitmap frame;
     private readonly Icon windowIcon;
-    private (BoardSettings Settings, int Hover, string Error)? drawn;
+    private (BoardSettings Settings, int Hover, string Error, AutostartState Autostart)? drawn;
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     private SettingsViewport Viewport => SettingsViewport.Fit(ClientSize.Width, ClientSize.Height);
     internal SettingsControl ControlFor(SettingsAction action) => SettingsControls.ForPage(pointers.Page, store.Current, pointers.Layout, pointers.ShortcutSlot).Single(c => c.Action == action);
@@ -44,11 +46,13 @@ internal sealed class SettingsForm : Form
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool ShowWindow(nint window, int command);
 
-    public SettingsForm(bool previewOnly = false, bool desktopMode = false, SettingsStore store = null)
+    public SettingsForm(bool previewOnly = false, bool desktopMode = false, SettingsStore store = null,
+        string autostartExecutable = null, AutostartController autostart = null)
     {
         this.previewOnly = previewOnly;
         this.desktopMode = desktopMode;
         this.store = store ?? new SettingsStore();
+        this.autostart = previewOnly ? null : autostart ?? new AutostartController(autostartExecutable);
         Text = "GoBoard Settings";
         using (var stream = typeof(SettingsForm).Assembly.GetManifestResourceStream("GoBoard.Icon.ico"))
             windowIcon = new Icon(stream);
@@ -60,11 +64,12 @@ internal sealed class SettingsForm : Form
         BackColor = Color.FromArgb(12, 21, 30);
         DoubleBuffered = true;
         if (previewOnly) { ShowInTaskbar = false; Opacity = 0; }
-        refresh.Tick += (_, _) => { this.store.Reload(); RenderFrame(); };
+        refresh.Tick += (_, _) => { this.store.Reload(); this.autostart?.Update(Now); RenderFrame(); };
         Shown += (_, _) =>
         {
             var area = Screen.FromControl(this).WorkingArea;
             Size = new Size(Math.Min(Width, area.Width), Math.Min(Height, area.Height));
+            this.autostart?.Update(Now);
             RenderFrame();
             refresh.Start();
         };
@@ -78,7 +83,8 @@ internal sealed class SettingsForm : Form
         RefreshLayout();
         var now = Now;
         var action = pointers.Process(0, point.X, point.Y, now, now, down, up, leave);
-        if (action.HasValue && SettingsControls.Enabled(action.Value, store.Current))
+        if (action == SettingsAction.Autostart) autostart?.Toggle();
+        else if (action.HasValue && SettingsControls.Enabled(action.Value, store.Current))
         {
             var saved = store.Update(s => SettingsControls.Enabled(action.Value, s) ? SettingsControls.Apply(action.Value, s, pointers.ShortcutSlot, pointers.Layout) : s);
             actionError = saved ? null : store.Error;
@@ -124,17 +130,18 @@ internal sealed class SettingsForm : Form
         RefreshLayout();
         var hover = pointers.Revision;
         var error = actionError ?? store.Error;
-        var signature = (store.Current, hover, error);
+        var autostartState = autostart?.State ?? AutostartState.Preview;
+        var signature = (store.Current, hover, error, autostartState);
         if (drawn == signature) return;
-        using var pixels = SettingsPanel.Render(store.Current, pointers, error, desktopMode);
+        using var pixels = SettingsPanel.Render(store.Current, pointers, error, desktopMode, autostartState);
         using var bgra = pixels.Copy(SKColorType.Bgra8888);
         using var borrowed = new Bitmap(bgra.Width, bgra.Height, bgra.RowBytes, PixelFormat.Format32bppPArgb, bgra.GetPixels());
         var next = new Bitmap(borrowed);
         frame?.Dispose();
         frame = next;
         drawn = signature;
-        details.SetToolTip(this, error);
-        AccessibleDescription = error ?? "GoBoard settings. Changes apply immediately and are saved on this PC.";
+        details.SetToolTip(this, error ?? autostartState.Error);
+        AccessibleDescription = error ?? autostartState.Error ?? $"GoBoard settings. Changes apply immediately. SteamVR autostart: {autostartState.Status}";
         audio.Apply(store.Current);
         Invalidate();
     }

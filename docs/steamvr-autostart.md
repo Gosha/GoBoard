@@ -2,6 +2,12 @@
 
 ## Configure
 
+In the desktop or SteamVR settings page, open **General** and use **Register autostart** above the reset buttons. It registers the production executable and enables SteamVR autostart. When autostart is on, the button becomes **Unregister autostart**, which disables it and removes the managed registration. Removing autostart leaves the current keyboard running. If SteamVR has disabled autostart while leaving the application registered, **Register autostart** enables it again.
+
+The status refreshes from SteamVR every ten seconds while the settings page is visible. During a change the button is disabled; errors offer **Retry**, which checks status before allowing another change. Hover over the desktop panel for error details. A separate hidden utility process performs the OpenVR calls, so neither settings host blocks the typing loop or shuts down the live overlay's OpenVR connection. Resetting keyboard preferences does not alter autostart.
+
+The settings window launched by `settings-goboard.ps1` registers the standard production Release build, building it first if missing. Settings opened from a running keyboard register that keyboard's executable. For a standalone installation, `GoBoard.exe --settings` registers the executable beside that settings window; `--settings --executable PATH` can explicitly select another production installation. Preview rendering does not query or modify SteamVR.
+
 Run `steamvr-goboard.ps1 -Action Enable` to register the production Release executable and enable autostart. The script builds production if missing, then uses a separate helper build to configure SteamVR without locking or registering the helper executable. To update an existing production build, stop GoBoard and run `dotnet build src/GoBoard.App -c Release` first. No PowerShell script or build runs during SteamVR startup.
 
 For an installed/published copy, pass `-Executable 'C:\Apps\GoBoard\GoBoard.exe'` to Enable or Register. Keep the entire build/publish output, including .NET dependencies and `openvr_api.dll`, together in a permanent directory. A framework-dependent build needs the .NET 10 Desktop Runtime. Do not register a temporary worktree that you plan to delete.
@@ -45,6 +51,10 @@ Verification on 2026-09-18: Release solution build and production publish passed
 
 After rebasing onto `main` on 2026-09-19, locked restore, Release solution build, all 188 regression tests, and PowerShell parsing passed. The rebase preserves the launcher's isolated outputs and `-BuildOnly` option, along with the current desktop settings and position-reset behavior.
 
+Settings button validation on 2026-09-19: Release build, all 191 regression tests, and `--settings-input-check` passed. The native check exercises register/unregister clicks at three window sizes with a fake SteamVR backend and verifies that keyboard preferences are unchanged. Controller tests cover busy-state click suppression, confirmed state updates, error/retry behavior, and external status refresh. Desktop and VR settings previews were rendered and visually inspected, and the README screenshot was regenerated. These checks did not change the user's SteamVR registration; live desktop/VR autostart acceptance remains below.
+
+Rebase validation against `main` at `e9b709d`: Release build and all 268 regression tests passed; the isolated native settings check passed on rerun. The updated settings views preserve the Shortcuts tab and keep autostart above the reset buttons. Settings screenshots were regenerated with the current defaults.
+
 The process smoke check below briefly displays a desktop keyboard without injecting input. It checks a launch from a different working directory, duplicate VR-mode launch, the stop script, restart, and log creation. Close all GoBoard processes first. This check was attempted but stopped at its existing-process guard on this PC; the user's running GoBoard was left untouched. Live SteamVR registration/autostart was not changed or validated here.
 
 ```powershell
@@ -61,3 +71,4 @@ Before release, perform these checks with SteamVR and a headset (not established
 4. Quit SteamVR while GoBoard is running. Confirm GoBoard exits, its log records cleanup, and restarting SteamVR launches it again.
 5. Disable, restart SteamVR, and confirm GoBoard stays closed. Change the setting in SteamVR and confirm Status reflects it. Register again and confirm the setting is preserved.
 6. Move/copy the installation, Register the new executable, and confirm only that path launches on restart. Unregister; confirm GoBoard is removed and no longer autostarts. Repeat Unregister to check idempotence.
+7. In each settings host, register and unregister using the autostart button above the reset buttons. Confirm the label/status updates, Status agrees, and typing continues. Change autostart externally in SteamVR and confirm the panel refreshes. With SteamVR unavailable, confirm the desktop panel offers Retry and shows an error instead of claiming success.

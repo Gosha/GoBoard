@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using GoBoard.Core;
 using Valve.VR;
 
 namespace GoBoard.Vr;
@@ -11,7 +12,7 @@ public static class SteamVrApplication
     internal static string ManifestPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GoBoard", "steamvr", "goboard.vrmanifest");
 
-    public static int Run(string[] args)
+    public static int Run(string[] args, bool json = false)
     {
         var initialized = false;
         try
@@ -35,6 +36,11 @@ public static class SteamVrApplication
             var api = new ApplicationsApi(applications);
             Configure(api, action, ManifestPath, manifest);
             var installed = api.IsInstalled();
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new AutostartState(installed && api.GetAutoLaunch())));
+                return 0;
+            }
             Console.WriteLine($"GoBoard: registered={installed}, autostart={installed && api.GetAutoLaunch()}");
             if (installed)
             {

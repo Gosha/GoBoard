@@ -17,6 +17,8 @@ internal sealed class SettingsOverlay : IDisposable
     private ulong handle, thumbnail;
     private readonly SettingsPointerState pointers = new();
     private readonly OverlayPointers identities = new();
+    private readonly AutostartController autostart = new();
+    private AutostartState drawnAutostart;
     private BoardSettings drawn;
     private int drawnHover = -1;
     private string drawnError, actionError;
@@ -54,6 +56,7 @@ internal sealed class SettingsOverlay : IDisposable
             active = visible;
         }
         var e = new VREvent_t();
+        if (active) autostart.Update(Now);
         while (overlay.PollNextOverlayEvent(handle, ref e, (uint)Marshal.SizeOf<VREvent_t>()))
         {
             if (!active) continue;
@@ -79,7 +82,8 @@ internal sealed class SettingsOverlay : IDisposable
             if ((down || up) && e.data.mouse.button != (uint)EVRMouseButton.Left) continue;
             var action = pointers.Process(identity.Value, e.data.mouse.x, SettingsControls.Height - e.data.mouse.y,
                 time, now, down, up, type == EVREventType.VREvent_FocusLeave);
-            if (action.HasValue && SettingsControls.Enabled(action.Value, store.Current))
+            if (action == SettingsAction.Autostart) autostart.Toggle();
+            else if (action.HasValue && SettingsControls.Enabled(action.Value, store.Current))
             {
                 var saved = store.Update(s => SettingsControls.Enabled(action.Value, s) ? SettingsControls.Apply(action.Value, s, pointers.ShortcutSlot, pointers.Layout) : s);
                 actionError = saved ? null : store.Error;
@@ -97,10 +101,11 @@ internal sealed class SettingsOverlay : IDisposable
     {
         var hover = pointers.Revision;
         var error = actionError ?? store.Error;
-        if (drawn == store.Current && drawnHover == hover && drawnError == error) return;
-        using var bitmap = SettingsPanel.Render(store.Current, pointers, error);
+        if (drawn == store.Current && drawnHover == hover && drawnError == error && drawnAutostart == autostart.State) return;
+        using var bitmap = SettingsPanel.Render(store.Current, pointers, error, autostart: autostart.State);
         graphics.Upload(overlay, handle, bitmap);
         drawn = store.Current; drawnHover = hover; drawnError = error;
+        drawnAutostart = autostart.State;
     }
 
     private uint? Controller(uint device) => device < OpenVR.k_unMaxTrackedDeviceCount &&

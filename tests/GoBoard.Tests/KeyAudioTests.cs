@@ -173,8 +173,8 @@ public sealed class KeyAudioTests
             foreach (var theme in new[] { BoardThemes.SteamSoft, BoardThemes.SteamFlat })
             {
                 using var bitmap = SettingsPanel.Render(new() { Sound = sound, Theme = theme }, desktopMode: desktop);
-                Assert.Equal(1800, bitmap.Width);
-                Assert.Equal(1700, bitmap.Height);
+                Assert.Equal(SettingsControls.Width * 2, bitmap.Width);
+                Assert.Equal(SettingsControls.Height * 2, bitmap.Height);
                 foreach (var button in buttons)
                 {
                     var selected = SettingsControls.SoundFor(button.Action) == KeySounds.Canonical(sound);

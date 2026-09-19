@@ -18,5 +18,6 @@
     <None Include="../../vendor/openvr/openvr_api.dll" Link="openvr_api.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../../vendor/openvr/LICENSE" Link="OpenVR-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <InternalsVisibleTo Include="GoBoard.Tests" />
+    <InternalsVisibleTo Include="GoBoard" />
   </ItemGroup>
 </Project>

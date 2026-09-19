@@ -5,8 +5,9 @@ namespace GoBoard.Presentation.Skia;
 
 internal static class SettingsPanel
 {
-    public static SKBitmap Render(BoardSettings settings, SettingsPointerState pointers = null, string error = null, bool desktopMode = false)
+    public static SKBitmap Render(BoardSettings settings, SettingsPointerState pointers = null, string error = null, bool desktopMode = false, AutostartState autostart = null)
     {
+        autostart ??= AutostartState.Preview;
         var bitmap = new SKBitmap(SettingsControls.Width * 2, SettingsControls.Height * 2, SKColorType.Rgba8888, SKAlphaType.Opaque);
         using var canvas = new SKCanvas(bitmap);
         canvas.Scale(2);
@@ -90,9 +91,13 @@ internal static class SettingsPanel
         Text("Keyboard arrangement", 64, 578, label, text);
         Text("Auto · ANSI · ISO", 64, 608, small, accent);
         Text("Keyboard theme", 64, 648, small, accent);
+        paint.Color = new SKColor(0x1b, 0x2c, 0x39);
+        canvas.DrawLine(64, 836, 804, 836, paint);
+        Text("Start with SteamVR", 64, 783, label, text);
+        Text(autostart.Status, 64, 815, small, autostart.Error == null ? accent : new SKColor(0xff, 0xb0, 0xa0));
         }
         if (error != null)
-            Text("Settings unavailable · Last working values kept", 64, choosingKey ? 834 : 760, small, new SKColor(0xff, 0xb0, 0xa0));
+            Text("Settings unavailable · Last working values kept", 64, choosingKey ? 834 : effectsPage || shortcutsPage ? 760 : 860, small, new SKColor(0xff, 0xb0, 0xa0));
         foreach (var c in SettingsControls.ForPage(pointers?.Page ?? SettingsPage.General, settings, layout, slot))
         {
             var preset = SettingsControls.SoundFor(c.Action);
@@ -117,7 +122,7 @@ internal static class SettingsPanel
                 c.Action == SettingsAction.TransitionNone && settings.Effects.Transition == CharacterTransition.None ||
                 c.Action == SettingsAction.Crossfade && settings.Effects.Transition == CharacterTransition.Crossfade ||
                 c.Action == SettingsAction.Lift && settings.Effects.Transition == CharacterTransition.Lift;
-            var enabled = c.Selectable && SettingsControls.Enabled(c.Action, settings);
+            var enabled = c.Selectable && (c.Action == SettingsAction.Autostart ? autostart.CanClick : SettingsControls.Enabled(c.Action, settings));
             var b = c.Bounds;
             var rect = new SKRect(b.X, b.Y, b.X + b.Width, b.Y + b.Height);
             var keyboardChoice = choosingKey && c.Action >= SettingsAction.KeyChoiceFirst && (b.Y < 460 || b.X < 240 && b.Y < 720);
@@ -161,11 +166,12 @@ internal static class SettingsPanel
             paint.Color = !enabled ? new SKColor(0x66, 0x78, 0x82) : selected ? new SKColor(0x09, 0x19, 0x23) : text;
             if (softTheme) paint.Color = selected ? KeyboardTheme.Soft.Accent : KeyboardTheme.Soft.Text;
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
+            if (c.Action == SettingsAction.Autostart) title = autostart.ButtonLabel;
             if (c.Action == SettingsAction.ToggleShortcuts) title = settings.ProgrammableKeys.Enabled ? "Shown" : "Hidden";
             if (c.Action == SettingsAction.ChooseShortcutKey) title = ProgrammableKeys.KeyName(shortcut.Scan, layout, shortcut.Shift) + "   ›";
             if (c.Action == SettingsAction.Geometry) title = settings.Geometry switch
             { KeyboardGeometry.Ansi => "ANSI", KeyboardGeometry.Iso => "ISO", _ => "Auto" };
-            var font = preset.HasValue || effectsPage || shortcutsPage || c.Action is SettingsAction.Defaults or SettingsAction.ResetPosition or SettingsAction.GeneralTab or SettingsAction.EffectsTab or SettingsAction.ShortcutsTab ? small : label;
+            var font = preset.HasValue || effectsPage || shortcutsPage || c.Action is SettingsAction.Autostart or SettingsAction.Defaults or SettingsAction.ResetPosition or SettingsAction.GeneralTab or SettingsAction.EffectsTab or SettingsAction.ShortcutsTab ? small : label;
             using var fitted = new SKFont(face, Math.Min(font.Size, font.Size * (rect.Width - 12) / Math.Max(1, font.MeasureText(title))));
             font = fitted;
             var baseline = rect.MidY - (font.Metrics.Ascent + font.Metrics.Descent) / 2;
