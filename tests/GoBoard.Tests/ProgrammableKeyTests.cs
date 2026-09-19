@@ -67,6 +67,34 @@ public sealed class ProgrammableKeyTests
 
     public static IEnumerable<object[]> GridSizes => Enumerable.Range(1, 4)
         .SelectMany(columns => Enumerable.Range(1, 5).Select(rows => new object[] { columns, rows }));
+
+    [Theory]
+    [MemberData(nameof(GridSizes))]
+    public void VrTextureCoordinatesTargetLogicalKeyBoundsAfterGridChanges(int columns, int rows)
+    {
+        var state = new KeyboardState(new Sink(), shortcutsOnly: true);
+        state.SetShortcuts(new() { Columns = columns, Rows = rows }, 0);
+        var texture = KeyboardOverlay.ShortcutTextureInfo;
+        KeyboardKey Hit(float x, float y)
+        {
+            var p = KeyboardOverlay.ShortcutPointerPosition(x / state.Width * texture.Width,
+                (1 - y / state.Height) * texture.Height, state);
+            return state.Hit(p.X, p.Y);
+        }
+        foreach (var key in state.Keys)
+        {
+            var b = key.Bounds;
+            foreach (var x in new[] { b.X + .1f, b.X + b.Width / 2, b.X + b.Width - .1f })
+            foreach (var y in new[] { b.Y + .1f, b.Y + b.Height / 2, b.Y + b.Height - .1f })
+                Assert.Same(key, Hit(x, y));
+            Assert.Null(Hit(b.X - .5f, b.Y + b.Height / 2));
+            Assert.Null(Hit(b.X + b.Width + .5f, b.Y + b.Height / 2));
+            Assert.Null(Hit(b.X + b.Width / 2, b.Y - .5f));
+            Assert.Null(Hit(b.X + b.Width / 2, b.Y + b.Height + .5f));
+        }
+        Assert.Null(Hit(state.Width / 2f, state.Height - ProgrammableKeys.StatusHeight / 2f));
+    }
+
     [Theory]
     [MemberData(nameof(GridSizes))]
     public void FloatingGridHasIndependentGeometryAndRetainsHiddenAssignments(int columns, int rows)

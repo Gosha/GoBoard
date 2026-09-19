@@ -1,4 +1,6 @@
 using System.Security.Cryptography;
+using System.Diagnostics;
+using System.Numerics;
 using GoBoard.Core;
 using OpenTK.Graphics.OpenGL4;
 using SkiaSharp;
@@ -6,7 +8,7 @@ using Valve.VR;
 
 namespace GoBoard.Vr;
 
-// Explicit native check: a hidden, uniquely named overlay, no settings writes
+// Explicit native check: a transparent, uniquely named overlay, no settings writes
 // or input events. Kept out of the headset-independent regression test suite.
 internal static class ShortcutResizeCheck
 {
@@ -22,8 +24,13 @@ internal static class ShortcutResizeCheck
         {
             var overlay = OpenVR.Overlay;
             Check(overlay.CreateOverlay("goboard.check.shortcut-resize." + Guid.NewGuid().ToString("N"),
-                "GoBoard hidden shortcut resize check", ref handle));
-            var pose = new HmdMatrix34_t { m0 = 1, m5 = 1, m10 = 1 };
+                "GoBoard transparent shortcut resize check", ref handle));
+            // Intersection queries require ShowOverlay. Keep it transparent and
+            // away from the play space, with no mouse input method enabled.
+            Check(overlay.SetOverlayAlpha(handle, 0));
+            Check(overlay.ShowOverlay(handle));
+            var transform = Matrix4x4.CreateFromYawPitchRoll(.3f, -.2f, .1f) * Matrix4x4.CreateTranslation(0, -100, 0);
+            var pose = OpenVrPose.ToOpenVr(transform);
             Check(overlay.SetOverlayTransformAbsolute(handle, ETrackingUniverseOrigin.TrackingUniverseStanding, ref pose));
             graphics = new();
             keyboard = new(system, overlay, handle, graphics, shortcutsOnly: true);
@@ -34,19 +41,21 @@ internal static class ShortcutResizeCheck
             var settings = new BoardSettings { SoundEnabled = false };
             (string Theme, int Columns, int Rows)? lastIdentity = null;
             string lastFingerprint = null;
+            var updates = 0;
             Verify(settings);
             foreach (var theme in new[] { BoardThemes.SteamSoft, BoardThemes.SteamFlat })
             foreach (var grid in grids.Concat(grids.Reverse()))
                 Verify(settings with { Theme = theme, ProgrammableKeys = new() { Enabled = true, Columns = grid.Columns, Rows = grid.Rows } });
-            Console.WriteLine("SteamVR shortcut resize check passed: 81 updates, all 20 grids growing/shrinking, both themes, texture readback, physical dimensions, pointer scale and UV orientation. No input or user settings changed.");
+            Console.WriteLine("SteamVR shortcut resize check passed: 81 updates, all 20 grids growing/shrinking, both themes, texture readback, physical dimensions, pointer scale, ray hitboxes and UV orientation at 50/100/150% scale. No input or user settings changed.");
             return 0;
 
             void Verify(BoardSettings next)
             {
                 keyboard.ApplySettings(next, resized: true);
                 var state = keyboard.State;
-                var expectedWidth = state.Width * ProgrammableKeys.MetersPerUnit;
-                var expectedHeight = state.Height * ProgrammableKeys.MetersPerUnit;
+                var meters = ProgrammableKeys.MetersPerUnit * (++updates % 3 + 1) / 2f;
+                var expectedWidth = state.Width * meters;
+                var expectedHeight = state.Height * meters;
                 Check(overlay.SetOverlayWidthInMeters(handle, expectedWidth));
                 keyboard.BeginFrame(true);
                 keyboard.EndFrame();
@@ -57,17 +66,55 @@ internal static class ShortcutResizeCheck
                 Require(width == texture.Width && height == texture.Height, "Texture dimensions changed");
                 var mouse = new HmdVector2_t();
                 Check(overlay.GetOverlayMouseScale(handle, ref mouse));
-                Require(mouse.v0 == state.Width && mouse.v1 == state.Height, "Stale pointer coordinates");
+                Require(mouse.v0 == texture.Width && mouse.v1 == texture.Height, "Pointer aspect differs from raster");
                 var bounds = new VRTextureBounds_t();
                 Check(overlay.GetOverlayTextureBounds(handle, ref bounds));
                 Require(bounds.uMin == 0 && bounds.uMax == 1 && bounds.vMin == 1 && bounds.vMax == 0, "Texture orientation changed");
-                var bottom = new HmdMatrix34_t(); var top = new HmdMatrix34_t();
-                Check(overlay.GetTransformForOverlayCoordinates(handle, ETrackingUniverseOrigin.TrackingUniverseStanding,
-                    new() { v0 = 0, v1 = 0 }, ref bottom));
-                Check(overlay.GetTransformForOverlayCoordinates(handle, ETrackingUniverseOrigin.TrackingUniverseStanding,
-                    new() { v0 = state.Width, v1 = state.Height }, ref top));
-                Require(Math.Abs(top.m3 - bottom.m3 - expectedWidth) < .00001f &&
-                    Math.Abs(top.m7 - bottom.m7 - expectedHeight) < .00001f, "Stale physical panel dimensions");
+                float physicalWidth = 0, texelAspect = 0;
+                Check(overlay.GetOverlayWidthInMeters(handle, ref physicalWidth));
+                Check(overlay.GetOverlayTexelAspect(handle, ref texelAspect));
+                Require(Math.Abs(physicalWidth - expectedWidth) < .00001f &&
+                    Math.Abs(physicalWidth * height / width / texelAspect - expectedHeight) < .00001f,
+                    "Stale physical panel dimensions");
+
+                bool Ray(float x, float y, out VROverlayIntersectionResults_t hit)
+                {
+                    var source = Vector3.Transform(new((x - state.Width / 2f) * meters,
+                        (state.Height / 2f - y) * meters, 1), transform);
+                    var direction = Vector3.TransformNormal(-Vector3.UnitZ, transform);
+                    var ray = new VROverlayIntersectionParams_t
+                    {
+                        eOrigin = ETrackingUniverseOrigin.TrackingUniverseStanding,
+                        vSource = new() { v0 = source.X, v1 = source.Y, v2 = source.Z },
+                        vDirection = new() { v0 = direction.X, v1 = direction.Y, v2 = direction.Z }
+                    };
+                    hit = new();
+                    return overlay.ComputeOverlayIntersection(handle, ref ray, ref hit);
+                }
+                // SteamVR's intersection cache can lag a width/pose change.
+                // Wait for an off-center ray, then check every key without retries.
+                var ready = Stopwatch.StartNew();
+                while (!Ray(state.Width * .25f, state.Height * .25f, out var center) ||
+                    Math.Abs(center.vUVs.v0 - .25f) > .0005f || Math.Abs(center.vUVs.v1 - .75f) > .0005f)
+                {
+                    Require(ready.Elapsed.TotalSeconds < 2, "SteamVR ray coordinates do not match the displayed grid");
+                    Thread.Sleep(10);
+                }
+                foreach (var key in state.Keys)
+                {
+                    var b = key.Bounds;
+                    foreach (var (x, y) in new[] { (b.X + b.Width / 2, b.Y + b.Height / 2),
+                        (b.X + 1, b.Y + 1), (b.X + b.Width - 1, b.Y + b.Height - 1) })
+                    {
+                        Require(Ray(x, y, out var hit), $"Ray missed {key.Id}");
+                        var p = KeyboardOverlay.ShortcutPointerPosition(hit.vUVs.v0 * mouse.v0, hit.vUVs.v1 * mouse.v1, state);
+                        Require(Math.Abs(p.X - x) < .03f && Math.Abs(p.Y - (state.Height - y)) < .03f &&
+                            state.Hit(p.X, p.Y) == key, $"Ray targets the wrong shortcut at {key.Id}");
+                    }
+                }
+                foreach (var (x, y) in new[] { (-2f, state.Height / 2f), (state.Width + 2f, state.Height / 2f),
+                    (state.Width / 2f, -2f), (state.Width / 2f, state.Height + 2f) })
+                    Require(!Ray(x, y, out _), "Ray hit outside the visible panel");
                 using var pixels = new SKBitmap(texture);
                 Check(overlay.GetOverlayImageData(handle, pixels.GetPixels(), (uint)pixels.ByteCount, ref width, ref height));
                 var fingerprint = Convert.ToHexString(SHA256.HashData(pixels.Bytes));

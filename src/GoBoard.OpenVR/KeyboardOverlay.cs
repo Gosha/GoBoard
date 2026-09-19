@@ -37,6 +37,9 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         ProgrammableKeys.Height(new() { Rows = ProgrammableKeySettings.MaxRows }) * Panel.RasterScale,
         SKColorType.Rgba8888, SKAlphaType.Unpremul);
 
+    internal static (float X, float Y) ShortcutPointerPosition(float x, float y, KeyboardState state) =>
+        (x * state.Width / ShortcutTextureInfo.Width, y * state.Height / ShortcutTextureInfo.Height);
+
     public void ApplySettings(BoardSettings settings, bool resized)
     {
         effects = settings.Effects;
@@ -46,12 +49,15 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         {
             Cancel();
             State.SetShortcuts(settings.ProgrammableKeys, Now);
-            var scale = new HmdVector2_t { v0 = State.Width, v1 = State.Height };
+            // SteamVR applies texel aspect to ray intersection using the mouse
+            // scale's aspect too. Match the fixed raster here, then convert
+            // event coordinates to the current logical grid in Process.
+            var scale = new HmdVector2_t { v0 = ShortcutTextureInfo.Width, v1 = ShortcutTextureInfo.Height };
             var mask = new VROverlayIntersectionMaskPrimitive_t
             {
                 m_nPrimitiveType = EVROverlayIntersectionMaskPrimitiveType.OverlayIntersectionPrimitiveType_Rectangle,
                 m_Primitive = new VROverlayIntersectionMaskPrimitive_Data_t
-                { m_Rectangle = new IntersectionMaskRectangle_t { m_flWidth = State.Width, m_flHeight = State.Height } }
+                { m_Rectangle = new IntersectionMaskRectangle_t { m_flWidth = scale.v0, m_flHeight = scale.v1 } }
             };
             var error = overlay.SetOverlayMouseScale(handle, ref scale);
             if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize pointer coordinates: {error}");
@@ -130,6 +136,8 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             return;
         }
         device = pointer;
+        var (x, y) = shortcutsOnly ? ShortcutPointerPosition(e.data.mouse.x, e.data.mouse.y, State)
+            : (e.data.mouse.x, e.data.mouse.y);
         try
         {
             switch (type)
@@ -144,13 +152,13 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
                 case EVREventType.VREvent_MouseMove when e.eventAgeSeconds <= 0.20f:
                     // This controller-identified event was delivered to this
                     // overlay. The global hover query cannot identify its hand.
-                    State.ObserveMotion(pointer.Value, device.Value, e.data.mouse.x, e.data.mouse.y, time, now, enabled);
+                    State.ObserveMotion(pointer.Value, device.Value, x, y, time, now, enabled);
                     break;
                 case EVREventType.VREvent_MouseButtonDown when enabled && !faulted && e.data.mouse.button == (uint)EVRMouseButton.Left:
-                    if (!State.Press(pointer.Value, device, e.data.mouse.x, e.data.mouse.y, time, now))
+                    if (!State.Press(pointer.Value, device, x, y, time, now))
                         Console.WriteLine($"Keyboard down rejected: controller {device}, laser slot {slot}, age {e.eventAgeSeconds:F3}s.");
                     else audio.Click(pointerId: pointer.Value,
-                        key: State.Hit(e.data.mouse.x, e.data.mouse.y));
+                        key: State.Hit(x, y));
                     break;
                 case EVREventType.VREvent_MouseButtonUp when e.data.mouse.button == (uint)EVRMouseButton.Left:
                     if (State.Up(pointer.Value, device, time)) audio.Click(released: true, pointerId: pointer.Value);
