@@ -5,8 +5,6 @@ using GoBoard.Core;
 
 namespace GoBoard.Platform.Windows;
 
-internal readonly record struct InputTarget(nint Window, nint Layout, uint Process);
-
 internal sealed class WindowsKeyboard : IKeySink, IDisposable
 {
     // Explicit x64 INPUT ABI: 8-byte union alignment, 32-byte union, 40 total.
@@ -29,12 +27,7 @@ internal sealed class WindowsKeyboard : IKeySink, IDisposable
     public static bool PhysicalShift => (GetAsyncKeyState(0xa0) & 0x8000) != 0 || (GetAsyncKeyState(0xa1) & 0x8000) != 0;
     public static bool PhysicalAltGr => (GetAsyncKeyState(0xa5) & 0x8000) != 0;
 
-    public static InputTarget Foreground()
-    {
-        var window = GetForegroundWindow();
-        var thread = GetWindowThreadProcessId(window, out var process);
-        return new(window, thread == 0 ? 0 : GetKeyboardLayout(thread), process);
-    }
+    public static InputTarget Foreground() => ForegroundInputTarget.Read();
 
     public static string TargetName(InputTarget target)
     {
@@ -151,9 +144,6 @@ internal sealed class WindowsKeyboard : IKeySink, IDisposable
     }
 
     [DllImport("user32.dll", SetLastError = true)] private static extern uint SendInput(uint count, Input[] inputs, int size);
-    [DllImport("user32.dll")] private static extern nint GetForegroundWindow();
-    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint window, out uint process);
-    [DllImport("user32.dll")] private static extern nint GetKeyboardLayout(uint thread);
     [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int virtualKey);
     [DllImport("user32.dll")] private static extern short GetKeyState(int virtualKey);
     [DllImport("user32.dll", EntryPoint = "MapVirtualKeyExW")] private static extern uint MapVirtualKeyEx(uint code, uint type, nint layout);

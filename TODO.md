@@ -6,7 +6,7 @@
 - [x] Spacing looks odd; spacing between keys is smaller than above/below. Let's make it consistent. Prefer smaller margins
 - [x] Implement automatic Windows keyboard layouts (see [implementation and validation](docs/automatic-keyboard-layouts.md)).
 - [ ] Auto-hide/show when steamvr native keyboard is toggled
-- [ ] Investigate why layout doesn't switch in notepad. Seems to work flawlessly elsewhere. In notepad, even with swedish selected, US layout is shown. Typing still uses swedish layout, so layout is misleading. Switching to a different app changes the layout to be correct, and switching back to notepad makes it US again.
+- [x] Investigate and fix stale Notepad layout labels: follow the focused editor thread's HKL instead of the frame thread's retained language (see [findings and validation](docs/automatic-keyboard-layouts.md#following-the-focused-editor)).
 - [ ] "Programmable keys" in a little optional side extension. Think macro keys on a physical keyboard. Desired keys/presets:
   - [ ] Ctrl-Win-Left/Right for moving between displays
   - [ ] Play/Pause/Next/Prev media keys

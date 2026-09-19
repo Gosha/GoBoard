@@ -2,6 +2,14 @@
 
 GoBoard follows the focused application's full Windows HKL in desktop and VR mode. It now derives printable labels and AltGr behavior from the registered Windows keyboard DLL, instead of maintaining a character table for each language. Input still uses physical scan codes and Windows handles the resulting text, shortcuts, and composition.
 
+## Following the focused editor
+
+The foreground frame and its focused editor can belong to different threads. Modern Notepad exhibited this directly: its frame retained Swedish (`041D041D`) while its `RichEditD2DPT` editor switched between Swedish, UK English (`08090809`), and Japanese (`04110411`). The former frame-only query therefore showed stale labels, not necessarily US fallback labels.
+
+`ForegroundInputTarget` uses `GetGUIThreadInfo` to find the focused control and reads that control thread's full HKL. The foreground frame remains the window used for status and foreground guards. Focused window and input thread identity also participate in target comparisons, so changing editor or layout cancels pending input in both desktop and VR. Windows without a focused control, or where GUI-thread information is unavailable, retain the frame-thread query for shortcuts. Invalid focused windows, unrelated windows, and activation changes during a read reject the snapshot. Observation does not attach input queues, activate layouts, change focus, or read document text.
+
+Regression tests cover separate frame/editor threads, successive language changes with a stale frame layout, full-HKL variants, same-thread and cross-process child controls, no-focus shortcuts, invalid handles, and activation races. All 180 tests passed after the change. Read-only live probes established the Notepad thread/layout mismatch and verified that the rebuilt production detector followed repeated Swedish/UK/Japanese switches in the editor. `--desktop-input-check` passed with disposable targets, including typing, focus preservation, shortcuts, repeat/capture cancellation, Settings input without a text box, and cleanup. `--layout-check` could not run because US English was not loaded; no input languages were installed. Actual Notepad typing and headset behavior remain separate manual acceptance checks.
+
 ## How labels are obtained safely
 
 Contributor constraints for input targeting, label generation, and fallback behavior are summarized in [AGENTS.md](../AGENTS.md#input-and-layout-constraints). The implementation and its validation limits are detailed below.
@@ -57,6 +65,7 @@ dotnet run --project src/GoBoard.App -c Release -- --render .runtime/internation
 
 ## References
 
+- [GetGUIThreadInfo](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getguithreadinfo) observes another thread's focused window; [GetKeyboardLayout](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getkeyboardlayout) reads the full input locale for the window's owning thread.
 - [Microsoft keyboard layout driver samples](https://github.com/microsoft/Windows-driver-samples/tree/main/input/layout) and the locally installed Windows SDK 10.0.26100.0 `um/kbd.h` describe the native tables.
 - [ToUnicodeEx](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-tounicodeex) documents the shared keyboard translation state and dead-key interactions.
 - [ActivateKeyboardLayout](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-activatekeyboardlayout) and [GetKeyboardLayoutName](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getkeyboardlayoutnamew) provide full layout identity without deriving a variant from language bits.
