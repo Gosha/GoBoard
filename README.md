@@ -33,3 +33,7 @@ On desktop, select a window and click the keys. Open **Settings** for size, them
 - [Development and feature details](docs/development.md)
 - [Contributing](AGENTS.md)
 - [Sound credits](assets/audio/mechanical/CREDITS.md)
+
+## Disclaimer
+
+Essentially 100% vibe-coded.
