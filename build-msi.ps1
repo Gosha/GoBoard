@@ -1,9 +1,4 @@
-param(
-    [ValidateSet('stable', 'rolling')][string]$Channel = 'stable',
-    [string]$Version,
-    [ValidateRange(0, 65535)][long]$RunNumber = 0,
-    [ValidateRange(1, 65535)][int]$RunAttempt = 1
-)
+param([Parameter(Mandatory)][string]$Version)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -28,20 +23,21 @@ try {
     $changes = git status --porcelain
     if ($LASTEXITCODE -ne 0) { throw 'Could not determine whether the source is clean.' }
     $dirty = [bool]$changes
-    $informationalVersion = if ($Channel -eq 'rolling') { "$Version-rolling" } else { $Version }
+    $informationalVersion = $Version
     $informationalVersion += "+$revision"
     if ($dirty) { $informationalVersion += '.dirty' }
 
     dotnet restore $app --runtime win-x64 --artifacts-path $dotnetArtifacts --locked-mode '-p:NuGetLockFilePath=packages.win-x64.lock.json' '-p:SelfContained=true'
     if ($LASTEXITCODE -ne 0) { throw 'Application restore failed.' }
 
-    dotnet publish $app -c Release --runtime win-x64 --self-contained true --no-restore --artifacts-path $dotnetArtifacts --output $publishDir "-p:Version=$Version" "-p:InformationalVersion=$informationalVersion" '-p:IncludeSourceRevisionInInformationalVersion=false' '-p:NuGetLockFilePath=packages.win-x64.lock.json' '-p:PublishSingleFile=false' '-p:PublishTrimmed=false' '-p:DebugType=None' '-p:DebugSymbols=false'
+    dotnet publish $app -c Release --runtime win-x64 --self-contained true --no-restore --artifacts-path $dotnetArtifacts --output $publishDir "-p:Version=$Version" "-p:AssemblyVersion=$($release.MsiVersion).0" "-p:FileVersion=$($release.MsiVersion).0" "-p:InformationalVersion=$informationalVersion" '-p:IncludeSourceRevisionInInformationalVersion=false' '-p:NuGetLockFilePath=packages.win-x64.lock.json' '-p:PublishSingleFile=false' '-p:PublishTrimmed=false' '-p:DebugType=None' '-p:DebugSymbols=false'
     if ($LASTEXITCODE -ne 0) { throw 'Application publish failed.' }
 
     # Ship provenance with the app as well as alongside the downloadable MSI.
     $metadata = [ordered]@{
         channel = $Channel
         version = $Version
+        msiVersion = $release.MsiVersion
         informationalVersion = $informationalVersion
         sourceRevision = $revision
         sourceDirty = $dirty
@@ -49,7 +45,7 @@ try {
     }
     $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $publishDir 'release.json') -Encoding utf8
 
-    $installerProperties = @("-p:BaseIntermediateOutputPath=$installerArtifacts\obj\", "-p:OutputPath=$installerArtifacts\bin\", "-p:PublishDir=$publishDir\", "-p:ProductVersion=$Version", "-p:ReleaseChannel=$Channel")
+    $installerProperties = @("-p:BaseIntermediateOutputPath=$installerArtifacts\obj\", "-p:OutputPath=$installerArtifacts\bin\", "-p:PublishDir=$publishDir\", "-p:ProductVersion=$($release.MsiVersion)", "-p:ReleaseVersion=$Version", "-p:ReleaseChannel=$Channel")
     dotnet restore $installer --locked-mode @installerProperties
     if ($LASTEXITCODE -ne 0) { throw 'Installer restore failed.' }
     dotnet build $installer -c Release --no-restore @installerProperties

@@ -2,12 +2,12 @@
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <!-- Channel-specific upgrade families share files, shortcuts, and settings.
        Always remove the other channel, regardless of its numeric version. -->
-  <?if $(var.ReleaseChannel) = rolling ?>
-    <?define ProductName = "GoBoard (Rolling)" ?>
+  <?if $(var.ReleaseChannel) = beta ?>
+    <?define ProductName = "GoBoard $(var.ReleaseVersion)" ?>
     <?define UpgradeCode = "56804E91-13DF-4698-908A-604D44D7320A" ?>
     <?define OtherUpgradeCode = "A8D6C499-CBD9-4DD9-9700-C5A8C9E23192" ?>
   <?else?>
-    <?define ProductName = "GoBoard" ?>
+    <?define ProductName = "GoBoard $(var.ReleaseVersion)" ?>
     <?define UpgradeCode = "A8D6C499-CBD9-4DD9-9700-C5A8C9E23192" ?>
     <?define OtherUpgradeCode = "56804E91-13DF-4698-908A-604D44D7320A" ?>
   <?endif?>

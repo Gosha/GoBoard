@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory)][string]$MsiPath,
     [Parameter(Mandatory)][string]$PublishDir,
-    [ValidateSet('stable', 'rolling')][string]$Channel = 'stable'
+    [ValidateSet('stable', 'beta')][string]$Channel = 'stable'
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -68,15 +68,11 @@ $appVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $payload 
 if ($appVersion -ne ($package.GetAttribute('Version') + '.0')) { throw 'App and MSI versions differ.' }
 
 $metadata = Get-Content -Raw -LiteralPath (Join-Path $payload 'release.json') | ConvertFrom-Json
-if ($metadata.channel -ne $Channel -or $metadata.version -ne $package.GetAttribute('Version')) {
+if ($metadata.channel -ne $Channel -or $metadata.msiVersion -ne $package.GetAttribute('Version')) {
     throw 'Packaged release metadata does not match the requested channel/version.'
 }
-$info = if ($Channel -eq 'rolling') {
-    $v = [version]$metadata.version
-    & (Join-Path $PSScriptRoot 'Get-ReleaseInfo.ps1') -Channel rolling -RunNumber ($v.Major * 256 + $v.Minor) -RunAttempt $v.Build
-} else {
-    & (Join-Path $PSScriptRoot 'Get-ReleaseInfo.ps1') -Channel stable -Version $metadata.version
-}
+$info = & (Join-Path $PSScriptRoot 'Get-ReleaseInfo.ps1') -Version $metadata.version
+if ($info.MsiVersion -ne $metadata.msiVersion -or $info.Channel -ne $Channel) { throw 'Release version mapping or channel does not match MSI metadata.' }
 if ([guid]$package.GetAttribute('UpgradeCode') -ne [guid]$info.UpgradeCode -or
     $package.GetAttribute('Name') -ne $info.ProductName) { throw 'Incorrect MSI channel identity.' }
 if ([Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $payload 'GoBoard.dll')).ProductVersion -ne $metadata.informationalVersion) {

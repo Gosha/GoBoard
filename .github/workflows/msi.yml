@@ -21,19 +21,13 @@ on:
       - '**/nuget.config'
       - '.github/workflows/**'
   push:
-    branches: [main]
     tags: ['v*']
   workflow_dispatch:
     inputs:
-      channel:
-        description: Build channel (manual runs produce artifacts only)
-        default: rolling
-        required: true
-        type: choice
-        options: [rolling, stable]
       version:
-        description: Stable version, e.g. 0.2.0 (leave empty for Rolling)
-        required: false
+        description: Version to build (e.g. 1.0.0 or 1.0.1-beta.1); artifacts only
+        default: '1.0.0-beta.1'
+        required: true
         type: string
 
 permissions:
@@ -49,11 +43,7 @@ jobs:
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
       artifact: ${{ steps.release.outputs.artifact }}
-      stable_version: ${{ steps.release.outputs.stable_version }}
-      stable_base: ${{ steps.release.outputs.stable_base }}
-      rolling_base: ${{ steps.release.outputs.rolling_base }}
-      rolling_run_number: ${{ steps.release.outputs.rolling_run_number }}
-      rolling_run_attempt: ${{ steps.release.outputs.rolling_run_attempt }}
+      matrix: ${{ steps.release.outputs.matrix }}
     defaults:
       run:
         shell: pwsh
@@ -62,32 +52,14 @@ jobs:
       - name: Resolve release version
         id: release
         env:
-          INPUT_CHANNEL: ${{ inputs.channel }}
           INPUT_VERSION: ${{ inputs.version }}
         run: |
-          $channel = 'rolling'
-          $stableVersion = '0.1.0' # A validation package on non-stable runs.
-          if ($env:GITHUB_REF_TYPE -eq 'tag') {
-            if ($env:GITHUB_REF_NAME -cnotmatch '^v(.+)$') { throw 'Expected a vMAJOR.MINOR.PATCH tag.' }
-            $stableVersion = $Matches[1]
-            $channel = 'stable'
-          } elseif ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
-            $channel = $env:INPUT_CHANNEL
-            if ($channel -eq 'stable') { $stableVersion = $env:INPUT_VERSION }
-            elseif ($env:INPUT_VERSION) { throw 'Rolling versions are automatic; leave version empty.' }
-          }
-          $stable = ./installer/Get-ReleaseInfo.ps1 -Channel stable -Version $stableVersion
-          $rolling = ./installer/Get-ReleaseInfo.ps1 -Channel rolling -RunNumber $env:GITHUB_RUN_NUMBER -RunAttempt $env:GITHUB_RUN_ATTEMPT
-          $selected = if ($channel -eq 'stable') { $stable } else { $rolling }
-          "channel=$channel" >> $env:GITHUB_OUTPUT
-          "tag=$($selected.ReleaseTag)" >> $env:GITHUB_OUTPUT
-          "version=$($selected.Version)" >> $env:GITHUB_OUTPUT
-          "artifact=GoBoard-$channel-msi" >> $env:GITHUB_OUTPUT
-          "stable_version=$stableVersion" >> $env:GITHUB_OUTPUT
-          "stable_base=$($stable.ArtifactBase)" >> $env:GITHUB_OUTPUT
-          "rolling_base=$($rolling.ArtifactBase)" >> $env:GITHUB_OUTPUT
-          "rolling_run_number=$env:GITHUB_RUN_NUMBER" >> $env:GITHUB_OUTPUT
-          "rolling_run_attempt=$env:GITHUB_RUN_ATTEMPT" >> $env:GITHUB_OUTPUT
+          $release = ./installer/Get-CiReleaseInfo.ps1 -EventName $env:GITHUB_EVENT_NAME -RefType $env:GITHUB_REF_TYPE -RefName $env:GITHUB_REF_NAME -Version $env:INPUT_VERSION
+          "channel=$($release.Channel)" >> $env:GITHUB_OUTPUT
+          "tag=$($release.ReleaseTag)" >> $env:GITHUB_OUTPUT
+          "version=$($release.Version)" >> $env:GITHUB_OUTPUT
+          "artifact=$($release.Artifact)" >> $env:GITHUB_OUTPUT
+          "matrix=$($release.Matrix | ConvertTo-Json -Depth 4 -Compress)" >> $env:GITHUB_OUTPUT
       - name: Check version rules
         run: ./installer/Test-ReleaseInfo.ps1
 
@@ -124,12 +96,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - channel: stable
-            artifact_base: ${{ needs.versions.outputs.stable_base }}
-          - channel: rolling
-            artifact_base: ${{ needs.versions.outputs.rolling_base }}
+      matrix: ${{ fromJSON(needs.versions.outputs.matrix) }}
     defaults:
       run:
         shell: pwsh
@@ -138,18 +105,10 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
-      - name: Build and check Stable MSI
-        if: matrix.channel == 'stable'
+      - name: Build and check MSI
         env:
-          MSI_VERSION: ${{ needs.versions.outputs.stable_version }}
-        run: ./build-msi.ps1 -Channel stable -Version $env:MSI_VERSION
-      - name: Build and check Rolling MSI
-        if: matrix.channel == 'rolling'
-        env:
-          # Use the resolved attempt even when only this failed job is retried.
-          MSI_RUN_NUMBER: ${{ needs.versions.outputs.rolling_run_number }}
-          MSI_RUN_ATTEMPT: ${{ needs.versions.outputs.rolling_run_attempt }}
-        run: ./build-msi.ps1 -Channel rolling -RunNumber $env:MSI_RUN_NUMBER -RunAttempt $env:MSI_RUN_ATTEMPT
+          MSI_VERSION: ${{ matrix.version }}
+        run: ./build-msi.ps1 -Version $env:MSI_VERSION
       - name: Upload MSI, checksum, and provenance
         uses: actions/upload-artifact@v6
         with:
@@ -159,7 +118,7 @@ jobs:
 
   release:
     needs: [versions, tests, package]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     runs-on: windows-latest
     permissions:
       contents: write
@@ -181,15 +140,6 @@ jobs:
           RELEASE_VERSION: ${{ needs.versions.outputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
-          if ($env:RELEASE_CHANNEL -eq 'rolling') {
-            # Do not advertise a superseded main build as a new rolling release.
-            $head = gh api "repos/$env:GH_REPO/git/ref/heads/main" --jq '.object.sha'
-            if ($LASTEXITCODE -ne 0) { throw 'Could not verify current main commit.' }
-            if ($head -ne $env:GITHUB_SHA) {
-              Write-Output 'Main has advanced; keeping this build as a workflow artifact only.'
-              exit 0
-            }
-          }
           $assets = @(Get-ChildItem release-assets -File | ForEach-Object FullName)
           if ($assets.Count -ne 3) { throw 'Expected MSI, SHA-256 checksum, and release metadata.' }
           $notes = @(
@@ -201,9 +151,8 @@ jobs:
             'The MSI is unsigned. VR mode requires SteamVR.'
           )
           $notes | Set-Content release-notes.md
-          $options = @('--target', $env:GITHUB_SHA, '--title', "GoBoard $env:RELEASE_CHANNEL $env:RELEASE_VERSION", '--notes-file', 'release-notes.md', '--draft')
-          if ($env:RELEASE_CHANNEL -eq 'rolling') { $options += @('--prerelease', '--latest=false') }
-          else { $options += '--verify-tag' }
+          $options = @('--target', $env:GITHUB_SHA, '--title', "GoBoard $env:RELEASE_CHANNEL $env:RELEASE_VERSION", '--notes-file', 'release-notes.md', '--draft', '--verify-tag')
+          if ($env:RELEASE_CHANNEL -eq 'beta') { $options += @('--prerelease', '--latest=false') }
           # Upload to a draft first: a failed upload must not expose a partial release.
           # Existing tags/releases are never overwritten by rerunning this job.
           gh release create $env:RELEASE_TAG @assets @options
