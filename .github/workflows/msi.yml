@@ -1,0 +1,161 @@
+name: Windows MSI
+
+on:
+  pull_request:
+    paths:
+      - 'src/GoBoard.App/**'
+      - 'src/GoBoard.Core/**'
+      - 'src/GoBoard.OpenVR/**'
+      - 'src/GoBoard.Platform.Windows/**'
+      - 'src/GoBoard.Presentation.Skia/**'
+      - 'tests/GoBoard.Tests/**'
+      - 'assets/**'
+      - 'vendor/**'
+      - 'installer/**'
+      - 'build-msi.ps1'
+      - 'GoBoard.slnx'
+      - 'global.json'
+      - '**/Directory.Build.*'
+      - '**/Directory.Packages.props'
+      - '**/NuGet.Config'
+      - '**/nuget.config'
+      - '.github/workflows/**'
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to build (e.g. 1.0.0 or 1.0.1-beta.1); artifacts only
+        default: '1.0.0-beta.1'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  versions:
+    name: Version rules and release metadata
+    runs-on: windows-latest
+    timeout-minutes: 5
+    outputs:
+      channel: ${{ steps.release.outputs.channel }}
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      artifact: ${{ steps.release.outputs.artifact }}
+      matrix: ${{ steps.release.outputs.matrix }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v5
+      - name: Resolve release version
+        id: release
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          $release = ./installer/Get-CiReleaseInfo.ps1 -EventName $env:GITHUB_EVENT_NAME -RefType $env:GITHUB_REF_TYPE -RefName $env:GITHUB_REF_NAME -Version $env:INPUT_VERSION
+          "channel=$($release.Channel)" >> $env:GITHUB_OUTPUT
+          "tag=$($release.ReleaseTag)" >> $env:GITHUB_OUTPUT
+          "version=$($release.Version)" >> $env:GITHUB_OUTPUT
+          "artifact=$($release.Artifact)" >> $env:GITHUB_OUTPUT
+          "matrix=$($release.Matrix | ConvertTo-Json -Depth 4 -Compress)" >> $env:GITHUB_OUTPUT
+      - name: Check version rules
+        run: ./installer/Test-ReleaseInfo.ps1
+
+  tests:
+    name: Build and regression tests
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - name: Restore
+        run: dotnet restore GoBoard.slnx --locked-mode
+      - name: Build
+        run: dotnet build GoBoard.slnx -c Release --no-restore
+      - name: Test
+        run: dotnet test GoBoard.slnx -c Release --no-build --logger trx --results-directory artifacts/test-results
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: msi-test-results
+          path: artifacts/test-results/*.trx
+          if-no-files-found: ignore
+
+  package:
+    name: MSI (${{ matrix.channel }})
+    needs: versions
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.versions.outputs.matrix) }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - name: Build and check MSI
+        env:
+          MSI_VERSION: ${{ matrix.version }}
+        run: ./build-msi.ps1 -Version $env:MSI_VERSION
+      - name: Upload MSI, checksum, and provenance
+        uses: actions/upload-artifact@v6
+        with:
+          name: GoBoard-${{ matrix.channel }}-msi
+          path: artifacts/msi/${{ matrix.artifact_base }}.*
+          if-no-files-found: error
+
+  release:
+    needs: [versions, tests, package]
+    if: github.event_name == 'push' && github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: msi-release-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.versions.outputs.artifact }}
+          path: release-assets
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_CHANNEL: ${{ needs.versions.outputs.channel }}
+          RELEASE_TAG: ${{ needs.versions.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.versions.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $assets = @(Get-ChildItem release-assets -File | ForEach-Object FullName)
+          if ($assets.Count -ne 3) { throw 'Expected MSI, SHA-256 checksum, and release metadata.' }
+          $notes = @(
+            "Channel: $env:RELEASE_CHANNEL",
+            "Version: $env:RELEASE_VERSION",
+            "Source: https://github.com/$env:GH_REPO/commit/$env:GITHUB_SHA",
+            '',
+            'Install this MSI to replace your existing GoBoard installation, including the other release channel. Settings are retained.',
+            'The MSI is unsigned. VR mode requires SteamVR.'
+          )
+          $notes | Set-Content release-notes.md
+          $options = @('--target', $env:GITHUB_SHA, '--title', "GoBoard $env:RELEASE_CHANNEL $env:RELEASE_VERSION", '--notes-file', 'release-notes.md', '--draft', '--verify-tag')
+          if ($env:RELEASE_CHANNEL -eq 'beta') { $options += @('--prerelease', '--latest=false') }
+          # Upload to a draft first: a failed upload must not expose a partial release.
+          # Existing tags/releases are never overwritten by rerunning this job.
+          gh release create $env:RELEASE_TAG @assets @options
+          if ($LASTEXITCODE -ne 0) { throw 'Release creation failed. Inspect any existing draft before retrying; do not overwrite a published release.' }
+          gh release edit $env:RELEASE_TAG --draft=false
+          if ($LASTEXITCODE -ne 0) { throw 'Release remains a draft; assets were uploaded but publication failed.' }

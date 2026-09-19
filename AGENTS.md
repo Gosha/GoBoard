@@ -67,6 +67,10 @@ Report what was actually verified. Pure tests and PNGs do not establish headset 
 - Settings edits merge only the changed field into the latest file under a per-file mutex and replace it atomically. Failed writes must not change applied settings; malformed files retain the last working values and surface an error. Preserve stable setting IDs and migrations.
 - Keep Valve's C# binding and native OpenVR library versions matched, retain dependency locks, and preserve vendor/audio licenses and credits.
 
+## Versioning
+
+Follow [the versioning policy](docs/versioning.md) when preparing releases. Choose the highest required major/minor/patch bump based on user-visible behavior and compatibility. Do not bump versions or create release tags automatically for each change.
+
 ## References
 
 - [Development](docs/development.md): detailed workflows, feature implementation, benchmarks, and acceptance gaps.

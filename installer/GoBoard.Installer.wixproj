@@ -1,0 +1,18 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <OutputName>GoBoard-$(ReleaseVersion)-win-x64</OutputName>
+    <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\artifacts\msi\publish\</PublishDir>
+    <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir);ReleaseChannel=$(ReleaseChannel);ReleaseVersion=$(ReleaseVersion)</DefineConstants>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+  </ItemGroup>
+  <Target Name="CheckPublishedApp" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(ReleaseChannel)' != 'stable' and '$(ReleaseChannel)' != 'beta'" Text="ReleaseChannel must be stable or beta." />
+    <Error Condition="'$(ProductVersion)' == '' or '$(ReleaseVersion)' == ''" Text="Run build-msi.ps1 with an explicit release version." />
+    <Error Condition="!Exists('$(PublishDir)GoBoard.exe')" Text="Run build-msi.ps1 to publish GoBoard before building the installer." />
+  </Target>
+</Project>
