@@ -34,7 +34,7 @@ internal sealed class DesktopKeyboardForm : Form
     private int HeaderHeight => (int)Math.Round(42 * DeviceDpi / 96f);
     private Rectangle SettingsButton => new(ClientSize.Width - (int)(144 * DeviceDpi / 96f), 0, (int)(100 * DeviceDpi / 96f), HeaderHeight);
     private Rectangle CloseButton => new(SettingsButton.Right, 0, ClientSize.Width - SettingsButton.Right, HeaderHeight);
-    private DesktopGeometry Geometry => new(ClientSize.Width, ClientSize.Height, HeaderHeight);
+    private DesktopGeometry Geometry => new(ClientSize.Width, ClientSize.Height, HeaderHeight, keyboard.Width);
     internal KeyboardState State => keyboard;
     internal bool HasOwnedKeys => output.HasOwnedKeys;
     internal Point SettingsPoint => new(SettingsButton.Left + SettingsButton.Width / 2, SettingsButton.Top + SettingsButton.Height / 2);
@@ -45,7 +45,7 @@ internal sealed class DesktopKeyboardForm : Form
             HeaderHeight + (int)((b.Y + b.Height / 2) * (ClientSize.Height - HeaderHeight) / OverlayGeometry.PanelHeight));
     }
 
-    public DesktopKeyboardForm(string stopFile = null, double seconds = double.PositiveInfinity, bool previewOnly = false, SettingsStore store = null, bool previewShortcuts = false, Func<bool> stopRequested = null)
+    public DesktopKeyboardForm(string stopFile = null, double seconds = double.PositiveInfinity, bool previewOnly = false, SettingsStore store = null, bool previewShortcuts = false, Func<bool> stopRequested = null, bool previewNumpad = false)
     {
         this.stopFile = stopFile; this.seconds = seconds; this.previewOnly = previewOnly;
         this.stopRequested = stopRequested;
@@ -64,7 +64,8 @@ internal sealed class DesktopKeyboardForm : Form
         ForeColor = Color.FromArgb(241, 246, 252);
         Font = new Font("Segoe UI", 10);
         if (previewOnly) Opacity = 0;
-        applied = fixedPreview ? new BoardSettings { ProgrammableKeys = new() { Enabled = previewShortcuts } } : settings.Current;
+        applied = fixedPreview ? new BoardSettings { NumpadEnabled = previewNumpad, ProgrammableKeys = new() { Enabled = previewShortcuts } } : settings.Current;
+        keyboard.SetNumpad(applied.NumpadEnabled, Now);
         audio.Apply(applied);
         ResetPosition();
         shortcuts = new(this, output, previewOnly);
@@ -108,7 +109,7 @@ internal sealed class DesktopKeyboardForm : Form
     private void ApplySize(Rectangle? workingArea = null)
     {
         var area = workingArea ?? Screen.FromControl(this).WorkingArea;
-        var geometry = DesktopGeometry.Create(applied.Scale, DeviceDpi / 96f, area.Width - 16, area.Height - 16);
+        var geometry = DesktopGeometry.Create(applied.Scale, DeviceDpi / 96f, area.Width - 16, area.Height - 16, keyboard.Width);
         ClientSize = new((int)Math.Round(geometry.Width), (int)Math.Round(geometry.Height));
         Location = new(Math.Clamp(Left, area.Left, Math.Max(area.Left, area.Right - Width)),
             Math.Clamp(Top, area.Top, Math.Max(area.Top, area.Bottom - Height)));
@@ -143,7 +144,12 @@ internal sealed class DesktopKeyboardForm : Form
                 Cancel();
                 keyboard.SetLayout(WindowsLayoutProvider.Get(output.Target.Layout, settings.Current.Geometry), Now);
             }
-            var resized = applied.SizePercent != settings.Current.SizePercent;
+            var resized = applied.SizePercent != settings.Current.SizePercent || applied.NumpadEnabled != settings.Current.NumpadEnabled;
+            if (applied.NumpadEnabled != settings.Current.NumpadEnabled)
+            {
+                Cancel();
+                keyboard.SetNumpad(settings.Current.NumpadEnabled, Now);
+            }
             var resetPosition = applied.PositionResetId != settings.Current.PositionResetId;
             applied = settings.Current;
             audio.Apply(applied);
@@ -267,6 +273,7 @@ internal sealed class DesktopKeyboardForm : Form
             keyboard.Mode(0x1d) != ModifierMode.Idle && keyboard.Mode(0x38) != ModifierMode.Idle;
         var caps = !previewOnly && WindowsKeyboard.CapsLock;
         var scroll = !previewOnly && WindowsKeyboard.ScrollLock;
+        keyboard.SetNumLock(previewOnly || WindowsKeyboard.NumLock);
         var notice = faulted || Now < errorUntil ? error : keyboard.Layout.Notice;
         if (ClientSize.Width <= 0 || ClientSize.Height <= HeaderHeight) return;
         var output = new SKImageInfo(ClientSize.Width, ClientSize.Height - HeaderHeight, SKColorType.Bgra8888, SKAlphaType.Opaque);

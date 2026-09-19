@@ -54,7 +54,8 @@ internal static class Panel
             var mode = key.IsModifier ? keyboard?.Mode(key.Scan) ?? ModifierMode.Idle : ModifierMode.Idle;
             var filled = mode == ModifierMode.Locked || (!suppressPressed && !key.IsModifier && keyboard?.Pressed(key) == true);
             var armed = mode == ModifierMode.OneShot;
-            var toggleOn = (key.Id == "Caps" && caps) || (key.Id == "ScrollLock" && scrollLock);
+            var toggleOn = (key.Id == "Caps" && caps) || (key.Id == "ScrollLock" && scrollLock) ||
+                (key.Id == "NumLock" && keyboard?.NumLock == true);
             if (cacheSurfaces && style.ShadowBlur > 0)
                 KeySurfaceCache.Draw(canvas, key, style, hover, filled, armed || toggleOn);
             else
@@ -115,6 +116,8 @@ internal static class Panel
                 Center(canvas, key.Label, rect.MidX, rect.MidY, imeLabel, paint);
             }
             else if (key.Id == "Win") DrawWindows(canvas, rect.MidX, rect.MidY, paint);
+            else if (key.Id.StartsWith("Num", StringComparison.Ordinal))
+                Center(canvas, key.Label, rect.MidX, rect.MidY, key.Label.Length == 1 ? number : special, paint);
             else if (key.Id is "Up" or "Down" or "Left" or "Right") DrawArrow(canvas, key.Id, rect.MidX, rect.MidY, paint);
             else if (key.Id == "Backspace")
             {

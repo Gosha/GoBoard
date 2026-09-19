@@ -70,8 +70,8 @@ internal static class DesktopInputCheck
             keyboard.Show();
             Require(WindowsKeyboard.Foreground().Window == target.Handle, $"Showing the keyboard stole focus (expected {target.Handle}, keyboard {keyboard.Handle}, actual {WindowsKeyboard.Foreground().Window}).");
             Pump(100);
-            Require(unchecked((uint)(long)keyboard.State.Layout.Handle) is WindowsLayout.UsHandle or WindowsLayout.SwedishHandle,
-                "This check requires the current Windows layout to be US or Swedish.");
+            Require(unchecked((uint)(long)keyboard.State.Layout.Handle) is WindowsLayout.UsHandle or WindowsLayout.SwedishHandle or 0x08090809,
+                "This check requires the current Windows layout to be US, UK or Swedish.");
             Require(WindowsKeyboard.Foreground().Window == target.Handle, "Showing the keyboard stole focus.");
             Require(((long)GetWindowLongPtr(keyboard.Handle, -20) & 0x08000000) != 0, "The keyboard is missing WS_EX_NOACTIVATE.");
             Require(SendMessage(keyboard.Handle, 0x21, target.Handle, (nint)(0x201 << 16 | 1)) == 3, "Mouse activation was not suppressed.");
@@ -152,6 +152,28 @@ internal static class DesktopInputCheck
                     $"Num Lock shortcut: events={string.Join(',', keypadDowns)}, before={initialNumLock}, after={Control.IsKeyLocked(Keys.NumLock)}");
                 keypadDowns.Clear(); TapKeypad(0x4f);
                 Require(keypadDowns.SequenceEqual(new[] { initialNumLock ? Keys.End : Keys.NumPad1 }), "Keypad follows Num Lock");
+                Require(store.Update(s => s with { NumpadEnabled = true }), "Show integrated numpad");
+                keyboard.RefreshSettings(); Pump(50);
+                Require(keyboard.State.NumpadEnabled && keyboard.Width > mainSize.Width, "Integrated numpad geometry");
+                foreach (var (id, expectedKey) in new[] { ("NumDivide", Keys.Divide), ("NumMultiply", Keys.Multiply),
+                    ("NumEnter", Keys.Enter), ("Num1", initialNumLock ? Keys.End : Keys.NumPad1) })
+                {
+                    keypadDowns.Clear(); Tap(id);
+                    Require(keypadDowns.SequenceEqual(new[] { expectedKey }) && !keyboard.HasOwnedKeys,
+                        "Integrated keypad input and cleanup");
+                }
+                Tap("NumLock");
+                Require(keyboard.State.NumLock == initialNumLock, "Integrated Num Lock indicator");
+                keypadDowns.Clear(); Tap("Num1");
+                Require(keypadDowns.SequenceEqual(new[] { initialNumLock ? Keys.NumPad1 : Keys.End }), "Integrated keypad follows Num Lock");
+                keypadDowns.Clear();
+                Mouse(0x201, keyboard.KeyPoint("NumAdd")); Pump(560);
+                Require(keypadDowns.Count >= 2 && keypadDowns.All(k => k == Keys.Add), "Integrated keypad repeat");
+                Require(store.Update(s => s with { NumpadEnabled = false }), "Hide integrated numpad during repeat");
+                keyboard.RefreshSettings();
+                var beforeHide = keypadDowns.Count; Pump(150);
+                Require(keypadDowns.Count == beforeHide && !keyboard.State.HasHeldKeys && !keyboard.HasOwnedKeys &&
+                    keyboard.Size == mainSize, "Hiding numpad stops repeat and restores geometry");
             }
             finally
             {

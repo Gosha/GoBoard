@@ -27,6 +27,7 @@ public static int Run(string[] args)
         if (args is ["--render-benchmark"]) { PanelPreview.Benchmark(); return 0; }
         if (args is ["--effects-benchmark"]) { EffectsBenchmark.Run(); return 0; }
         if (args is ["--shortcut-resize-check"]) return ShortcutResizeCheck.Run();
+        if (args is ["--numpad-resize-check"]) return ShortcutResizeCheck.Run(numpad: true);
         if (args.Length == 1 && args[0] == "--input-check") { KeyboardInputCheck.Run(); return 0; }
         if (args.Length == 1 && args[0] == "--shell-check") { KeyboardInputCheck.Run(shell: true); return 0; }
         if (args.Length == 1 && args[0] == "--layout-check") { KeyboardInputCheck.Run(layouts: true); return 0; }
@@ -37,6 +38,7 @@ public static int Run(string[] args)
         string previewTheme = BoardThemes.Default;
         bool previewOptions = false;
         bool previewShortcuts = false;
+        bool previewNumpad = false;
         bool shortcutsSettings = false;
         bool shortcutPresets = false;
         string stopFile = null;
@@ -48,6 +50,7 @@ public static int Run(string[] args)
                 case "--render" when i + 1 < args.Length: renderPath = args[++i]; break;
                 case "--render-settings" when i + 1 < args.Length: settingsRenderPath = args[++i]; break;
                 case "--shortcuts": previewShortcuts = true; break;
+                case "--numpad": previewNumpad = true; break;
                 case "--render-shortcut-settings" when i + 1 < args.Length: settingsRenderPath = args[++i]; shortcutsSettings = true; break;
                 case "--render-shortcut-presets" when i + 1 < args.Length: settingsRenderPath = args[++i]; shortcutsSettings = shortcutPresets = true; break;
                 case "--layout" when i + 1 < args.Length: previewLayout = args[++i]; previewOptions = true; break;
@@ -69,6 +72,7 @@ public static int Run(string[] args)
         if (settingsRenderPath != null && (renderPath != null || previewOptions)) throw new ArgumentException("--render-settings cannot be combined with keyboard preview options.");
         if (previewOptions && renderPath == null) throw new ArgumentException("--layout, --state and --theme require --render; live layouts follow Windows automatically; use Settings for live theme selection.");
         if (previewShortcuts && renderPath == null) throw new ArgumentException("--shortcuts requires --render or --render-desktop.");
+        if (previewNumpad && renderPath == null) throw new ArgumentException("--numpad requires --render or --render-desktop.");
         var previewId = previewLayout switch
         {
             "us" => "00000409", "sv" => "0000041d", "uk" => "00000809", "de" => "00000407",
@@ -89,8 +93,8 @@ public static int Run(string[] args)
             settingsPointers.Reset();
         }
         using var panel = settingsRenderPath != null ? SettingsPanel.Render(new BoardSettings(), settingsPointers) :
-            renderPath == null ? Panel.Render() : previewLayout == "ja" ? PanelPreview.Render("ja", previewState, previewTheme, shortcuts: previewShortcuts) :
-            PanelPreview.Render(WindowsLayoutProvider.FromKlid(0, previewId), previewState, previewTheme, shortcuts: previewShortcuts);
+            renderPath == null ? PanelPreview.Render("us", "idle", numpad: true) : previewLayout == "ja" ? PanelPreview.Render("ja", previewState, previewTheme, shortcuts: previewShortcuts, numpad: previewNumpad) :
+            PanelPreview.Render(WindowsLayoutProvider.FromKlid(0, previewId), previewState, previewTheme, shortcuts: previewShortcuts, numpad: previewNumpad);
         renderPath ??= settingsRenderPath;
         if (renderPath != null)
         {
@@ -122,7 +126,7 @@ public static int Run(string[] args)
 
 
         Check(overlay.SetOverlayFlag(handle, VROverlayFlags.NoBackside, false), "Enable SteamVR backside surface");
-        var mouseScale = new HmdVector2_t { v0 = Panel.LayoutWidth, v1 = Panel.LayoutHeight };
+        var mouseScale = new HmdVector2_t { v0 = KeyboardOverlay.MainTextureInfo.Width, v1 = KeyboardOverlay.MainTextureInfo.Height };
         Check(overlay.SetOverlayMouseScale(handle, ref mouseScale), "Set exact pointer dimensions");
         var mask = new VROverlayIntersectionMaskPrimitive_t
         {
@@ -132,7 +136,7 @@ public static int Run(string[] args)
                 m_Rectangle = new IntersectionMaskRectangle_t
                 {
                     m_flTopLeftX = 0, m_flTopLeftY = 0,
-                    m_flWidth = Panel.LayoutWidth, m_flHeight = Panel.LayoutHeight
+                    m_flWidth = mouseScale.v0, m_flHeight = mouseScale.v1
                 }
             }
         };
@@ -165,12 +169,13 @@ public static int Run(string[] args)
         using var keyboard = new KeyboardOverlay(system, overlay, handle, graphics, sharedOutput: output);
         using var shortcuts = new ShortcutOverlays(system, overlay, graphics, handle, output);
         var appliedSettings = settings.Current;
+        follower.SetNumpad(appliedSettings.NumpadEnabled);
         follower.SetScale(appliedSettings.Scale);
         keyboard.ApplySettings(appliedSettings, false);
         shortcuts.ApplySettings(appliedSettings);
         using var settingsOverlay = new SettingsOverlay(system, overlay, graphics, settings, keyboard.PreviewSound);
         Console.WriteLine($"Independent overlay: {transformType}; 15 cm grab line with an 18 x 6 cm hover target. Controller-relative movement; no smoothing.");
-        Console.WriteLine($"Panel: {Panel.WidthInMeters * 100:F1} x {Panel.HeightInMeters * 100:F1} cm, {panel.Width}x{panel.Height} texture; input coordinates remain {Panel.LayoutWidth}x{Panel.LayoutHeight}.");
+        Console.WriteLine($"Panel: {OverlayGeometry.WidthInMeters(appliedSettings.NumpadEnabled) * appliedSettings.Scale * 100:F1} x {Panel.HeightInMeters * appliedSettings.Scale * 100:F1} cm, {panel.Width}x{panel.Height} fixed texture.");
         Console.WriteLine($"Headset connected: {system.IsTrackedDeviceConnected(OpenVR.k_unTrackedDeviceIndex_Hmd)}.");
         Console.WriteLine("Open the SteamVR menu: GoBoard appears separately below it and follows dashboard movement.");
         Console.WriteLine("Point at the line below GoBoard and hold the trigger to move it. Release to keep its new dashboard-relative position.");
@@ -208,6 +213,7 @@ public static int Run(string[] args)
             {
                 var resetPosition = appliedSettings.PositionResetId != settings.Current.PositionResetId;
                 if (resetPosition) follower.ResetPosition();
+                follower.SetNumpad(settings.Current.NumpadEnabled);
                 keyboard.ApplySettings(settings.Current, appliedSettings.SizePercent != settings.Current.SizePercent || resetPosition);
                 shortcuts.ApplySettings(settings.Current);
                 appliedSettings = settings.Current;

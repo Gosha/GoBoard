@@ -8,8 +8,8 @@ using Valve.VR;
 
 namespace GoBoard.Vr;
 
-// Separate launcher, palette and grab overlays. The main keyboard retains its
-// dimensions. A moved palette keeps its own keyboard-relative pose.
+// Separate launcher, palette and grab overlays. A moved palette keeps its own
+// keyboard-relative pose.
 internal sealed class ShortcutOverlays : IDisposable
 {
     private readonly CVRSystem system;
@@ -66,7 +66,7 @@ internal sealed class ShortcutOverlays : IDisposable
     public void ApplySettings(BoardSettings next)
     {
         if (settings == next) return;
-        var reset = settings == null || settings.PositionResetId != next.PositionResetId;
+        var reset = settings == null || settings.PositionResetId != next.PositionResetId || settings.NumpadEnabled != next.NumpadEnabled;
         if (settings == null || settings.ProgrammableKeys != next.ProgrammableKeys || settings.SizePercent != next.SizePercent || reset)
         { grab.Update(false, default); toggle.Reset(Now, collapse: !next.ProgrammableKeys.Enabled); }
         settings = next; scale = next.Scale;
@@ -90,7 +90,7 @@ internal sealed class ShortcutOverlays : IDisposable
             return;
         }
         var buttonSize = ProgrammableKeys.ToggleSize * ProgrammableKeys.MetersPerUnit * scale;
-        var mainWidth = OverlayGeometry.PanelWidthInMeters * scale;
+        var mainWidth = OverlayGeometry.WidthInMeters(settings.NumpadEnabled) * scale;
         var mainHeight = OverlayGeometry.PanelHeightInMeters * scale;
         var buttonOffset = Matrix4x4.CreateTranslation(-(mainWidth + buttonSize) / 2 - .012f * scale,
             (mainHeight - buttonSize) / 2, .002f * scale);
@@ -115,7 +115,7 @@ internal sealed class ShortcutOverlays : IDisposable
         var raw = new HmdMatrix34_t();
         var world = Matrix4x4.Identity;
         var poseValid = expanded && overlay.GetTransformForOverlayCoordinates(main, ETrackingUniverseOrigin.TrackingUniverseStanding,
-            new HmdVector2_t { v0 = OverlayGeometry.PanelWidth / 2f, v1 = OverlayGeometry.PanelHeight / 2f }, ref raw) == EVROverlayError.None &&
+            new HmdVector2_t { v0 = KeyboardOverlay.MainTextureInfo.Width / 2f, v1 = KeyboardOverlay.MainTextureInfo.Height / 2f }, ref raw) == EVROverlayError.None &&
             OpenVrPose.TryRigid(raw, out world);
         var moved = grab.Update(poseValid, panelOffset * world, interactive: !resizing && !mainGrab.HasValue);
         if (moved.HasValue && Matrix4x4.Invert(world, out var inverse))
