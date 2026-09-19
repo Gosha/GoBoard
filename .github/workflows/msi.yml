@@ -39,9 +39,6 @@ on:
 permissions:
   contents: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   versions:
     name: Version rules and release metadata
@@ -61,7 +58,7 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Resolve release version
         id: release
         env:
@@ -102,8 +99,8 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
       - name: Restore
@@ -114,7 +111,7 @@ jobs:
         run: dotnet test GoBoard.slnx -c Release --no-build --logger trx --results-directory artifacts/test-results
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: msi-test-results
           path: artifacts/test-results/*.trx
@@ -137,8 +134,8 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
       - name: Build and check Stable MSI
@@ -154,7 +151,7 @@ jobs:
           MSI_RUN_ATTEMPT: ${{ needs.versions.outputs.rolling_run_attempt }}
         run: ./build-msi.ps1 -Channel rolling -RunNumber $env:MSI_RUN_NUMBER -RunAttempt $env:MSI_RUN_ATTEMPT
       - name: Upload MSI, checksum, and provenance
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: GoBoard-${{ matrix.channel }}-msi
           path: artifacts/msi/${{ matrix.artifact_base }}.*
@@ -170,7 +167,7 @@ jobs:
       group: msi-release-${{ github.ref }}
       cancel-in-progress: false
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: ${{ needs.versions.outputs.artifact }}
           path: release-assets
