@@ -29,6 +29,8 @@ Launch **GoBoard VR**, **GoBoard Desktop**, or **GoBoard Settings** from the Sta
 
 ![Shortcut presets and custom shortcut editor](docs/images/goboard-shortcut-settings.png)
 
+![Shortcut preset chooser](docs/images/goboard-shortcut-presets.png)
+
 ![Shortcut key picker](docs/images/goboard-shortcut-key-picker.png)
 
 ## Run from source

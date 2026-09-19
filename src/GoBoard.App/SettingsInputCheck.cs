@@ -134,12 +134,22 @@ internal static class SettingsInputCheck
                 Require(desktop.Shortcuts.State.Keys.Single(k => k.Id == "Shortcut3").Shortcut == store.Current.ProgrammableKeys.Key3,
                     "Desktop receives edited shortcut");
                 var layout = WindowsLayoutProvider.Get(WindowsKeyboard.Foreground().Layout, store.Current.Geometry);
-                var presetIndex = Array.FindIndex(ProgrammableKeys.Presets, p => p.ForLayout(layout) == store.Current.ProgrammableKeys.Key3);
-                Click(SettingsAction.NextPreset);
-                Require(store.Current.ProgrammableKeys.Key3 == ProgrammableKeys.Presets[(presetIndex + 1) % ProgrammableKeys.Presets.Length].ForLayout(layout), "Assign next preset from custom shortcut");
+                var beforeChooser = File.ReadAllText(path);
+                Click(SettingsAction.ChooseShortcutPreset);
+                Preview("preset-picker");
+                Click(SettingsAction.BackToShortcut);
+                Require(File.ReadAllText(path) == beforeChooser, "Cancel preset chooser without saving");
+                Click(SettingsAction.ChooseShortcutPreset);
+                var presetIndex = Array.FindIndex(ProgrammableKeys.Presets, p => p.Label == "Copy");
+                Click(SettingsAction.PresetChoiceFirst + presetIndex);
+                Require(store.Current.ProgrammableKeys.Key3 == ProgrammableKeys.Presets[presetIndex].ForLayout(layout), "Assign preset directly from custom shortcut");
+                Require(new SettingsStore(path).Current == store.Current, "Save direct preset selection");
+                desktop.RefreshSettings();
+                Require(desktop.Shortcuts.State.Keys.Single(k => k.Id == "Shortcut3").Shortcut == store.Current.ProgrammableKeys.Key3,
+                    "Desktop receives selected preset");
                 Click(SettingsAction.MoreRows);
                 Require(store.Current.ProgrammableKeys.Rows == 5, "Add fifth row");
-                Click(SettingsAction.Slot10); Click(SettingsAction.NextPreset);
+                Click(SettingsAction.Slot10); Click(SettingsAction.ChooseShortcutPreset); Click(SettingsAction.PresetChoiceFirst);
                 Preview("2x5");
                 var tenth = store.Current.ProgrammableKeys.Key10;
                 Click(SettingsAction.FewerColumns);
@@ -152,7 +162,7 @@ internal static class SettingsInputCheck
                 Click(SettingsAction.MoreRows);
                 Click(SettingsAction.MoreColumns); Click(SettingsAction.MoreColumns);
                 Require(store.Current.ProgrammableKeys.Columns == 4 && store.Current.ProgrammableKeys.Rows == 5, "Expand to twenty keys");
-                Click(SettingsAction.Slot20); Click(SettingsAction.NextPreset);
+                Click(SettingsAction.Slot20); Click(SettingsAction.ChooseShortcutPreset); Click(SettingsAction.PresetChoiceFirst);
                 var twentieth = store.Current.ProgrammableKeys.Key20;
                 Require(twentieth == ProgrammableKeys.Presets[0].Shortcut, "Edit twentieth key");
                 Require(new SettingsStore(path).Current.ProgrammableKeys.Key20 == twentieth, "Save twentieth key");
@@ -169,7 +179,8 @@ internal static class SettingsInputCheck
                 Require(store.Current.ProgrammableKeys.Columns == 4 && store.Current.ProgrammableKeys.Rows == 5, "Maximum grid controls disabled");
                 Require(store.Current.ProgrammableKeys.Key20 == twentieth && store.Current.ProgrammableKeys.Key10 == tenth, "Restore hidden grid assignments");
                 Click(SettingsAction.Slot20);
-                for (var i = 0; i < Array.FindIndex(ProgrammableKeys.Presets, p => p.Shortcut.Scan == ProgrammableKeys.MediaStop); i++) Click(SettingsAction.NextPreset);
+                Click(SettingsAction.ChooseShortcutPreset);
+                Click(SettingsAction.PresetChoiceFirst + Array.FindIndex(ProgrammableKeys.Presets, p => p.Shortcut.Scan == ProgrammableKeys.MediaStop));
                 Require(store.Current.ProgrammableKeys.Key20.Scan == ProgrammableKeys.MediaStop, "Choose Stop preset");
                 Click(SettingsAction.ChooseShortcutKey);
                 Click(SettingsAction.KeyChoiceFirst + ProgrammableKeys.MediaStop);

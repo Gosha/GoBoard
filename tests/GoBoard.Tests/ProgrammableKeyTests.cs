@@ -302,20 +302,109 @@ public sealed class ProgrammableKeyTests
     }
 
     [Fact]
-    public void PresetNavigationIncludesStopAndWrapsBothWays()
+    public void EveryPresetCanBeAssignedDirectlyWithoutChangingOtherSlots()
     {
-        var settings = new BoardSettings();
-        for (var i = 1; i < ProgrammableKeys.Presets.Length; i++)
+        var before = new BoardSettings { ProgrammableKeys = new() { Key20 = new(0x1e, Alt: true) } };
+        for (var i = ProgrammableKeys.Presets.Length - 1; i >= 0; i--)
         {
-            settings = SettingsControls.Apply(SettingsAction.NextPreset, settings);
-            Assert.Equal(ProgrammableKeys.Presets[i].Shortcut, settings.ProgrammableKeys.Key1);
+            var settings = SettingsControls.Apply(SettingsAction.PresetChoiceFirst + i, before, 19);
+            Assert.Equal(ProgrammableKeys.Presets[i].Shortcut, settings.ProgrammableKeys.Key20);
+            Assert.Equal(before, settings with { ProgrammableKeys = settings.ProgrammableKeys.Set(19, before.ProgrammableKeys.Key20) });
         }
-        Assert.Contains(ProgrammableKeys.Presets, p => p.Shortcut == new KeyboardShortcut(ProgrammableKeys.MediaStop));
-        settings = SettingsControls.Apply(SettingsAction.NextPreset, settings);
-        Assert.Equal(ProgrammableKeys.Presets[0].Shortcut, settings.ProgrammableKeys.Key1);
-        settings = SettingsControls.Apply(SettingsAction.PreviousPreset, settings);
-        Assert.Equal(ProgrammableKeys.Presets[^1].Shortcut, settings.ProgrammableKeys.Key1);
-        Assert.Equal(settings, settings.Normalize());
+        Assert.Equal(before, SettingsControls.Apply(SettingsAction.PresetChoiceFirst + ProgrammableKeys.Presets.Length, before));
+    }
+
+    [Fact]
+    public void PresetChooserHasEveryPresetExactlyOnceWithSeparateHitTargets()
+    {
+        var controls = SettingsControls.ForPage(SettingsPage.ShortcutPreset).ToArray();
+        var choices = controls.Where(c => SettingsControls.PresetIndex(c.Action) >= 0).ToArray();
+        Assert.Equal(ProgrammableKeys.Presets.Length, choices.Length);
+        Assert.Equal(choices.Length, choices.Select(c => c.Action).Distinct().Count());
+        foreach (var control in controls)
+        {
+            var b = control.Bounds;
+            Assert.InRange(b.X, 0, SettingsControls.Width - b.Width);
+            Assert.InRange(b.Y, 0, SettingsControls.Height - b.Height);
+            Assert.Equal(control.Action, SettingsControls.Hit(b.X + b.Width / 2, b.Y + b.Height / 2, SettingsPage.ShortcutPreset));
+            Assert.DoesNotContain(controls, other => other != control && b.X < other.Bounds.X + other.Bounds.Width &&
+                b.X + b.Width > other.Bounds.X && b.Y < other.Bounds.Y + other.Bounds.Height && b.Y + b.Height > other.Bounds.Y);
+        }
+        Assert.All(choices, c => Assert.True(c.Bounds.Height >= 48));
+    }
+
+    [Fact]
+    public void PresetChooserRetainsSlotAndCancelsOtherHandAndLayoutChangeCaptures()
+    {
+        var pointers = new SettingsPointerState();
+        var settings = new BoardSettings();
+        double time = 1;
+        SettingsAction? Edge(SettingsAction action, uint device, bool up)
+        {
+            var b = SettingsControls.ForPage(pointers.Page).Single(c => c.Action == action).Bounds;
+            time += .01;
+            return pointers.Process(device, b.X + 5, b.Y + 5, time, time, down: !up, up: up);
+        }
+        SettingsAction? Click(SettingsAction action)
+        {
+            Edge(action, 7, false);
+            return Edge(action, 7, true);
+        }
+        Click(SettingsAction.ShortcutsTab);
+        Click(SettingsAction.Slot5);
+        Assert.Null(Click(SettingsAction.ChooseShortcutPreset));
+        Assert.Equal(SettingsPage.ShortcutPreset, pointers.Page);
+        Assert.Equal(4, pointers.ShortcutSlot);
+        Assert.Null(Click(SettingsAction.BackToShortcut));
+        Assert.Equal(SettingsPage.Shortcuts, pointers.Page);
+        Assert.Equal(4, pointers.ShortcutSlot);
+        Click(SettingsAction.ChooseShortcutPreset);
+        Edge(SettingsAction.PresetChoiceFirst, 8, false);
+        Assert.Null(Click(SettingsAction.BackToShortcut));
+        Click(SettingsAction.ChooseShortcutPreset);
+        Assert.Null(Edge(SettingsAction.PresetChoiceFirst, 8, true));
+        Edge(SettingsAction.PresetChoiceFirst, 8, false);
+        pointers.Configure(settings, new WindowsLayout((nint)WindowsLayout.SwedishHandle));
+        Assert.Null(Edge(SettingsAction.PresetChoiceFirst, 8, true));
+        var choice = SettingsAction.PresetChoiceFirst + ProgrammableKeys.Presets.Length - 1;
+        Assert.Equal(choice, Click(choice));
+        Assert.Equal(SettingsPage.Shortcuts, pointers.Page);
+        Assert.Equal(4, pointers.ShortcutSlot);
+        settings = SettingsControls.Apply(choice, settings, pointers.ShortcutSlot, pointers.Layout);
+        Assert.Equal(ProgrammableKeys.Presets[^1].Shortcut, settings.ProgrammableKeys.Key5);
+        Click(SettingsAction.ChooseShortcutPreset);
+        Assert.Null(Click(SettingsAction.GeneralTab));
+        Assert.Equal(SettingsPage.General, pointers.Page);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PresetChooserRendersCurrentAndCustomAssignments(bool desktop)
+    {
+        var pointers = new SettingsPointerState();
+        var settings = new BoardSettings();
+        foreach (var action in new[] { SettingsAction.ShortcutsTab, SettingsAction.ChooseShortcutPreset })
+        {
+            var b = SettingsControls.ForPage(pointers.Page).Single(c => c.Action == action).Bounds;
+            pointers.Process(7, b.X + 5, b.Y + 5, 1, 1, down: true);
+            pointers.Process(7, b.X + 5, b.Y + 5, 1.1, 1.1, up: true);
+        }
+        foreach (var custom in new[] { false, true })
+        {
+            if (custom) settings = settings with { ProgrammableKeys = settings.ProgrammableKeys.Set(0, new(0x1e, Alt: true)) };
+            pointers.Configure(settings, pointers.Layout);
+            using var bitmap = SettingsPanel.Render(settings, pointers, desktopMode: desktop);
+            Assert.Equal(SettingsControls.Width * 2, bitmap.Width);
+            if (Environment.GetEnvironmentVariable("GOBOARD_SHORTCUT_ARTIFACTS") is { Length: > 0 } directory)
+            {
+                Directory.CreateDirectory(directory);
+                using var image = SKImage.FromBitmap(bitmap);
+                using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                using var file = File.Create(Path.Combine(directory, $"shortcut-preset-picker-{(desktop ? "desktop" : "vr")}{(custom ? "-custom" : "")}.png"));
+                data.SaveTo(file);
+            }
+        }
     }
 
     [Theory]
@@ -354,7 +443,7 @@ public sealed class ProgrammableKeyTests
         var layout = WindowsLayoutProvider.FromKlid(0, klid);
         var settings = new BoardSettings();
         var index = Array.FindIndex(ProgrammableKeys.Presets, p => p.Label == preset);
-        for (var i = 0; i < index; i++) settings = SettingsControls.Apply(SettingsAction.NextPreset, settings, layout: layout);
+        settings = SettingsControls.Apply(SettingsAction.PresetChoiceFirst + index, settings, layout: layout);
         Assert.Equal(scan, settings.ProgrammableKeys.Key1.Scan);
         Assert.Equal(preset, settings.ProgrammableKeys.Key1.LabelFor(layout));
     }

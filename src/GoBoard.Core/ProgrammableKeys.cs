@@ -75,7 +75,8 @@ internal static class ProgrammableKeys
     public const ushort BrowserBack = 0xffa6, BrowserForward = 0xffa7, BrowserRefresh = 0xffa8, BrowserStop = 0xffa9,
         BrowserSearch = 0xffaa, BrowserFavorites = 0xffab, BrowserHome = 0xffac;
     public const ushort NumLock = 0xe045, NumEnter = 0xe01c, NumDivide = 0xe035;
-    public sealed record Preset(string Label, KeyboardShortcut Shortcut, string Letter = null)
+    public enum PresetCategory { Windows, Editing, Media, Browser }
+    public sealed record Preset(string Label, KeyboardShortcut Shortcut, string Letter = null, PresetCategory Category = PresetCategory.Windows)
     {
         // Resolve letter-based convenience presets from cached layout labels at selection time.
         public KeyboardShortcut ForLayout(WindowsLayout layout)
@@ -114,23 +115,23 @@ internal static class ProgrammableKeys
     [
         new("Desktop ←", new(0xe04b, Ctrl: true, Win: true)),
         new("Desktop →", new(0xe04d, Ctrl: true, Win: true)),
-        new("Play / Pause", new(MediaPlayPause)),
-        new("Next track", new(MediaNext)),
-        new("Prev track", new(MediaPrevious)),
+        new("Play / Pause", new(MediaPlayPause), Category: PresetCategory.Media),
+        new("Next track", new(MediaNext), Category: PresetCategory.Media),
+        new("Prev track", new(MediaPrevious), Category: PresetCategory.Media),
         new("Task view", new(0x0f, Win: true)),
         new("Language", new(0x39, Win: true)),
         new("Dictation", new(0x23, Win: true)),
-        new("Stop", new(MediaStop)),
-        new("Volume mute", new(VolumeMute)), new("Volume down", new(VolumeDown)), new("Volume up", new(VolumeUp)),
-        new("Browser back", new(BrowserBack)), new("Browser forward", new(BrowserForward)),
-        new("Browser refresh", new(BrowserRefresh)), new("Browser stop", new(BrowserStop)),
-        new("Browser home", new(BrowserHome)), new("Browser search", new(BrowserSearch)), new("Browser favorites", new(BrowserFavorites)),
-        new("Copy", new(0x2e, Ctrl: true), "C"), new("Paste", new(0x2f, Ctrl: true), "V"),
-        new("Cut", new(0x2d, Ctrl: true), "X"), new("Undo", new(0x2c, Ctrl: true), "Z"),
-        new("Redo", new(0x15, Ctrl: true), "Y"), new("Select all", new(0x1e, Ctrl: true), "A"),
-        new("Capture region", new(0x1f, Shift: true, Win: true), "S"),
-        new("Capture window", new(KeyboardLayout.PrintScreenScan, Alt: true)),
-        new("Save screenshot", new(KeyboardLayout.PrintScreenScan, Win: true)),
+        new("Stop", new(MediaStop), Category: PresetCategory.Media),
+        new("Volume mute", new(VolumeMute), Category: PresetCategory.Media), new("Volume down", new(VolumeDown), Category: PresetCategory.Media), new("Volume up", new(VolumeUp), Category: PresetCategory.Media),
+        new("Browser back", new(BrowserBack), Category: PresetCategory.Browser), new("Browser forward", new(BrowserForward), Category: PresetCategory.Browser),
+        new("Browser refresh", new(BrowserRefresh), Category: PresetCategory.Browser), new("Browser stop", new(BrowserStop), Category: PresetCategory.Browser),
+        new("Browser home", new(BrowserHome), Category: PresetCategory.Browser), new("Browser search", new(BrowserSearch), Category: PresetCategory.Browser), new("Browser favorites", new(BrowserFavorites), Category: PresetCategory.Browser),
+        new("Copy", new(0x2e, Ctrl: true), "C", PresetCategory.Editing), new("Paste", new(0x2f, Ctrl: true), "V", PresetCategory.Editing),
+        new("Cut", new(0x2d, Ctrl: true), "X", PresetCategory.Editing), new("Undo", new(0x2c, Ctrl: true), "Z", PresetCategory.Editing),
+        new("Redo", new(0x15, Ctrl: true), "Y", PresetCategory.Editing), new("Select all", new(0x1e, Ctrl: true), "A", PresetCategory.Editing),
+        new("Capture region", new(0x1f, Shift: true, Win: true), "S", PresetCategory.Editing),
+        new("Capture window", new(KeyboardLayout.PrintScreenScan, Alt: true), Category: PresetCategory.Editing),
+        new("Save screenshot", new(KeyboardLayout.PrintScreenScan, Win: true), Category: PresetCategory.Editing),
         new("Snap left", new(0xe04b, Win: true)), new("Snap right", new(0xe04d, Win: true)),
         new("Maximize", new(0xe048, Win: true)), new("Minimize / restore", new(0xe050, Win: true))
     ];
