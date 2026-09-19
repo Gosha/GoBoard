@@ -67,6 +67,16 @@ Report what was actually verified. Pure tests and PNGs do not establish headset 
 - Settings edits merge only the changed field into the latest file under a per-file mutex and replace it atomically. Failed writes must not change applied settings; malformed files retain the last working values and surface an error. Preserve stable setting IDs and migrations.
 - Keep Valve's C# binding and native OpenVR library versions matched, retain dependency locks, and preserve vendor/audio licenses and credits.
 
+## README scope
+
+Keep `README.md` short and focused on getting the app installed and running.
+
+- Include the download link, requirements, launch options, source commands, and essential installation notes such as the unsigned-installer warning while it applies.
+- Skip obvious keyboard interactions and explanations of self-evident controls such as drag handles. Keep any necessary setup instructions brief.
+- Keep the settings screenshots under a Settings subheading with minimal prose; let the images explain the interface.
+- Put feature inventories, preset lists, implementation details, release mechanics, and troubleshooting in the relevant `docs/` page and link to it. Do not append a README paragraph for every new feature.
+- Include upgrade or migration notes only when they affect users of a distributed version.
+
 ## Versioning
 
 Follow [the versioning policy](docs/versioning.md) when preparing releases. Choose the highest required major/minor/patch bump based on user-visible behavior and compatibility. Do not bump versions or create release tags automatically for each change.
