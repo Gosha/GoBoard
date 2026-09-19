@@ -32,7 +32,7 @@ internal static class SettingsPanel
         var shortcut = settings.ProgrammableKeys.Get(slot);
         var keyNumber = settings.ProgrammableKeys.NumberFor(slot);
         var layout = pointers?.Layout ?? new WindowsLayout((nint)WindowsLayout.UsHandle);
-        Text(shortcutsPage ? "Shortcuts · Changes apply immediately" : effectsPage ? "Effects · Changes apply immediately" : "Settings · Changes apply immediately", 64, 110, small, accent);
+        Text(shortcutsPage ? "Shortcuts" : effectsPage ? "Effects" : "Settings", 64, 110, small, accent);
         if (choosingKey)
         {
             Text($"Key {keyNumber} · {layout.Name}", 64, 151, label, text);

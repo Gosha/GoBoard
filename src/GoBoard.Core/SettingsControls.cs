@@ -100,7 +100,7 @@ internal static class SettingsControls
         {
             var key = ProgrammableKeys.SystemKeys[i];
             var browser = i >= 7; var index = browser ? i - 7 : i;
-            controls.Add(new(SettingsAction.KeyChoiceFirst + key.Scan, browser ? key.Label[8..] : key.Label,
+            controls.Add(new(SettingsAction.KeyChoiceFirst + key.Scan, browser ? char.ToUpperInvariant(key.Label[8]) + key.Label[9..] : key.Label,
                 new(270 + index % 4 * 135.5f, (browser ? 632 : 496) + index / 4 * 48, 127.5f, 40)));
         }
         controls.Add(new(SettingsAction.KeyChoiceFirst, "None", new(64, 768, 216, 42)));

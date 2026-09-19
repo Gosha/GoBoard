@@ -141,7 +141,7 @@ internal sealed class SettingsForm : Form
         frame = next;
         drawn = signature;
         details.SetToolTip(this, error ?? autostartState.Error);
-        AccessibleDescription = error ?? autostartState.Error ?? $"GoBoard settings. Changes apply immediately. SteamVR autostart: {autostartState.Status}";
+        AccessibleDescription = error ?? autostartState.Error ?? $"GoBoard settings. SteamVR autostart: {autostartState.Status}";
         audio.Apply(store.Current);
         Invalidate();
     }
