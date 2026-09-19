@@ -1,0 +1,19 @@
+{
+  "source": "builtin",
+  "applications": [
+    {
+      "app_key": "goboard.app",
+      "launch_type": "binary",
+      "binary_path_windows": "GoBoard.exe",
+      "working_directory": ".",
+      "arguments": "",
+      "is_dashboard_overlay": true,
+      "strings": {
+        "en_us": {
+          "name": "GoBoard",
+          "description": "Desktop keyboard overlay for SteamVR"
+        }
+      }
+    }
+  ]
+}

@@ -44,6 +44,7 @@ Install the [.NET 10 SDK](global.json), then run from the repository root in Pow
 
 ## More
 
+- [SteamVR autostart: enable, disable, and unregister](docs/steamvr-autostart.md)
 - [Keyboard layouts and limitations](docs/automatic-keyboard-layouts.md)
 - [Installation and release details](docs/packaging.md)
 - [Development and feature details](docs/development.md)

@@ -18,6 +18,14 @@ internal static class Program
     private static int Run(string[] args)
     {
         if (args is ["--desktop-effects-benchmark"]) { DesktopEffectsBenchmark.Run(); return 0; }
+        if (args.Length > 0 && args[0] == "--steamvr") return SteamVrApplication.Run(args);
+        if (args.Length > 0 && args[0] == "--steamvr-ui") return SteamVrApplication.Run(args, json: true);
+        if (args is ["--stop"])
+        {
+            Console.WriteLine(GoBoard.Platform.Windows.RuntimeSession.RequestStop()
+                ? "Requested graceful GoBoard shutdown." : "GoBoard is not running in this Windows session.");
+            return 0;
+        }
         if (args.Length > 0 && args[0] == "--desktop") return DesktopRuntime.Run(args);
         if (args is ["--render-desktop", var desktopPath]) return DesktopRuntime.Render(desktopPath);
         if (args is ["--render-desktop", var shortcutDesktopPath, "--shortcuts"]) return DesktopRuntime.Render(shortcutDesktopPath, shortcuts: true);
@@ -25,10 +33,10 @@ internal static class Program
         if (args is ["--desktop-shell-check"]) return DesktopInputCheck.Run(shell: true);
         if (args is ["--desktop-launch-check"]) return DesktopInputCheck.RunLaunch();
         if (args is ["--settings-input-check"]) return SettingsInputCheck.Run();
-        if (args is ["--settings"])
+        if (args is ["--settings"] || args is ["--settings", "--executable", _])
         {
             ApplicationConfiguration.Initialize();
-            Application.Run(new SettingsForm());
+            Application.Run(new SettingsForm(autostartExecutable: args.Length == 3 ? args[2] : null));
             return 0;
         }
         if (args is ["--render-desktop-settings", var path])

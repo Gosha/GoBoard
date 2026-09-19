@@ -17,6 +17,7 @@ public static int Run(string[] args)
     ulong grabHandle = OpenVR.k_ulOverlayHandleInvalid;
     bool initialized = false;
     OverlayGraphics graphics = null;
+    RuntimeSession session = null;
     using var cancel = new CancellationTokenSource();
     ConsoleCancelEventHandler onCancel = (_, e) => { e.Cancel = true; cancel.Cancel(); };
     Console.CancelKeyPress += onCancel;
@@ -93,11 +94,16 @@ public static int Run(string[] args)
             return 0;
         }
 
+        session = RuntimeSession.TryStart();
+        if (session == null) { Console.WriteLine("GoBoard is already running in this Windows session."); return 0; }
+        session.StartLogging();
+
         if (!OpenVR.IsRuntimeInstalled()) throw new InvalidOperationException("SteamVR is not installed or its runtime path is not registered.");
         var error = EVRInitError.None;
         var system = OpenVR.Init(ref error, EVRApplicationType.VRApplication_Overlay);
         if (error != EVRInitError.None) throw new InvalidOperationException($"OpenVR initialization failed: {error}. Start SteamVR and connect your headset.");
         initialized = true;
+        SteamVrApplication.IdentifyCurrentProcess();
         graphics = new OverlayGraphics();
         var overlay = OpenVR.Overlay ?? throw new InvalidOperationException("SteamVR did not provide the OpenVR overlay interface.");
         Check(overlay.CreateOverlay("goboard.app", "GoBoard", ref handle), "Create independent overlay (is another copy running?)");
@@ -167,7 +173,7 @@ public static int Run(string[] args)
         var eventSize = (uint)Marshal.SizeOf<VREvent_t>();
         double nextSettingsRead = 0;
         string settingsError = null;
-        while (!cancel.IsCancellationRequested && timer.Elapsed.TotalSeconds < seconds && (stopFile == null || !File.Exists(stopFile)))
+        while (!cancel.IsCancellationRequested && !session.StopRequested && timer.Elapsed.TotalSeconds < seconds && (stopFile == null || !File.Exists(stopFile)))
         {
             while (system.PollNextEvent(ref vrEvent, eventSize))
             {
@@ -244,6 +250,7 @@ public static int Run(string[] args)
         }
         graphics?.Dispose();
         Console.CancelKeyPress -= onCancel;
+        session?.Dispose();
     }
 }
 

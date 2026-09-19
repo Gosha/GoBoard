@@ -12,7 +12,8 @@ internal enum SettingsAction
     ShortcutsTab, ToggleShortcuts, Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, Slot8,
     PreviousPreset, NextPreset, ShortcutCtrl, ShortcutAlt, ShortcutShift, ShortcutWin, ChooseShortcutKey,
     ResetShortcuts, Slot9, Slot10, FewerColumns, MoreColumns, FewerRows, MoreRows,
-    Slot11, Slot12, Slot13, Slot14, Slot15, Slot16, Slot17, Slot18, Slot19, Slot20, KeyChoiceFirst = 1000
+    Slot11, Slot12, Slot13, Slot14, Slot15, Slot16, Slot17, Slot18, Slot19, Slot20,
+    Autostart, KeyChoiceFirst = 1000
 }
 internal sealed record SettingsControl(SettingsAction Action, string Label, KeyBounds Bounds,
     bool Selectable = true, float CutoutWidth = 0, float CutoutTop = 0)
@@ -40,7 +41,7 @@ internal readonly record struct SettingsViewport(float X, float Y, float Scale)
 
 internal static class SettingsControls
 {
-    public const int Width = 900, Height = 850;
+    public const int Width = 900, Height = 950;
     public static readonly SettingsControl[] All =
     [
         new(SettingsAction.Smaller, "−", new(588, 158, 100, 64)),
@@ -55,8 +56,9 @@ internal static class SettingsControls
         new(SettingsAction.Geometry, "", new(588, 550, 216, 64)),
         new(SettingsAction.SteamSoft, BoardThemes.Name(BoardThemes.SteamSoft), new(64, 668, 340, 64)),
         new(SettingsAction.SteamFlat, BoardThemes.Name(BoardThemes.SteamFlat), new(420, 668, 384, 64)),
-        new(SettingsAction.ResetPosition, "Reset position", new(356, 770, 216, 48)),
-        new(SettingsAction.Defaults, "Reset to defaults", new(588, 770, 216, 48))
+        new(SettingsAction.Autostart, "Register autostart", new(588, 758, 216, 64)),
+        new(SettingsAction.ResetPosition, "Reset position", new(356, 870, 216, 48)),
+        new(SettingsAction.Defaults, "Reset to defaults", new(588, 870, 216, 48))
     ];
 
     public static readonly SettingsControl[] Tabs =

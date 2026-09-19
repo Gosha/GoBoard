@@ -37,7 +37,7 @@ Inspect affected previews after rendering. Check both desktop and VR presentatio
 
 Whenever design, buttons, or copy change, regenerate the affected README screenshots in `docs/images/` with the real renderer and visually inspect them before completing the change (`--render-settings docs/images/goboard-settings.png` for the settings page).
 
-Use `start-goboard.ps1` for VR, `start-goboard.ps1 -Desktop` for desktop, and `stop-goboard.ps1` to stop. Add `-BuildOnly` to build without launching. Launchers isolate outputs under `artifacts/vr-build`, `artifacts/desktop-build`, and `artifacts/settings-build`; preserve this separation to avoid locked DLLs. Production logs and stop signals are under `.runtime/app`.
+Use `start-goboard.ps1` for VR, `start-goboard.ps1 -Desktop` for desktop, and `stop-goboard.ps1` to stop. Add `-BuildOnly` to build without launching. Launchers isolate outputs under `artifacts/vr-build`, `artifacts/desktop-build`, and `artifacts/settings-build`; preserve this separation to avoid locked DLLs. Production logs are under `%LOCALAPPDATA%\GoBoard\runtime`; a session-local named event stops manual and SteamVR launches alike. See [SteamVR autostart](docs/steamvr-autostart.md) for registration and configuration commands.
 
 Native checks are separate from the normal test loop. Select checks relevant to the change; see [development.md](docs/development.md) for invocation and coverage:
 

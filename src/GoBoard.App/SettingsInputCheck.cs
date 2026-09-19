@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using GoBoard.Core;
 using GoBoard.Platform.Windows;
+using GoBoard.Vr;
 
 namespace GoBoard.App;
 
@@ -15,7 +16,15 @@ internal static class SettingsInputCheck
         {
             var store = new SettingsStore(path);
             Require(store.Update(_ => new BoardSettings { SoundEnabled = false }), "Create disposable settings");
-            using var form = new SettingsForm(store: store);
+            var autostartCalls = new List<string>();
+            var autostart = new AutostartController(execute: action =>
+            {
+                autostartCalls.Add(action);
+                return Task.FromResult(new AutostartState(action == "enable"));
+            });
+            autostart.Update(0);
+            autostart.Update(0);
+            using var form = new SettingsForm(store: store, autostart: autostart);
             using var desktop = new DesktopKeyboardForm(previewOnly: true, store: new SettingsStore(path));
             _ = form.Handle;
             _ = desktop.Handle;
@@ -45,6 +54,16 @@ internal static class SettingsInputCheck
                         System.Drawing.Imaging.ImageFormat.Png);
                 }
                 var before = store.Current.SizePercent;
+                var preferences = File.ReadAllText(path);
+                Click(SettingsAction.Autostart);
+                Require(autostartCalls[^1] == "enable", "Register autostart action");
+                autostart.Update(0);
+                Require(autostart.State.Enabled == true, "Autostart enabled feedback");
+                Click(SettingsAction.Autostart);
+                Require(autostartCalls[^1] == "unregister", "Unregister autostart action");
+                autostart.Update(0);
+                Require(autostart.State.Enabled == false, "Autostart disabled feedback");
+                Require(File.ReadAllText(path) == preferences, "Autostart does not edit keyboard preferences");
                 Click(SettingsAction.Larger);
                 Require(store.Current.SizePercent == before + 5, "Scaled size button");
                 Require(new SettingsStore(path).Current == store.Current, "Saved click");
@@ -167,7 +186,7 @@ internal static class SettingsInputCheck
                 Require(store.Current == general, "Shortcut reset preserves other settings");
                 Click(SettingsAction.GeneralTab);
             }
-            Console.WriteLine("Shared settings input check passed: native mouse clicks, resized/letterboxed targets, persistence, themes, sound, desktop position reset, effects, preset/custom shortcut editing and desktop propagation, disabled controls, and capture cancellation. User settings were untouched.");
+            Console.WriteLine("Shared settings input check passed: native mouse clicks, resized/letterboxed targets, persistence, themes, sound, desktop position reset, effects, preset/custom shortcut editing and desktop propagation, autostart register/unregister routing, disabled controls, and capture cancellation. User settings and SteamVR registration were untouched.");
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine($"Settings input check: {ex.Message}"); return 1; }
