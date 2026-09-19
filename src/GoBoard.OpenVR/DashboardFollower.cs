@@ -27,6 +27,14 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
     }
 
 
+    public void ResetPosition()
+    {
+        // Cancel captures and drain their queued events before placing the keyboard again.
+        grab.Update(false, default);
+        resize.Update(false, default);
+        pose.Reset();
+    }
+
     public bool Update()
     {
         ulong anchor = 0;

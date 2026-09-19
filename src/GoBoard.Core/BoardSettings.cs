@@ -16,6 +16,8 @@ internal sealed record BoardSettings
     public KeyboardGeometry Geometry { get; init; } = KeyboardGeometry.Auto;
     public string Theme { get; init; } = BoardThemes.Default;
     public EffectSettings Effects { get; init; } = new();
+    // A new request is observed once by each running host through the shared settings file.
+    public Guid PositionResetId { get; init; }
     public float Scale => SizePercent / 100f;
 
     public BoardSettings Normalize() => this with

@@ -6,7 +6,7 @@ namespace GoBoard.Presentation.Skia;
 // Small vector pictograms stay crisp in the desktop and VR settings viewports.
 internal static class SoundPresetIcon
 {
-    public const float Size = 40, LabelGap = 12;
+    public const float Size = 40;
 
     public static void Draw(SKCanvas canvas, KeySound sound, float x, float y)
     {

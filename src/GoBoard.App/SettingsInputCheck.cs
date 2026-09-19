@@ -15,7 +15,9 @@ internal static class SettingsInputCheck
             var store = new SettingsStore(path);
             Require(store.Update(_ => new BoardSettings { SoundEnabled = false }), "Create disposable settings");
             using var form = new SettingsForm(store: store);
+            using var desktop = new DesktopKeyboardForm(previewOnly: true, store: new SettingsStore(path));
             _ = form.Handle;
+            _ = desktop.Handle;
             foreach (var size in new[] { new Size(900, 650), new Size(1200, 650), new Size(560, 850) })
             {
                 form.ClientSize = size;
@@ -40,18 +42,16 @@ internal static class SettingsInputCheck
                 Click(SettingsAction.Geometry);
                 Require(store.Current.Geometry == (KeyboardGeometry)(((int)geometry + 1) % 3), "Arrangement selection");
                 Require(new SettingsStore(path).Current.Geometry == store.Current.Geometry, "Saved arrangement");
-                foreach (var sound in new[] { KeySound.SoftLowThud, KeySound.CherryMxBlue,
-                    KeySound.GateronYellowPairs, KeySound.CushionedWood })
+                foreach (var (action, sound) in new[] { (SettingsAction.Thud, KeySound.SoftLowThud),
+                    (SettingsAction.CherryBlue, KeySound.CherryMxBlue),
+                    (SettingsAction.GateronYellow, KeySound.GateronYellowPairs), (SettingsAction.Wood, KeySound.CushionedWood) })
                 {
-                    Click(SettingsAction.NextSound);
-                    Require(store.Current.Sound == sound, "Preset selection and wraparound");
+                    Click(action);
+                    Require(store.Current.Sound == sound, "Direct preset selection");
                     Require(new SettingsStore(path).Current.Sound == sound, "Saved sound preset");
+                    Click(action);
+                    Require(store.Current.Sound == sound, "Preview preserves selection");
                 }
-                Click(SettingsAction.PreviousSound);
-                Require(store.Current.Sound == KeySound.GateronYellowPairs, "Reverse preset wraparound");
-                Click(SettingsAction.PreviewSound);
-                Require(store.Current.Sound == KeySound.GateronYellowPairs, "Preview preserves selection");
-                Click(SettingsAction.NextSound);
                 Click(SettingsAction.SteamFlat);
                 Require(store.Current.Theme == BoardThemes.SteamFlat, "Flat theme selection");
                 Require(new SettingsStore(path).Current.Theme == BoardThemes.SteamFlat, "Saved theme selection");
@@ -67,6 +67,21 @@ internal static class SettingsInputCheck
                 form.Capture = false;
                 Mouse(0x202, Center(SettingsAction.Larger));
                 Require(store.Current.SizePercent == before + 5, "Capture-loss cancellation");
+                desktop.RefreshSettings();
+                var beforeReset = store.Current;
+                desktop.Location = new Point(-10000, -10000);
+                Click(SettingsAction.ResetPosition);
+                Require(store.Current.PositionResetId != beforeReset.PositionResetId, "Position reset request");
+                Require(store.Current with { PositionResetId = beforeReset.PositionResetId } == beforeReset,
+                    "Position reset preserves preferences");
+                desktop.RefreshSettings();
+                var area = Screen.FromPoint(Cursor.Position).WorkingArea;
+                Require(desktop.Left == area.Left + (area.Width - desktop.Width) / 2 &&
+                    desktop.Top == Math.Max(area.Top, area.Bottom - desktop.Height - 24), "Desktop position restored");
+                desktop.Location = new Point(area.Left + 30, area.Top + 30);
+                var moved = desktop.Location;
+                desktop.RefreshSettings();
+                Require(desktop.Location == moved, "Position reset is consumed once");
                 var general = store.Current;
                 Click(SettingsAction.EffectsTab);
                 Click(SettingsAction.Spotlight);
@@ -79,7 +94,7 @@ internal static class SettingsInputCheck
                 Require(store.Current == general, "Effects reset preserves general preferences");
                 Click(SettingsAction.GeneralTab);
             }
-            Console.WriteLine("Shared settings input check passed: native mouse clicks, resized/letterboxed targets, persistence, themes, sound, effects tab and reset, disabled controls, and capture cancellation. User settings were untouched.");
+            Console.WriteLine("Shared settings input check passed: native mouse clicks, resized/letterboxed targets, persistence, themes, sound, desktop position reset, effects tab and reset, disabled controls, and capture cancellation. User settings were untouched.");
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine($"Settings input check: {ex.Message}"); return 1; }

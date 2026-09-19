@@ -12,7 +12,7 @@ internal sealed class DesktopKeyboardForm : Form
     private readonly KeyAudio audio = new();
     private readonly AnimatedKeyboardRenderer renderer = new();
     private readonly KeyboardState keyboard;
-    private readonly SettingsStore settings = new();
+    private readonly SettingsStore settings;
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 16 };
     private readonly bool previewOnly;
     private readonly string stopFile;
@@ -40,9 +40,10 @@ internal sealed class DesktopKeyboardForm : Form
             HeaderHeight + (int)((b.Y + b.Height / 2) * (ClientSize.Height - HeaderHeight) / OverlayGeometry.PanelHeight));
     }
 
-    public DesktopKeyboardForm(string stopFile = null, double seconds = double.PositiveInfinity, bool previewOnly = false)
+    public DesktopKeyboardForm(string stopFile = null, double seconds = double.PositiveInfinity, bool previewOnly = false, SettingsStore store = null)
     {
         this.stopFile = stopFile; this.seconds = seconds; this.previewOnly = previewOnly;
+        settings = store ?? new SettingsStore();
         keyboard = new KeyboardState(output);
         Text = "GoBoard Desktop";
         FormBorderStyle = FormBorderStyle.None;
@@ -58,9 +59,7 @@ internal sealed class DesktopKeyboardForm : Form
         if (previewOnly) Opacity = 0;
         applied = settings.Current;
         audio.Apply(applied);
-        ApplySize();
-        var area = Screen.FromPoint(Cursor.Position).WorkingArea;
-        Location = new(area.Left + (area.Width - Width) / 2, area.Bottom - Height - 24);
+        ResetPosition();
         timer.Tick += (_, _) => Frame();
         Shown += (_, _) => { ApplySize(); Frame(); timer.Start(); };
         ResizeBegin += (_, _) => Cancel();
@@ -90,9 +89,17 @@ internal sealed class DesktopKeyboardForm : Form
         base.WndProc(ref m);
     }
 
-    private void ApplySize()
+    private void ResetPosition()
     {
-        var area = Screen.FromControl(this).WorkingArea;
+        Cancel();
+        var area = Screen.FromPoint(Cursor.Position).WorkingArea;
+        ApplySize(area);
+        Location = new(area.Left + (area.Width - Width) / 2, Math.Max(area.Top, area.Bottom - Height - 24));
+    }
+
+    private void ApplySize(Rectangle? workingArea = null)
+    {
+        var area = workingArea ?? Screen.FromControl(this).WorkingArea;
         var geometry = DesktopGeometry.Create(applied.Scale, DeviceDpi / 96f, area.Width - 16, area.Height - 16);
         ClientSize = new((int)Math.Round(geometry.Width), (int)Math.Round(geometry.Height));
         Location = new(Math.Clamp(Left, area.Left, Math.Max(area.Left, area.Right - Width)),
@@ -116,27 +123,31 @@ internal sealed class DesktopKeyboardForm : Form
         return !faulted && target.Window != 0;
     }
 
+    internal void RefreshSettings()
+    {
+        settings.Reload();
+        nextSettingsRead = Now + .5;
+        if (applied != settings.Current)
+        {
+            if (applied.Geometry != settings.Current.Geometry)
+            {
+                Cancel();
+                keyboard.SetLayout(WindowsLayoutProvider.Get(output.Target.Layout, settings.Current.Geometry), Now);
+            }
+            var resized = applied.SizePercent != settings.Current.SizePercent;
+            var resetPosition = applied.PositionResetId != settings.Current.PositionResetId;
+            applied = settings.Current;
+            audio.Apply(applied);
+            if (resetPosition) ResetPosition();
+            else if (resized) { Cancel(); ApplySize(); }
+        }
+    }
+
     private void Frame()
     {
         if (closing) return;
         if ((stopFile != null && File.Exists(stopFile)) || Now - started >= seconds) { Close(); return; }
-        if (Now >= nextSettingsRead)
-        {
-            settings.Reload();
-            nextSettingsRead = Now + .5;
-            if (applied != settings.Current)
-            {
-                if (applied.Geometry != settings.Current.Geometry)
-                {
-                    Cancel();
-                    keyboard.SetLayout(WindowsLayoutProvider.Get(output.Target.Layout, settings.Current.Geometry), Now);
-                }
-                var resized = applied.SizePercent != settings.Current.SizePercent;
-                applied = settings.Current;
-                audio.Apply(applied);
-                if (resized) { Cancel(); ApplySize(); }
-            }
-        }
+        if (Now >= nextSettingsRead) RefreshSettings();
         if (faulted)
         {
             try { output.ReleaseAll(); faulted = false; }

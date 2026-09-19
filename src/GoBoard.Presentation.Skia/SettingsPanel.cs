@@ -43,17 +43,18 @@ internal static class SettingsPanel
         Text(desktopMode ? "Desktop scale · 50–150%" : $"{OverlayGeometry.PanelWidthInMeters * settings.Scale * 100:F0} cm wide · 50–150%", 64, 216, small, accent);
         Text("Key sounds", 64, 290, label, text);
         Text("Sound preset", 64, 347, small, accent);
-        Text("Use arrows to choose · Click the name to preview", 64, 461, small, accent);
+        Text("Click a preset to select and preview", 64, 470, small, accent);
         Text($"Volume   {settings.VolumePercent}%", 64, 511, label, text);
         Text("Keyboard arrangement", 64, 578, label, text);
         Text("Auto · ANSI · ISO", 64, 608, small, accent);
         Text("Keyboard theme", 64, 648, small, accent);
         }
-        Text(error == null ? "Saved on this PC · Shared by desktop and VR" : "Settings unavailable · Last working values kept",
-            64, 760, small, error == null ? accent : new SKColor(0xff, 0xb0, 0xa0));
+        if (error != null)
+            Text("Settings unavailable · Last working values kept", 64, 760, small, new SKColor(0xff, 0xb0, 0xa0));
         foreach (var c in SettingsControls.ForPage(pointers?.Page ?? SettingsPage.General))
         {
-            var selected = c.Action == SettingsAction.PreviewSound ||
+            var preset = SettingsControls.SoundFor(c.Action);
+            var selected = preset == KeySounds.Canonical(settings.Sound) ||
                 c.Action == SettingsAction.ToggleSound && settings.SoundEnabled ||
                 c.Action == SettingsAction.SteamSoft && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamSoft ||
                 c.Action == SettingsAction.SteamFlat && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamFlat ||
@@ -69,9 +70,29 @@ internal static class SettingsPanel
             var enabled = SettingsControls.Enabled(c.Action, settings);
             var b = c.Bounds;
             var rect = new SKRect(b.X, b.Y, b.X + b.Width, b.Y + b.Height);
-            paint.Color = selected ? accent : new SKColor(0x1b, 0x2c, 0x39);
-            canvas.DrawRoundRect(rect, 10, 10, paint);
-            if (enabled && pointers?.Hovered(c.Action) == true)
+            var softTheme = c.Action == SettingsAction.SteamSoft;
+            var hovered = enabled && pointers?.Hovered(c.Action) == true;
+            if (softTheme)
+            {
+                // Render the actual theme surface at twice the keyboard's logical key size.
+                canvas.Save();
+                canvas.Scale(2);
+                Panel.DrawKeySurface(canvas, new KeyboardKey("ThemePreview", "", 0,
+                    new(b.X / 2, b.Y / 2, b.Width / 2, b.Height / 2)),
+                    KeyboardTheme.Soft, hovered, filled: false, armed: selected);
+                canvas.Restore();
+                if (selected)
+                {
+                    paint.Color = KeyboardTheme.Soft.Accent;
+                    canvas.DrawRoundRect(new SKRect(rect.MidX - 12, rect.Bottom - 9, rect.MidX + 12, rect.Bottom - 6), 1.5f, 1.5f, paint);
+                }
+            }
+            else
+            {
+                paint.Color = selected ? accent : new SKColor(0x1b, 0x2c, 0x39);
+                canvas.DrawRoundRect(rect, 10, 10, paint);
+            }
+            if (!softTheme && hovered)
             {
                 paint.Style = SKPaintStyle.Stroke;
                 paint.StrokeWidth = 3;
@@ -80,18 +101,17 @@ internal static class SettingsPanel
                 paint.Style = SKPaintStyle.Fill;
             }
             paint.Color = !enabled ? new SKColor(0x66, 0x78, 0x82) : selected ? new SKColor(0x09, 0x19, 0x23) : text;
+            if (softTheme) paint.Color = selected ? KeyboardTheme.Soft.Accent : KeyboardTheme.Soft.Text;
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
-            if (c.Action == SettingsAction.PreviewSound) title = KeySounds.Name(settings.Sound);
             if (c.Action == SettingsAction.Geometry) title = settings.Geometry switch
             { KeyboardGeometry.Ansi => "ANSI", KeyboardGeometry.Iso => "ISO", _ => "Auto" };
-            var font = effectsPage || c.Action is SettingsAction.Defaults or SettingsAction.GeneralTab or SettingsAction.EffectsTab ? small : label;
+            var font = preset.HasValue || effectsPage || c.Action is SettingsAction.Defaults or SettingsAction.ResetPosition or SettingsAction.GeneralTab or SettingsAction.EffectsTab ? small : label;
             var baseline = rect.MidY - (font.Metrics.Ascent + font.Metrics.Descent) / 2;
-            if (c.Action == SettingsAction.PreviewSound)
+            if (preset.HasValue)
             {
-                var contentWidth = SoundPresetIcon.Size + SoundPresetIcon.LabelGap + font.MeasureText(title);
-                var left = rect.MidX - contentWidth / 2;
-                SoundPresetIcon.Draw(canvas, settings.Sound, left, rect.MidY - SoundPresetIcon.Size / 2);
-                canvas.DrawText(title, left + SoundPresetIcon.Size + SoundPresetIcon.LabelGap, baseline, SKTextAlign.Left, font, paint);
+                SoundPresetIcon.Draw(canvas, preset.Value, rect.MidX - SoundPresetIcon.Size / 2, rect.Top + 10);
+                var labelY = rect.Top + 68 - (font.Metrics.Ascent + font.Metrics.Descent) / 2;
+                canvas.DrawText(title, rect.MidX, labelY, SKTextAlign.Center, font, paint);
             }
             else canvas.DrawText(title, rect.MidX, baseline, SKTextAlign.Center, font, paint);
         }

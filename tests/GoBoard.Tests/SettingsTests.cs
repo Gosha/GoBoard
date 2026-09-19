@@ -12,6 +12,46 @@ public sealed class SettingsTests : IDisposable
     private string SettingsPath => Path.Combine(directory, "settings.json");
 
     [Fact]
+    public void PositionResetReachesOtherHostsWithoutChangingPreferences()
+    {
+        var editor = new SettingsStore(SettingsPath);
+        var host = new SettingsStore(SettingsPath);
+        Assert.True(editor.Update(s => s with { SizePercent = 125, Sound = KeySound.CherryMxBlue,
+            Effects = new() { Spotlight = true } }));
+        var preferences = editor.Current;
+        Assert.True(editor.Update(s => SettingsControls.Apply(SettingsAction.ResetPosition, s)));
+        var request = editor.Current.PositionResetId;
+        Assert.NotEqual(Guid.Empty, request);
+        Assert.Equal(preferences, editor.Current with { PositionResetId = preferences.PositionResetId });
+        Assert.True(host.Reload());
+        Assert.Equal(request, host.Current.PositionResetId);
+        Assert.False(host.Reload());
+        Assert.True(editor.Update(s => SettingsControls.Apply(SettingsAction.ResetPosition, s)));
+        Assert.True(host.Reload());
+        Assert.NotEqual(request, host.Current.PositionResetId);
+        Assert.Equal(host.Current.PositionResetId, SettingsControls.Apply(SettingsAction.Defaults, host.Current).PositionResetId);
+        Assert.False(SettingsControls.AuditionsSound(SettingsAction.ResetPosition));
+    }
+
+    [Fact]
+    public void PositionResetRestoresDefaultOffsetAgainstCurrentDashboard()
+    {
+        var pose = new RelativePose();
+        var parent = Matrix4x4.CreateRotationY(.7f) * Matrix4x4.CreateTranslation(1, 2, -1);
+        pose.Update(parent);
+        pose.SetWorld(parent, Matrix4x4.CreateRotationX(.4f) * Matrix4x4.CreateTranslation(3, 4, 5));
+        pose.Update(parent);
+        var movedParent = Matrix4x4.CreateRotationY(-.3f) * Matrix4x4.CreateTranslation(-2, 1, -3);
+        pose.Reset();
+        var reset = pose.Update(movedParent);
+        Assert.True(reset.Write);
+        Assert.True(RelativePose.Near(Matrix4x4.CreateTranslation(0, -.30f, .10f) * movedParent, reset.World));
+        Assert.False(pose.Update(movedParent).Write);
+        pose.Reset();
+        Assert.True(pose.Update(movedParent).Write);
+    }
+
+    [Fact]
     public void ThemeSelectionPersistsMergesAndResetsAcrossEditors()
     {
         var desktop = new SettingsStore(SettingsPath);

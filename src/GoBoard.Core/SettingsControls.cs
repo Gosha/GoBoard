@@ -8,7 +8,7 @@ internal enum SettingsAction
     TransitionNone, Crossfade, Lift, TransitionFaster, TransitionSlower, TravelLess, TravelMore,
     EnterFaster, EnterSlower, LeaveFaster, LeaveSlower, RadiusLess, RadiusMore,
     StrengthLess, StrengthMore, RippleFaster, RippleSlower, ResetEffects,
-    PreviousSound, NextSound, PreviewSound
+    CherryBlue, GateronYellow, ResetPosition
 }
 internal sealed record SettingsControl(SettingsAction Action, string Label, KeyBounds Bounds);
 
@@ -37,14 +37,16 @@ internal static class SettingsControls
         new(SettingsAction.Smaller, "−", new(588, 158, 100, 64)),
         new(SettingsAction.Larger, "+", new(704, 158, 100, 64)),
         new(SettingsAction.ToggleSound, "", new(588, 260, 216, 64)),
-        new(SettingsAction.PreviousSound, "‹", new(64, 368, 84, 68)),
-        new(SettingsAction.PreviewSound, "", new(164, 368, 540, 68)),
-        new(SettingsAction.NextSound, "›", new(720, 368, 84, 68)),
+        new(SettingsAction.Wood, KeySounds.Name(KeySound.CushionedWood), new(64, 358, 173, 88)),
+        new(SettingsAction.Thud, KeySounds.Name(KeySound.SoftLowThud), new(253, 358, 173, 88)),
+        new(SettingsAction.CherryBlue, KeySounds.Name(KeySound.CherryMxBlue), new(442, 358, 173, 88)),
+        new(SettingsAction.GateronYellow, KeySounds.Name(KeySound.GateronYellowPairs), new(631, 358, 173, 88)),
         new(SettingsAction.Quieter, "−", new(588, 474, 100, 64)),
         new(SettingsAction.Louder, "+", new(704, 474, 100, 64)),
         new(SettingsAction.Geometry, "", new(588, 550, 216, 64)),
         new(SettingsAction.SteamSoft, BoardThemes.Name(BoardThemes.SteamSoft), new(64, 668, 340, 64)),
         new(SettingsAction.SteamFlat, BoardThemes.Name(BoardThemes.SteamFlat), new(420, 668, 384, 64)),
+        new(SettingsAction.ResetPosition, "Reset position", new(356, 770, 216, 48)),
         new(SettingsAction.Defaults, "Reset to defaults", new(588, 770, 216, 48))
     ];
 
@@ -100,23 +102,28 @@ internal static class SettingsControls
         >= SettingsAction.TransitionFaster and <= SettingsAction.RippleSlower => Apply(action, s) != s,
         _ => true
     };
-    public static bool AuditionsSound(SettingsAction action) => action is
-        SettingsAction.Wood or SettingsAction.Thud or SettingsAction.PreviousSound or SettingsAction.NextSound or
-        SettingsAction.PreviewSound or SettingsAction.ToggleSound or SettingsAction.Quieter or SettingsAction.Louder;
+    public static KeySound? SoundFor(SettingsAction action) => action switch
+    {
+        SettingsAction.Wood => KeySound.CushionedWood,
+        SettingsAction.Thud => KeySound.SoftLowThud,
+        SettingsAction.CherryBlue => KeySound.CherryMxBlue,
+        SettingsAction.GateronYellow => KeySound.GateronYellowPairs,
+        _ => null
+    };
+    public static bool AuditionsSound(SettingsAction action) => SoundFor(action).HasValue || action is
+        SettingsAction.ToggleSound or SettingsAction.Quieter or SettingsAction.Louder;
     public static BoardSettings Apply(SettingsAction action, BoardSettings s) => (action switch
     {
         SettingsAction.Smaller => s with { SizePercent = s.SizePercent - 5 },
         SettingsAction.Larger => s with { SizePercent = s.SizePercent + 5 },
         SettingsAction.ToggleSound => s with { SoundEnabled = !s.SoundEnabled },
-        SettingsAction.Wood => s with { Sound = KeySound.CushionedWood },
-        SettingsAction.Thud => s with { Sound = KeySound.SoftLowThud },
-        SettingsAction.PreviousSound => s with { Sound = KeySounds.Next(s.Sound, previous: true) },
-        SettingsAction.NextSound => s with { Sound = KeySounds.Next(s.Sound) },
+        _ when SoundFor(action) is { } sound => s with { Sound = sound },
         SettingsAction.Quieter => s with { VolumePercent = s.VolumePercent - 10 },
         SettingsAction.Louder => s with { VolumePercent = s.VolumePercent + 10 },
         SettingsAction.SteamSoft => s with { Theme = BoardThemes.SteamSoft },
         SettingsAction.SteamFlat => s with { Theme = BoardThemes.SteamFlat },
-        SettingsAction.Defaults => new BoardSettings(),
+        SettingsAction.ResetPosition => s with { PositionResetId = Guid.NewGuid() },
+        SettingsAction.Defaults => new BoardSettings { PositionResetId = s.PositionResetId },
         SettingsAction.Geometry => s with { Geometry = (KeyboardGeometry)(((int)s.Geometry + 1) % 3) },
         SettingsAction.ResetEffects => s with { Effects = new() },
         SettingsAction.Afterglow => s with { Effects = s.Effects with { Afterglow = !s.Effects.Afterglow } },

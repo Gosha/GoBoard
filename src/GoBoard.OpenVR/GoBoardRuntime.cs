@@ -177,7 +177,9 @@ public static int Run(string[] args)
             settingsOverlay.Update();
             if (appliedSettings != settings.Current)
             {
-                keyboard.ApplySettings(settings.Current, appliedSettings.SizePercent != settings.Current.SizePercent);
+                var resetPosition = appliedSettings.PositionResetId != settings.Current.PositionResetId;
+                if (resetPosition) follower.ResetPosition();
+                keyboard.ApplySettings(settings.Current, appliedSettings.SizePercent != settings.Current.SizePercent || resetPosition);
                 appliedSettings = settings.Current;
             }
             var visible = follower.Update();

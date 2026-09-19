@@ -136,20 +136,22 @@ public sealed class KeyAudioTests
             var initial = new BoardSettings { Effects = new() { Spotlight = true, Transition = CharacterTransition.Lift } };
             Assert.True(store.Update(_ => initial));
             var seen = new HashSet<KeySound>();
-            foreach (var _ in KeySounds.All)
+            foreach (var (action, sound) in new[] { (SettingsAction.GateronYellow, KeySound.GateronYellowPairs),
+                (SettingsAction.Thud, KeySound.SoftLowThud), (SettingsAction.CherryBlue, KeySound.CherryMxBlue),
+                (SettingsAction.Wood, KeySound.CushionedWood) })
             {
-                Assert.True(store.Update(s => SettingsControls.Apply(SettingsAction.NextSound, s)));
+                Assert.True(store.Update(s => SettingsControls.Apply(action, s)));
+                Assert.Equal(sound, store.Current.Sound);
                 Assert.True(seen.Add(store.Current.Sound));
                 Assert.Equal(store.Current, new SettingsStore(path).Current);
                 Assert.Equal(initial.Effects, store.Current.Effects);
                 Assert.Contains($"\"{store.Current.Sound}\"", File.ReadAllText(path));
+                Assert.Equal(store.Current, SettingsControls.Apply(action, store.Current));
+                Assert.True(SettingsControls.AuditionsSound(action));
             }
             Assert.Equal(KeySound.CushionedWood, store.Current.Sound);
-            Assert.Equal(KeySound.GateronYellowPairs, SettingsControls.Apply(SettingsAction.PreviousSound, store.Current).Sound);
-            Assert.Equal(store.Current, SettingsControls.Apply(SettingsAction.PreviewSound, store.Current));
+            Assert.Equal(KeySounds.All.Count, seen.Count);
             Assert.Equal(KeySound.CushionedWood, SettingsControls.Apply(SettingsAction.Defaults, store.Current).Sound);
-            foreach (var action in new[] { SettingsAction.NextSound, SettingsAction.PreviousSound, SettingsAction.PreviewSound })
-                Assert.True(SettingsControls.AuditionsSound(action));
             Assert.False(SettingsControls.AuditionsSound(SettingsAction.Spotlight));
         }
         finally { File.Delete(path); }
@@ -158,22 +160,32 @@ public sealed class KeyAudioTests
     [Fact]
     public void PresetNamesFitAndSettingsRenderInDesktopAndVr()
     {
-        var button = SettingsControls.All.Single(c => c.Action == SettingsAction.PreviewSound);
+        var buttons = SettingsControls.All.Where(c => SettingsControls.SoundFor(c.Action).HasValue).ToArray();
+        Assert.Equal(KeySounds.All, buttons.Select(c => SettingsControls.SoundFor(c.Action).Value));
         using var face = SKTypeface.FromFamilyName("Segoe UI");
-        using var font = new SKFont(face, 25);
+        using var font = new SKFont(face, 19);
         var output = Environment.GetEnvironmentVariable("GOBOARD_AUDIO_PREVIEW_DIR");
+        foreach (var button in buttons)
+            Assert.True(font.MeasureText(button.Label) <= button.Bounds.Width - 24);
         foreach (var sound in Enum.GetValues<KeySound>())
         {
-            Assert.True(font.MeasureText(KeySounds.Name(sound)) + SoundPresetIcon.Size + SoundPresetIcon.LabelGap <= button.Bounds.Width - 32);
             foreach (var desktop in new[] { false, true })
+            foreach (var theme in new[] { BoardThemes.SteamSoft, BoardThemes.SteamFlat })
             {
-                using var bitmap = SettingsPanel.Render(new() { Sound = sound }, desktopMode: desktop);
+                using var bitmap = SettingsPanel.Render(new() { Sound = sound, Theme = theme }, desktopMode: desktop);
                 Assert.Equal(1800, bitmap.Width);
                 Assert.Equal(1700, bitmap.Height);
+                foreach (var button in buttons)
+                {
+                    var selected = SettingsControls.SoundFor(button.Action) == KeySounds.Canonical(sound);
+                    Assert.Equal(selected ? new SKColor(0x66, 0xc0, 0xf4) : new SKColor(0x1b, 0x2c, 0x39),
+                        bitmap.GetPixel((int)(button.Bounds.X + 12) * 2, (int)(button.Bounds.Y + 12) * 2));
+                }
                 if (output == null) continue;
                 Directory.CreateDirectory(output);
                 using var encoded = bitmap.Encode(SKEncodedImageFormat.Png, 100);
                 var name = sound == KeySound.GateronYellowModified ? "sounds" : $"sounds-{sound}";
+                if (theme == BoardThemes.SteamFlat) name += "-flat";
                 using var file = File.Create(Path.Combine(output, $"{name}-{(desktop ? "desktop" : "vr")}.png"));
                 encoded.SaveTo(file);
             }

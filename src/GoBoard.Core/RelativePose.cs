@@ -5,9 +5,16 @@ namespace GoBoard.Core;
 // System.Numerics uses row vectors: world = local * parent.
 internal sealed class RelativePose
 {
-    private Matrix4x4 local = Matrix4x4.CreateTranslation(0, -0.30f, 0.10f);
+    private static readonly Matrix4x4 DefaultLocal = Matrix4x4.CreateTranslation(0, -0.30f, 0.10f);
+    private Matrix4x4 local = DefaultLocal;
     private Matrix4x4? lastWorld;
 
+
+    public void Reset()
+    {
+        local = DefaultLocal;
+        lastWorld = null;
+    }
 
     public void SetWorld(Matrix4x4 parent, Matrix4x4 world)
     {

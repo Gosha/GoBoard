@@ -30,10 +30,4 @@ internal static class KeySounds
         KeySound.GateronYellowPairs => "Gateron Yellow",
         _ => "Cushioned wood"
     };
-    public static KeySound Next(KeySound sound, bool previous = false)
-    {
-        var index = Array.IndexOf(Presets, Canonical(sound));
-        if (index < 0) index = 0;
-        return Presets[(index + (previous ? Presets.Length - 1 : 1)) % Presets.Length];
-    }
 }
