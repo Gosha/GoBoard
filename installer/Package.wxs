@@ -1,0 +1,87 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <!-- Channel-specific upgrade families share files, shortcuts, and settings.
+       Always remove the other channel, regardless of its numeric version. -->
+  <?if $(var.ReleaseChannel) = rolling ?>
+    <?define ProductName = "GoBoard (Rolling)" ?>
+    <?define UpgradeCode = "56804E91-13DF-4698-908A-604D44D7320A" ?>
+    <?define OtherUpgradeCode = "A8D6C499-CBD9-4DD9-9700-C5A8C9E23192" ?>
+  <?else?>
+    <?define ProductName = "GoBoard" ?>
+    <?define UpgradeCode = "A8D6C499-CBD9-4DD9-9700-C5A8C9E23192" ?>
+    <?define OtherUpgradeCode = "56804E91-13DF-4698-908A-604D44D7320A" ?>
+  <?endif?>
+  <Package Name="$(var.ProductName)" Manufacturer="GoBoard" Version="$(var.ProductVersion)"
+           UpgradeCode="$(var.UpgradeCode)" Scope="perMachine"
+           Language="1033">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of $(var.ProductName) is already installed."
+                  Schedule="afterInstallInitialize" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <!-- MSI's WindowsBuild can report 9600 on modern Windows. Read the real build. -->
+    <Property Id="GOBOARD_WINDOWS_BUILD">
+      <RegistrySearch Id="WindowsBuildSearch" Root="HKLM"
+                      Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+                      Name="CurrentBuildNumber" Type="raw" Bitness="always64" />
+    </Property>
+    <Upgrade Id="$(var.OtherUpgradeCode)">
+      <UpgradeVersion Minimum="0.0.0" IncludeMinimum="yes"
+                      Property="GOBOARD_OTHER_CHANNEL_FOUND" MigrateFeatures="no" />
+    </Upgrade>
+    <Upgrade Id="$(var.UpgradeCode)">
+      <UpgradeVersion Minimum="$(var.ProductVersion)" Maximum="$(var.ProductVersion)"
+                      IncludeMinimum="yes" IncludeMaximum="yes" OnlyDetect="yes"
+                      Property="GOBOARD_SAME_VERSION_FOUND" />
+    </Upgrade>
+    <Launch Condition="Installed OR NOT GOBOARD_SAME_VERSION_FOUND"
+            Message="This version of $(var.ProductName) is already installed. Use the original MSI to repair it, or install a newer version." />
+    <Launch Condition="Installed OR (VersionNT64 AND GOBOARD_WINDOWS_BUILD &gt;= 19044)"
+            Message="GoBoard requires Windows 10 21H2 or later (x64)." />
+
+    <Icon Id="GoBoard.exe" SourceFile="$(var.PublishDir)GoBoard.exe" />
+    <Property Id="ARPPRODUCTICON" Value="GoBoard.exe" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/Gosha/GoBoard" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Open GoBoard from the Start menu. VR mode requires SteamVR and a connected headset." />
+
+    <Property Id="INSTALLFOLDER" Secure="yes">
+      <RegistrySearch Id="PreviousInstallFolder" Root="HKLM" Key="Software\GoBoard"
+                      Name="InstallFolder" Type="raw" Bitness="always64" />
+    </Property>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="GoBoard" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="GoBoardMenuFolder" Name="GoBoard" />
+    </StandardDirectory>
+
+    <Feature Id="GoBoard" Title="GoBoard" Level="1">
+      <Component Directory="INSTALLFOLDER" Id="InstallationLocation" Guid="*">
+        <RegistryValue Root="HKLM" Key="Software\GoBoard" Name="InstallFolder"
+                       Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+      </Component>
+      <Component Directory="INSTALLFOLDER" Id="GoBoardExecutable" Guid="*">
+        <File Id="GoBoardExe" Source="$(var.PublishDir)GoBoard.exe" KeyPath="yes">
+          <Shortcut Id="VrShortcut" Directory="GoBoardMenuFolder" Name="GoBoard VR"
+                    Advertise="yes" WorkingDirectory="INSTALLFOLDER" Icon="GoBoard.exe" />
+          <Shortcut Id="DesktopShortcut" Directory="GoBoardMenuFolder" Name="GoBoard Desktop"
+                    Arguments="--desktop" Advertise="yes" WorkingDirectory="INSTALLFOLDER" Icon="GoBoard.exe" />
+          <Shortcut Id="SettingsShortcut" Directory="GoBoardMenuFolder" Name="GoBoard Settings"
+                    Arguments="--settings" Advertise="yes" WorkingDirectory="INSTALLFOLDER" Icon="GoBoard.exe" />
+        </File>
+        <RemoveFolder Id="RemoveGoBoardMenu" Directory="GoBoardMenuFolder" On="uninstall" />
+      </Component>
+      <Files Directory="INSTALLFOLDER" Include="$(var.PublishDir)**">
+        <Exclude Files="$(var.PublishDir)GoBoard.exe" />
+        <Exclude Files="$(var.PublishDir)**\*.pdb" />
+      </Files>
+    </Feature>
+
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <!-- There is no project EULA: skip WixUI's stock placeholder license page. -->
+    <UI>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg"
+               Order="2" Condition="NOT Installed" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"
+               Order="2" Condition="1" />
+    </UI>
+  </Package>
+</Wix>

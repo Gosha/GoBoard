@@ -1,0 +1,128 @@
+param(
+    [Parameter(Mandatory)][string]$MsiPath,
+    [Parameter(Mandatory)][string]$PublishDir,
+    [ValidateSet('stable', 'rolling')][string]$Channel = 'stable'
+)
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+$msi = (Resolve-Path -LiteralPath $MsiPath).Path
+$publish = (Resolve-Path -LiteralPath $PublishDir).Path
+$checkRoot = Join-Path (Split-Path $msi) ('check-' + [Guid]::NewGuid().ToString('N'))
+$extracted = Join-Path $checkRoot 'extracted'
+$payload = Join-Path $checkRoot 'payload'
+$xmlPath = Join-Path $checkRoot 'package.wxs'
+New-Item -ItemType Directory -Force -Path $payload | Out-Null
+
+# Use the restored SDK, honoring NuGet's configured package cache.
+$wixBin = & dotnet msbuild (Join-Path $PSScriptRoot 'GoBoard.Installer.wixproj') -getProperty:WixBinDir
+if ($LASTEXITCODE -ne 0) { throw 'Could not locate the WiX SDK.' }
+& dotnet (Join-Path $wixBin 'wix.dll') msi decompile $msi -x $extracted -o $xmlPath
+if ($LASTEXITCODE -ne 0) { throw 'MSI extraction failed.' }
+
+[xml]$document = Get-Content -Raw -LiteralPath $xmlPath
+$ns = New-Object System.Xml.XmlNamespaceManager($document.NameTable)
+$ns.AddNamespace('w', 'http://wixtoolset.org/schemas/v4/wxs')
+$files = $document.SelectNodes('//w:File', $ns)
+foreach ($file in $files) {
+    $relative = $file.GetAttribute('Name')
+    if (!$relative) { throw 'Extracted file has no target name.' }
+    $directory = $file.ParentNode.ParentNode
+    while ($directory.GetAttribute('Id') -ne 'INSTALLFOLDER') {
+        if ($directory.LocalName -ne 'Directory') { throw "Unexpected install location for $relative" }
+        $relative = Join-Path $directory.GetAttribute('Name') $relative
+        $directory = $directory.ParentNode
+    }
+    $source = Join-Path $extracted ('File\' + $file.GetAttribute('Id'))
+    $original = Join-Path $publish $relative
+    if ((Get-FileHash -LiteralPath $source).Hash -ne (Get-FileHash -LiteralPath $original).Hash) {
+        throw "Packaged bytes differ from publish output: $relative"
+    }
+    $target = Join-Path $payload $relative
+    New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
+    Copy-Item -LiteralPath $source -Destination $target
+}
+$publishedFiles = @(Get-ChildItem -LiteralPath $publish -Recurse -File | Where-Object Extension -ne '.pdb')
+if ($files.Count -ne $publishedFiles.Count) { throw 'MSI file count differs from the publish output.' }
+foreach ($required in @('GoBoard.exe', 'GoBoard.dll', 'GoBoard.runtimeconfig.json', 'hostfxr.dll',
+                        'hostpolicy.dll', 'coreclr.dll', 'System.Windows.Forms.dll',
+                        'openvr_api.dll', 'libSkiaSharp.dll', 'glfw3.dll',
+                        'OpenVR-LICENSE.txt', 'SOUND-CREDITS.md')) {
+    if (!(Test-Path -LiteralPath (Join-Path $payload $required))) { throw "Missing payload: $required" }
+}
+if (Get-ChildItem -LiteralPath $payload -Recurse -Filter '*Poc*') { throw 'POC files must not ship in the production MSI.' }
+$config = Get-Content -Raw -LiteralPath (Join-Path $payload 'GoBoard.runtimeconfig.json') | ConvertFrom-Json
+if (@($config.runtimeOptions.includedFrameworks).Count -ne 2) { throw 'Expected a self-contained desktop runtime.' }
+
+$shortcuts = $document.SelectNodes('//w:Shortcut', $ns)
+if ($shortcuts.Count -ne 3) { throw 'Expected three Start menu shortcuts.' }
+foreach ($entry in @(@('GoBoard VR', ''), @('GoBoard Desktop', '--desktop'), @('GoBoard Settings', '--settings'))) {
+    $shortcut = @($shortcuts | Where-Object { $_.GetAttribute('Name') -eq $entry[0] })
+    if ($shortcut.Count -ne 1 -or $shortcut[0].GetAttribute('Arguments') -ne $entry[1] -or
+        $shortcut[0].GetAttribute('Advertise') -ne 'yes' -or
+        !$shortcut[0].ParentNode.SelectSingleNode("w:File[@Id='GoBoardExe' and @KeyPath='yes']", $ns)) {
+        throw "Incorrect shortcut target/arguments: $($entry[0])"
+    }
+}
+$package = $document.SelectSingleNode('/w:Wix/w:Package', $ns)
+$appVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $payload 'GoBoard.exe')).FileVersion
+if ($appVersion -ne ($package.GetAttribute('Version') + '.0')) { throw 'App and MSI versions differ.' }
+
+$metadata = Get-Content -Raw -LiteralPath (Join-Path $payload 'release.json') | ConvertFrom-Json
+if ($metadata.channel -ne $Channel -or $metadata.version -ne $package.GetAttribute('Version')) {
+    throw 'Packaged release metadata does not match the requested channel/version.'
+}
+$info = if ($Channel -eq 'rolling') {
+    $v = [version]$metadata.version
+    & (Join-Path $PSScriptRoot 'Get-ReleaseInfo.ps1') -Channel rolling -RunNumber ($v.Major * 256 + $v.Minor) -RunAttempt $v.Build
+} else {
+    & (Join-Path $PSScriptRoot 'Get-ReleaseInfo.ps1') -Channel stable -Version $metadata.version
+}
+if ([guid]$package.GetAttribute('UpgradeCode') -ne [guid]$info.UpgradeCode -or
+    $package.GetAttribute('Name') -ne $info.ProductName) { throw 'Incorrect MSI channel identity.' }
+if ([Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $payload 'GoBoard.dll')).ProductVersion -ne $metadata.informationalVersion) {
+    throw 'App informational version does not match release provenance.'
+}
+
+# Inspect actual MSI tables: decompilation can misreport action scheduling.
+$engine = New-Object -ComObject WindowsInstaller.Installer
+$db = $engine.OpenDatabase($msi, 0)
+try {
+    $view = $db.OpenView('SELECT `UpgradeCode`, `VersionMin`, `VersionMax`, `Attributes`, `Remove`, `ActionProperty` FROM `Upgrade`')
+    $view.Execute()
+    $crossChannelFound = $false
+    while ($record = $view.Fetch()) {
+        if ($record.StringData(6) -ne 'GOBOARD_OTHER_CHANNEL_FOUND') { continue }
+        # OnlyDetect (2) must be absent, VersionMinInclusive (256) present;
+        # an empty Remove column removes all features.
+        if ([guid]$record.StringData(1) -ne [guid]$info.OtherUpgradeCode -or
+            $record.StringData(2) -ne '0.0.0' -or $record.StringData(3) -ne '' -or
+            ($record.IntegerData(4) -band 2) -ne 0 -or ($record.IntegerData(4) -band 256) -eq 0 -or
+            $record.StringData(5) -ne '') { throw 'Cross-channel replacement is not unconditional.' }
+        $crossChannelFound = $true
+    }
+    $view.Close()
+    if (!$crossChannelFound) { throw 'MSI does not replace the other release channel.' }
+    $view = $db.OpenView('SELECT `Action`, `Sequence` FROM `InstallExecuteSequence`')
+    $view.Execute()
+    $sequence = @{}
+    while ($record = $view.Fetch()) { $sequence[$record.StringData(1)] = $record.IntegerData(2) }
+    $view.Close()
+    if ($sequence.RemoveExistingProducts -le $sequence.InstallInitialize -or
+        $sequence.RemoveExistingProducts -ge $sequence.InstallFiles) {
+        throw 'Replacement must remove old files inside the rollback transaction before installing new files.'
+    }
+} finally {
+    [Runtime.InteropServices.Marshal]::FinalReleaseComObject($db) | Out-Null
+    [Runtime.InteropServices.Marshal]::FinalReleaseComObject($engine) | Out-Null
+}
+
+# Run only rendering commands: no SteamVR initialization, typing, or saved-settings edits.
+foreach ($mode in @('render', 'render-desktop')) {
+    $png = Join-Path $checkRoot "$mode.png"
+    $process = Start-Process -FilePath (Join-Path $payload 'GoBoard.exe') -ArgumentList @("--$mode", ('"' + $png + '"')) -WindowStyle Hidden -Wait -PassThru
+    if ($process.ExitCode -ne 0 -or !(Test-Path -LiteralPath $png) -or (Get-Item -LiteralPath $png).Length -lt 1000) {
+        throw "Extracted MSI payload failed --$mode."
+    }
+}
+Write-Output "MSI verified: $($files.Count) files match publish output; runtime, native libraries, credits, shortcuts, versions, and both render modes passed."
+Write-Output "Inspection artifacts: $checkRoot"

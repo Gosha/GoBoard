@@ -1,0 +1,146 @@
+name: Windows MSI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Build channel (manual runs produce artifacts only)
+        default: rolling
+        required: true
+        type: choice
+        options: [rolling, stable]
+      version:
+        description: Stable version, e.g. 0.2.0 (leave empty for Rolling)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-latest
+    outputs:
+      channel: ${{ steps.release.outputs.channel }}
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      artifact: ${{ steps.release.outputs.artifact }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Resolve release version
+        id: release
+        env:
+          INPUT_CHANNEL: ${{ inputs.channel }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          $channel = 'rolling'
+          $stableVersion = '0.1.0' # A validation package on non-stable runs.
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            if ($env:GITHUB_REF_NAME -cnotmatch '^v(.+)$') { throw 'Expected a vMAJOR.MINOR.PATCH tag.' }
+            $stableVersion = $Matches[1]
+            $channel = 'stable'
+          } elseif ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+            $channel = $env:INPUT_CHANNEL
+            if ($channel -eq 'stable') { $stableVersion = $env:INPUT_VERSION }
+            elseif ($env:INPUT_VERSION) { throw 'Rolling versions are automatic; leave version empty.' }
+          }
+          $stable = ./installer/Get-ReleaseInfo.ps1 -Channel stable -Version $stableVersion
+          $rolling = ./installer/Get-ReleaseInfo.ps1 -Channel rolling -RunNumber $env:GITHUB_RUN_NUMBER -RunAttempt $env:GITHUB_RUN_ATTEMPT
+          $selected = if ($channel -eq 'stable') { $stable } else { $rolling }
+          "channel=$channel" >> $env:GITHUB_OUTPUT
+          "tag=$($selected.ReleaseTag)" >> $env:GITHUB_OUTPUT
+          "version=$($selected.Version)" >> $env:GITHUB_OUTPUT
+          "artifact=GoBoard-$channel-msi" >> $env:GITHUB_OUTPUT
+          "stable_version=$stableVersion" >> $env:GITHUB_OUTPUT
+          "stable_base=$($stable.ArtifactBase)" >> $env:GITHUB_OUTPUT
+          "rolling_base=$($rolling.ArtifactBase)" >> $env:GITHUB_OUTPUT
+      - name: Check version rules
+        run: ./installer/Test-ReleaseInfo.ps1
+      - name: Restore
+        run: dotnet restore GoBoard.slnx --locked-mode
+      - name: Build
+        run: dotnet build GoBoard.slnx -c Release --no-restore
+      - name: Test
+        run: dotnet test GoBoard.slnx -c Release --no-build
+      - name: Build and check Stable MSI
+        env:
+          MSI_VERSION: ${{ steps.release.outputs.stable_version }}
+        run: ./build-msi.ps1 -Channel stable -Version $env:MSI_VERSION
+      - name: Build and check Rolling MSI
+        run: ./build-msi.ps1 -Channel rolling -RunNumber $env:GITHUB_RUN_NUMBER -RunAttempt $env:GITHUB_RUN_ATTEMPT
+      - name: Upload Stable MSI, checksum, and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: GoBoard-stable-msi
+          path: artifacts/msi/${{ steps.release.outputs.stable_base }}.*
+          if-no-files-found: error
+      - name: Upload Rolling MSI, checksum, and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: GoBoard-rolling-msi
+          path: artifacts/msi/${{ steps.release.outputs.rolling_base }}.*
+          if-no-files-found: error
+
+  release:
+    needs: package
+    if: github.event_name == 'push'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: msi-release-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.package.outputs.artifact }}
+          path: release-assets
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_CHANNEL: ${{ needs.package.outputs.channel }}
+          RELEASE_TAG: ${{ needs.package.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RELEASE_CHANNEL -eq 'rolling') {
+            # Do not advertise a superseded main build as a new rolling release.
+            $head = gh api "repos/$env:GH_REPO/git/ref/heads/main" --jq '.object.sha'
+            if ($LASTEXITCODE -ne 0) { throw 'Could not verify current main commit.' }
+            if ($head -ne $env:GITHUB_SHA) {
+              Write-Output 'Main has advanced; keeping this build as a workflow artifact only.'
+              exit 0
+            }
+          }
+          $assets = @(Get-ChildItem release-assets -File | ForEach-Object FullName)
+          if ($assets.Count -ne 3) { throw 'Expected MSI, SHA-256 checksum, and release metadata.' }
+          $notes = @(
+            "Channel: $env:RELEASE_CHANNEL",
+            "Version: $env:RELEASE_VERSION",
+            "Source: https://github.com/$env:GH_REPO/commit/$env:GITHUB_SHA",
+            '',
+            'Install this MSI to replace your existing GoBoard installation, including the other release channel. Settings are retained.',
+            'The MSI is unsigned. VR mode requires SteamVR.'
+          )
+          $notes | Set-Content release-notes.md
+          $options = @('--target', $env:GITHUB_SHA, '--title', "GoBoard $env:RELEASE_CHANNEL $env:RELEASE_VERSION", '--notes-file', 'release-notes.md', '--draft')
+          if ($env:RELEASE_CHANNEL -eq 'rolling') { $options += @('--prerelease', '--latest=false') }
+          else { $options += '--verify-tag' }
+          # Upload to a draft first: a failed upload must not expose a partial release.
+          # Existing tags/releases are never overwritten by rerunning this job.
+          gh release create $env:RELEASE_TAG @assets @options
+          if ($LASTEXITCODE -ne 0) { throw 'Release creation failed. Inspect any existing draft before retrying; do not overwrite a published release.' }
+          gh release edit $env:RELEASE_TAG --draft=false
+          if ($LASTEXITCODE -ne 0) { throw 'Release remains a draft; assets were uploaded but publication failed.' }

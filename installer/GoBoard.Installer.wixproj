@@ -1,0 +1,21 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <ReleaseChannel Condition="'$(ReleaseChannel)' == ''">stable</ReleaseChannel>
+    <ChannelLabel Condition="'$(ReleaseChannel)' == 'stable'">Stable</ChannelLabel>
+    <ChannelLabel Condition="'$(ReleaseChannel)' == 'rolling'">Rolling</ChannelLabel>
+    <OutputName>GoBoard-$(ChannelLabel)-$(ProductVersion)-win-x64</OutputName>
+    <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\artifacts\msi\publish\</PublishDir>
+    <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir);ReleaseChannel=$(ReleaseChannel)</DefineConstants>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+  </ItemGroup>
+  <Target Name="CheckPublishedApp" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(ChannelLabel)' == ''" Text="ReleaseChannel must be stable or rolling." />
+    <Error Condition="'$(ProductVersion)' == ''" Text="Run build-msi.ps1 with an explicit version or rolling run number." />
+    <Error Condition="!Exists('$(PublishDir)GoBoard.exe')" Text="Run build-msi.ps1 to publish GoBoard before building the installer." />
+  </Target>
+</Project>
