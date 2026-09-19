@@ -24,10 +24,12 @@ The script restores pinned WiX dependencies from NuGet; no global WiX installati
 | --- | --- |
 | Push to `main` | Rolling GitHub prerelease from that exact commit |
 | Push a tag such as `v0.2.0` | Stable GitHub release, version `0.2.0` |
-| Pull request | Validated packages as workflow artifacts; no release |
+| Pull request affecting production/build inputs | Validated packages and test results as workflow artifacts; no release |
 | Manual workflow run | Selected channel as a workflow artifact; no release |
 
-Both channels are built and checked on every run. Only the selected channel is published on a push. A Rolling build is kept as a workflow artifact without publication if `main` has already advanced by the publication check.
+PR packaging runs only for changes to production source, regression tests, assets, vendor files, installer/build scripts, solution/SDK/NuGet/build configuration, or GitHub workflows. Documentation-only, launcher-only, POC-only, and experiment-only PRs skip this workflow. Main pushes, version tags, and manual runs remain unfiltered.
+
+Both channels are built and checked on every run. Test runs emit TRX files uploaded as the msi-test-results artifact, including when tests fail; earlier failures that produce no results do not cause an additional upload failure. Only the selected channel is published on a push. A Rolling build is kept as a workflow artifact without publication if `main` has already advanced by the publication check.
 
 To ship Stable, tag the intended commit with a canonical `vMAJOR.MINOR.PATCH` tag and push that tag. Release tags and assets should never be moved or replaced. The workflow creates a draft, uploads the MSI, checksum, and provenance, then publishes it. If publishing fails, inspect the draft; the workflow deliberately refuses to overwrite an existing release. For a failed Stable draft, verify its complete assets and source before publishing it manually, or remove only that unpublished draft and rerun the release job.
 
