@@ -26,7 +26,7 @@ internal sealed class ShortcutOverlays : IDisposable
     private BoardSettings settings;
     private bool visible, panelVisible, placed, wasGrabbed;
     private int drawnToggle = -1;
-    private Matrix4x4 panelOffset;
+    private readonly ScaledRelativePose panelPlacement = new();
     private float scale = 1;
     private readonly Dictionary<ulong, (uint Device, ETrackingUniverseOrigin Origin, Matrix4x4 Pose)> transforms = new();
     private readonly Dictionary<ulong, float> widths = new();
@@ -92,17 +92,18 @@ internal sealed class ShortcutOverlays : IDisposable
         var buttonSize = ProgrammableKeys.ToggleSize * ProgrammableKeys.MetersPerUnit * scale;
         var mainWidth = OverlayGeometry.PanelWidthInMeters * scale;
         var mainHeight = OverlayGeometry.PanelHeightInMeters * scale;
-        var buttonOffset = Matrix4x4.CreateTranslation(-(mainWidth + buttonSize) / 2 - .012f,
-            (mainHeight - buttonSize) / 2, .002f);
+        var buttonOffset = Matrix4x4.CreateTranslation(-(mainWidth + buttonSize) / 2 - .012f * scale,
+            (mainHeight - buttonSize) / 2, .002f * scale);
         SetWidth(button, buttonSize);
         Relative(button, main, buttonOffset);
         SetWidth(panel, PanelWidth);
         if (!placed)
         {
-            panelOffset = Matrix4x4.CreateTranslation(buttonOffset.M41 - buttonSize / 2 - PanelWidth / 2 - .012f,
-                mainHeight / 2 - PanelHeight / 2, .002f);
+            panelPlacement.SetLocal(Matrix4x4.CreateTranslation(buttonOffset.M41 - buttonSize / 2 - PanelWidth / 2 - .012f * scale,
+                mainHeight / 2 - PanelHeight / 2, .002f * scale), scale);
             placed = true;
         }
+        var panelOffset = panelPlacement.AtScale(scale);
         ProcessButton(show && !resizing && !mainGrab.HasValue && GrabOwner == null);
         var expanded = show && toggle.Expanded;
         if (panelVisible != expanded)
@@ -117,7 +118,11 @@ internal sealed class ShortcutOverlays : IDisposable
             new HmdVector2_t { v0 = OverlayGeometry.PanelWidth / 2f, v1 = OverlayGeometry.PanelHeight / 2f }, ref raw) == EVROverlayError.None &&
             OpenVrPose.TryRigid(raw, out world);
         var moved = grab.Update(poseValid, panelOffset * world, interactive: !resizing && !mainGrab.HasValue);
-        if (moved.HasValue && Matrix4x4.Invert(world, out var inverse)) panelOffset = moved.Value * inverse;
+        if (moved.HasValue && Matrix4x4.Invert(world, out var inverse))
+        {
+            panelOffset = moved.Value * inverse;
+            panelPlacement.SetLocal(panelOffset, scale);
+        }
         if (grab.ActiveGrab is { } capture)
         {
             var pose = OpenVrPose.ToOpenVr(capture.ControllerOffset);

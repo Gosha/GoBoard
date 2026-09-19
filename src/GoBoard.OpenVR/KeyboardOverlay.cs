@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using GoBoard.Core;
 using GoBoard.Platform.Windows;
 using GoBoard.Presentation.Skia;
+using SkiaSharp;
 using Valve.VR;
 
 namespace GoBoard.Vr;
@@ -16,7 +17,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private KeyboardState keyboard;
     private readonly OverlayPointers pointers = new();
     private readonly TrackedDevicePose_t[] devices = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
-    private bool enabled, faulted, resizing;
+    private bool enabled, faulted, resizing, shortcutGeometryApplied;
     private string theme = BoardThemes.Default;
     private EffectSettings effects = new();
     private readonly AnimatedKeyboardRenderer renderer = new();
@@ -28,27 +29,44 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     internal KeyboardState State => keyboard ??= new KeyboardState(output, shortcutsOnly);
     private double acceptAfter;
+    // SteamVR's OpenGL sharing keeps the first submitted texture dimensions.
+    // Keep the palette raster fixed and use texel aspect to display its logical
+    // proportions. Full UV bounds retain the usual top/bottom orientation.
+    internal static readonly SKImageInfo ShortcutTextureInfo = new(
+        ProgrammableKeys.Width(new() { Columns = ProgrammableKeySettings.MaxColumns }) * Panel.RasterScale,
+        ProgrammableKeys.Height(new() { Rows = ProgrammableKeySettings.MaxRows }) * Panel.RasterScale,
+        SKColorType.Rgba8888, SKAlphaType.Unpremul);
+
+    internal static (float X, float Y) ShortcutPointerPosition(float x, float y, KeyboardState state) =>
+        (x * state.Width / ShortcutTextureInfo.Width, y * state.Height / ShortcutTextureInfo.Height);
 
     public void ApplySettings(BoardSettings settings, bool resized)
     {
         effects = settings.Effects;
         theme = BoardThemes.Normalize(settings.Theme);
         if (resized) Cancel();
-        if (shortcutsOnly && State.Shortcuts != settings.ProgrammableKeys)
+        if (shortcutsOnly && (!shortcutGeometryApplied || State.Shortcuts != settings.ProgrammableKeys))
         {
             Cancel();
             State.SetShortcuts(settings.ProgrammableKeys, Now);
-            var scale = new HmdVector2_t { v0 = State.Width, v1 = State.Height };
+            // SteamVR applies texel aspect to ray intersection using the mouse
+            // scale's aspect too. Match the fixed raster here, then convert
+            // event coordinates to the current logical grid in Process.
+            var scale = new HmdVector2_t { v0 = ShortcutTextureInfo.Width, v1 = ShortcutTextureInfo.Height };
             var mask = new VROverlayIntersectionMaskPrimitive_t
             {
                 m_nPrimitiveType = EVROverlayIntersectionMaskPrimitiveType.OverlayIntersectionPrimitiveType_Rectangle,
                 m_Primitive = new VROverlayIntersectionMaskPrimitive_Data_t
-                { m_Rectangle = new IntersectionMaskRectangle_t { m_flWidth = State.Width, m_flHeight = State.Height } }
+                { m_Rectangle = new IntersectionMaskRectangle_t { m_flWidth = scale.v0, m_flHeight = scale.v1 } }
             };
             var error = overlay.SetOverlayMouseScale(handle, ref scale);
             if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize pointer coordinates: {error}");
             error = overlay.SetOverlayIntersectionMask(handle, ref mask, 1, (uint)Marshal.SizeOf<VROverlayIntersectionMaskPrimitive_t>());
             if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize input region: {error}");
+            error = overlay.SetOverlayTexelAspect(handle,
+                State.Width * (float)ShortcutTextureInfo.Height / (State.Height * ShortcutTextureInfo.Width));
+            if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize shortcut proportions: {error}");
+            shortcutGeometryApplied = true;
         }
         if (geometry != settings.Geometry)
         {
@@ -118,6 +136,8 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             return;
         }
         device = pointer;
+        var (x, y) = shortcutsOnly ? ShortcutPointerPosition(e.data.mouse.x, e.data.mouse.y, State)
+            : (e.data.mouse.x, e.data.mouse.y);
         try
         {
             switch (type)
@@ -132,13 +152,13 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
                 case EVREventType.VREvent_MouseMove when e.eventAgeSeconds <= 0.20f:
                     // This controller-identified event was delivered to this
                     // overlay. The global hover query cannot identify its hand.
-                    State.ObserveMotion(pointer.Value, device.Value, e.data.mouse.x, e.data.mouse.y, time, now, enabled);
+                    State.ObserveMotion(pointer.Value, device.Value, x, y, time, now, enabled);
                     break;
                 case EVREventType.VREvent_MouseButtonDown when enabled && !faulted && e.data.mouse.button == (uint)EVRMouseButton.Left:
-                    if (!State.Press(pointer.Value, device, e.data.mouse.x, e.data.mouse.y, time, now))
+                    if (!State.Press(pointer.Value, device, x, y, time, now))
                         Console.WriteLine($"Keyboard down rejected: controller {device}, laser slot {slot}, age {e.eventAgeSeconds:F3}s.");
                     else audio.Click(pointerId: pointer.Value,
-                        key: State.Hit(e.data.mouse.x, e.data.mouse.y));
+                        key: State.Hit(x, y));
                     break;
                 case EVREventType.VREvent_MouseButtonUp when e.data.mouse.button == (uint)EVRMouseButton.Left:
                     if (State.Up(pointer.Value, device, time)) audio.Click(released: true, pointerId: pointer.Value);
@@ -173,7 +193,8 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             (State.Mode(0x1d) != ModifierMode.Idle && State.Mode(0x38) != ModifierMode.Idle);
         var caps = WindowsKeyboard.CapsLock;
         var scrollLock = WindowsKeyboard.ScrollLock;
-        using var bitmap = renderer.Render(State, shift, status, altGr, caps, scrollLock, theme, effects, Now);
+        using var bitmap = renderer.Render(State, shift, status, altGr, caps, scrollLock, theme, effects, Now,
+            shortcutsOnly ? ShortcutTextureInfo : null);
         if (bitmap == null) return;
         graphics.Upload(overlay, handle, bitmap);
     }

@@ -39,6 +39,8 @@ Whenever design, buttons, or copy change, regenerate the affected README screens
 
 Use `start-goboard.ps1` for VR, `start-goboard.ps1 -Desktop` for desktop, and `stop-goboard.ps1` to stop. Add `-BuildOnly` to build without launching. Launchers isolate outputs under `artifacts/vr-build`, `artifacts/desktop-build`, and `artifacts/settings-build`; preserve this separation to avoid locked DLLs. Production logs are under `%LOCALAPPDATA%\GoBoard\runtime`; a session-local named event stops manual and SteamVR launches alike. See [SteamVR autostart](docs/steamvr-autostart.md) for registration and configuration commands.
 
+When asked to build and run an MSI, run the installer unattended without first closing the running GoBoard instance. Verify that it relaunches with the newly installed version; report and investigate a failure to relaunch rather than treating installer completion alone as success.
+
 Native checks are separate from the normal test loop. Select checks relevant to the change; see [development.md](docs/development.md) for invocation and coverage:
 
 - `--desktop-input-check`, `--input-check`, `--layout-check`, and `--ime-check` exercise native input using disposable foreground targets. Do not run them while working in a user document; preserve their focus guards and cleanup.

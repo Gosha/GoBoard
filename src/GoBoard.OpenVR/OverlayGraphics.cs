@@ -18,8 +18,8 @@ internal sealed class OverlayGraphics : IDisposable
         public int Front = -1;
     }
     private readonly NativeWindow context;
-    // Keep each supported palette-size texture pair alive until OpenVR shutdown.
-    // Reuse them on grid changes; never delete a submitted texture.
+    // Submitted texture pairs stay alive until OpenVR shutdown. Hosts must keep
+    // each overlay's raster size fixed; SteamVR can retain its initial GL size.
     private readonly Dictionary<(ulong Handle, int Width, int Height), Surface> surfaces = new();
 
     public OverlayGraphics()
