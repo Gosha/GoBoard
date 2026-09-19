@@ -151,6 +151,7 @@ public static int Run(string[] args)
         var settings = new SettingsStore();
         using var resize = new ResizeHandle(system, overlay, graphics, settings);
         var follower = new DashboardFollower(overlay, handle, grabHandle, grab, resize);
+        var nativeKeyboard = new NativeKeyboardVisibility(overlay);
         using var output = new WindowsKeyboard();
         using var keyboard = new KeyboardOverlay(system, overlay, handle, graphics, sharedOutput: output);
         using var shortcuts = new ShortcutOverlays(system, overlay, graphics, handle, output);
@@ -202,7 +203,10 @@ public static int Run(string[] args)
                 shortcuts.ApplySettings(settings.Current);
                 appliedSettings = settings.Current;
             }
-            var visible = follower.Update(shortcuts.GrabOwner.HasValue);
+            // Use the ordinary hidden path for input, grabs, resize and shortcuts.
+            // Settings remains independently accessible in the dashboard.
+            var visible = follower.Update(shortcuts.GrabOwner.HasValue,
+                nativeKeyboardVisible: nativeKeyboard.IsVisible());
             shortcuts.Update(visible && !cancel.IsCancellationRequested, resize.Scale, grab.ActiveGrab != null ? grab.Controller : null, resize.Active);
             keyboard.BeginFrame(visible && !cancel.IsCancellationRequested,
                 grab.ActiveGrab != null ? grab.Controller : shortcuts.GrabOwner, resize.Active);
