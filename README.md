@@ -10,6 +10,8 @@ A keyboard for SteamVR and Windows desktop, inspired by [YuuBoard](https://yuuza
 
 ## Install
 
+[Download the latest release](https://github.com/Gosha/GoBoard/releases/latest).
+
 Choose a tagged **Stable** release (such as v1.0.0) or **Beta** prerelease (such as v1.0.1-beta.1). Both use one Windows x64 installation: installing either channel replaces the other and keeps your settings. The MSI includes .NET and adds VR, Desktop, and Settings shortcuts. See [MSI packaging and tagged releases](docs/packaging.md) for downloads, local builds, and version rules.
 
 ## Run from source
