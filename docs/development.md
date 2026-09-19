@@ -2,6 +2,8 @@
 
 See [AGENTS.md](../AGENTS.md) for project boundaries, contributor workflows, and engineering constraints. This document covers implementation details, troubleshooting, and validation evidence.
 
+GoBoard uses the Windows GUI subsystem so direct and installed launches do not create console windows. Existing terminal output and redirected stdout/stderr remain available; the source launcher still captures `.runtime/app/goboard.log` and `goboard.error.log`. With no terminal or redirection, diagnostics go to a separate file per launch under `%LOCALAPPDATA%\GoBoard\logs`. These logs contain operational diagnostics, never typed text, and may be deleted when the app is closed. When scripting the GUI executable directly, use `Start-Process -Wait -PassThru` to wait for completion and inspect its exit code. MSI validation checks the subsystem of the extracted executable.
+
 ## Prerequisites and commands
 
 The canonical [build, test, preview, and launch commands](../AGENTS.md#build-and-validation) are in AGENTS.md. Feature-specific previews and native integration commands are documented below alongside their coverage and limitations.

@@ -50,6 +50,17 @@ foreach ($required in @('GoBoard.exe', 'GoBoard.dll', 'GoBoard.runtimeconfig.jso
     if (!(Test-Path -LiteralPath (Join-Path $payload $required))) { throw "Missing payload: $required" }
 }
 if (Get-ChildItem -LiteralPath $payload -Recurse -Filter '*Poc*') { throw 'POC files must not ship in the production MSI.' }
+# Inspect the actual packaged apphost: a console subsystem opens a window before
+# managed startup runs, even when the application only displays graphical UI.
+$appStream = [IO.File]::OpenRead((Join-Path $payload 'GoBoard.exe'))
+try {
+    $pe = [System.Reflection.PortableExecutable.PEReader]::new($appStream)
+    try {
+        if ($pe.PEHeaders.PEHeader.Subsystem -ne [System.Reflection.PortableExecutable.Subsystem]::WindowsGui) {
+            throw 'GoBoard.exe must use the Windows GUI subsystem to launch without a console.'
+        }
+    } finally { $pe.Dispose() }
+} finally { $appStream.Dispose() }
 $config = Get-Content -Raw -LiteralPath (Join-Path $payload 'GoBoard.runtimeconfig.json') | ConvertFrom-Json
 if (@($config.runtimeOptions.includedFrameworks).Count -ne 2) { throw 'Expected a self-contained desktop runtime.' }
 
@@ -146,10 +157,21 @@ try {
 # Run only rendering commands: no SteamVR initialization, typing, or saved-settings edits.
 foreach ($mode in @('render', 'render-desktop')) {
     $png = Join-Path $checkRoot "$mode.png"
-    $process = Start-Process -FilePath (Join-Path $payload 'GoBoard.exe') -ArgumentList @("--$mode", ('"' + $png + '"')) -WindowStyle Hidden -Wait -PassThru
+    $stdout = Join-Path $checkRoot "$mode.stdout.log"
+    $stderr = Join-Path $checkRoot "$mode.stderr.log"
+    $process = Start-Process -FilePath (Join-Path $payload 'GoBoard.exe') -ArgumentList @("--$mode", ('"' + $png + '"')) -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     if ($process.ExitCode -ne 0 -or !(Test-Path -LiteralPath $png) -or (Get-Item -LiteralPath $png).Length -lt 1000) {
         throw "Extracted MSI payload failed --$mode."
     }
+    if ((Get-Content -Raw -LiteralPath $stdout) -notmatch 'Rendered') {
+        throw "Extracted MSI payload lost redirected stdout for --$mode."
+    }
 }
-Write-Output "MSI verified: $($files.Count) files match publish output; per-user scope/privileges, registry, migration guard, runtime, native libraries, credits, shortcuts, versions, and both render modes passed."
+# Argument validation exits before showing UI or initializing SteamVR.
+$stderr = Join-Path $checkRoot 'invalid-option.stderr.log'
+$process = Start-Process -FilePath (Join-Path $payload 'GoBoard.exe') -ArgumentList @('--desktop', '--invalid-option') -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput (Join-Path $checkRoot 'invalid-option.stdout.log') -RedirectStandardError $stderr
+if ($process.ExitCode -ne 1 -or (Get-Content -Raw -LiteralPath $stderr) -notmatch 'Usage:') {
+    throw 'Extracted MSI payload lost its failure exit code or redirected stderr.'
+}
+Write-Output "MSI verified: $($files.Count) files match publish output; per-user scope/privileges, registry, migration guard, GUI subsystem, redirected diagnostics, runtime, native libraries, credits, shortcuts, versions, and both render modes passed."
 Write-Output "Inspection artifacts: $checkRoot"

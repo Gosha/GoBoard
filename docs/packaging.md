@@ -92,6 +92,7 @@ See [SemVer precedence](https://semver.org/#spec-item-11) and [MSI ProductVersio
 - Self-contained, untrimmed .NET 10 Windows x64 app with native SkiaSharp, GLFW, OpenVR, its license, and sound credits. No preinstalled .NET is required.
 - One per-user installation, normally `%LOCALAPPDATA%\Programs\GoBoard`, without requesting administrator access or UAC elevation. The folder chooser must point to a location writable by that user. The folder is remembered in `HKCU\Software\GoBoard` across channel changes; the MSI only writes current-user registry values.
 - Current-user Start menu entries **GoBoard VR**, **GoBoard Desktop**, and **GoBoard Settings**. Installed apps names include the readable release version, such as **GoBoard 1.0.1-beta.1**; its numeric version field uses the MSI mapping above.
+- All three shortcuts launch a Windows GUI executable without opening a console. Diagnostics from launches without a terminal or redirected output go to `%LOCALAPPDATA%\GoBoard\logs\goboard-<timestamp>-<pid>.log`.
 - Shared settings at `%LOCALAPPDATA%\GoBoard\settings.json` are never owned or removed by the MSI. Future Beta settings migrations must remain compatible with Stable.
 - Installation does not launch the app or enable autostart. Repository launchers and their `.runtime/app` logs and stop signals remain development facilities.
 

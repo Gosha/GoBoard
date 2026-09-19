@@ -6,6 +6,17 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        using var diagnostics = StartupDiagnostics.Open();
+        try { return Run(args); }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"GoBoard: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static int Run(string[] args)
+    {
         if (args is ["--desktop-effects-benchmark"]) { DesktopEffectsBenchmark.Run(); return 0; }
         if (args.Length > 0 && args[0] == "--desktop") return DesktopRuntime.Run(args);
         if (args is ["--render-desktop", var desktopPath]) return DesktopRuntime.Render(desktopPath);
