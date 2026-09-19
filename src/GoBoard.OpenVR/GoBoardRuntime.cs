@@ -38,6 +38,7 @@ public static int Run(string[] args)
         bool previewOptions = false;
         bool previewShortcuts = false;
         bool shortcutsSettings = false;
+        bool shortcutPresets = false;
         string stopFile = null;
         double seconds = double.PositiveInfinity;
         for (var i = 0; i < args.Length; i++)
@@ -48,6 +49,7 @@ public static int Run(string[] args)
                 case "--render-settings" when i + 1 < args.Length: settingsRenderPath = args[++i]; break;
                 case "--shortcuts": previewShortcuts = true; break;
                 case "--render-shortcut-settings" when i + 1 < args.Length: settingsRenderPath = args[++i]; shortcutsSettings = true; break;
+                case "--render-shortcut-presets" when i + 1 < args.Length: settingsRenderPath = args[++i]; shortcutsSettings = shortcutPresets = true; break;
                 case "--layout" when i + 1 < args.Length: previewLayout = args[++i]; previewOptions = true; break;
                 case "--state" when i + 1 < args.Length: previewState = args[++i]; previewOptions = true; break;
                 case "--theme" when i + 1 < args.Length:
@@ -78,6 +80,13 @@ public static int Run(string[] args)
             var b = SettingsControls.Tabs.Single(c => c.Action == SettingsAction.ShortcutsTab).Bounds;
             settingsPointers.Process(0, b.X + 10, b.Y + 10, 1, 1, down: true);
             settingsPointers.Process(0, b.X + 10, b.Y + 10, 1.1, 1.1, up: true);
+        }
+        if (shortcutPresets)
+        {
+            var b = SettingsControls.Shortcuts.Single(c => c.Action == SettingsAction.ChooseShortcutPreset).Bounds;
+            settingsPointers.Process(0, b.X + 10, b.Y + 10, 1.2, 1.2, down: true);
+            settingsPointers.Process(0, b.X + 10, b.Y + 10, 1.3, 1.3, up: true);
+            settingsPointers.Reset();
         }
         using var panel = settingsRenderPath != null ? SettingsPanel.Render(new BoardSettings(), settingsPointers) :
             renderPath == null ? Panel.Render() : previewLayout == "ja" ? PanelPreview.Render("ja", previewState, previewTheme, shortcuts: previewShortcuts) :

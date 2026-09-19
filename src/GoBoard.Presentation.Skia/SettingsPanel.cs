@@ -26,14 +26,27 @@ internal static class SettingsPanel
         }
         Text("GoBoard", 64, 72, heading, text);
         var effectsPage = pointers?.Page == SettingsPage.Effects;
-        var shortcutsPage = pointers?.Page is SettingsPage.Shortcuts or SettingsPage.ShortcutKey;
+        var shortcutsPage = pointers?.Page is SettingsPage.Shortcuts or SettingsPage.ShortcutKey or SettingsPage.ShortcutPreset;
+        var choosingPreset = pointers?.Page == SettingsPage.ShortcutPreset;
         var choosingKey = pointers?.Page == SettingsPage.ShortcutKey;
         var slot = pointers?.ShortcutSlot ?? 0;
         var shortcut = settings.ProgrammableKeys.Get(slot);
         var keyNumber = settings.ProgrammableKeys.NumberFor(slot);
         var layout = pointers?.Layout ?? new WindowsLayout((nint)WindowsLayout.UsHandle);
         Text(shortcutsPage ? "Shortcuts" : effectsPage ? "Effects" : "Settings", 64, 110, small, accent);
-        if (choosingKey)
+        if (choosingPreset)
+        {
+            Text($"Choose a preset · Key {keyNumber}", 64, 151, label, text);
+            var name = shortcut.LabelFor(layout);
+            var chord = shortcut.ChordFor(layout);
+            var current = name == chord ? $"Current: {chord}" : $"Current: {name} · {chord}";
+            using var currentFont = new SKFont(face, Math.Min(19, 19 * 740 / Math.Max(1, small.MeasureText(current))));
+            Text(current, 64, 184, currentFont, accent);
+            foreach (var category in Enum.GetValues<ProgrammableKeys.PresetCategory>())
+                Text(category.ToString(), 64 + (int)category * 189, 228, small, accent);
+            if (error == null) Text(layout.Notice ?? "Select a preset to assign it and return.", 64, 806, small, accent);
+        }
+        else if (choosingKey)
         {
             Text($"Key {keyNumber} · {layout.Name}", 64, 151, label, text);
             Text(shortcut.Shift ? "Choose a key · Shift labels" : "Choose a key", 64, 180, small, accent);
@@ -61,10 +74,6 @@ internal static class SettingsPanel
             using var chordFont = new SKFont(face, Math.Min(19, 19 * 350 / Math.Max(1, small.MeasureText(chord))));
             Text(chord, 454, 282, chordFont, accent);
             Text("Preset", 454, 332, small, accent);
-            var presetName = shortcut.LabelFor(layout);
-            using var presetFont = new SKFont(face, Math.Min(19, 19 * 230 / Math.Max(1, small.MeasureText(presetName))));
-            paint.Color = text;
-            canvas.DrawText(presetName, 629, 381, SKTextAlign.Center, presetFont, paint);
             Text("Modifiers", 454, 444, small, accent);
             Text("Main key", 454, 616, small, accent);
             Text("Click the floating button to expand or collapse shortcuts.", 64, 734, small, accent);
@@ -97,7 +106,7 @@ internal static class SettingsPanel
         Text(autostart.Status, 64, 815, small, autostart.Error == null ? accent : new SKColor(0xff, 0xb0, 0xa0));
         }
         if (error != null)
-            Text("Settings unavailable · Last working values kept", 64, choosingKey ? 834 : effectsPage || shortcutsPage ? 760 : 860, small, new SKColor(0xff, 0xb0, 0xa0));
+            Text("Settings unavailable · Last working values kept", 64, choosingPreset ? 806 : choosingKey ? 834 : effectsPage || shortcutsPage ? 760 : 860, small, new SKColor(0xff, 0xb0, 0xa0));
         foreach (var c in SettingsControls.ForPage(pointers?.Page ?? SettingsPage.General, settings, layout, slot))
         {
             var preset = SettingsControls.SoundFor(c.Action);
@@ -110,6 +119,8 @@ internal static class SettingsPanel
                 c.Action == SettingsAction.ToggleShortcuts && settings.ProgrammableKeys.Enabled ||
                 c.Action == SettingsControls.SlotAction(slot) ||
                 c.Action == SettingsAction.KeyChoiceFirst + shortcut.Scan ||
+                SettingsControls.PresetIndex(c.Action) is var presetIndex && presetIndex >= 0 &&
+                    ProgrammableKeys.Presets[presetIndex].ForLayout(layout) == shortcut ||
                 c.Action == SettingsAction.ShortcutCtrl && shortcut.Ctrl ||
                 c.Action == SettingsAction.ShortcutAlt && shortcut.Alt ||
                 c.Action == SettingsAction.ShortcutShift && shortcut.Shift ||
@@ -168,6 +179,7 @@ internal static class SettingsPanel
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
             if (c.Action == SettingsAction.Autostart) title = autostart.ButtonLabel;
             if (c.Action == SettingsAction.ToggleShortcuts) title = settings.ProgrammableKeys.Enabled ? "Shown" : "Hidden";
+            if (c.Action == SettingsAction.ChooseShortcutPreset) title = shortcut.LabelFor(layout) + "   ›";
             if (c.Action == SettingsAction.ChooseShortcutKey) title = ProgrammableKeys.KeyName(shortcut.Scan, layout, shortcut.Shift) + "   ›";
             if (c.Action == SettingsAction.Geometry) title = settings.Geometry switch
             { KeyboardGeometry.Ansi => "ANSI", KeyboardGeometry.Iso => "ISO", _ => "Auto" };
