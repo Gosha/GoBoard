@@ -43,21 +43,25 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
-  package:
+  versions:
+    name: Version rules and release metadata
     runs-on: windows-latest
+    timeout-minutes: 5
     outputs:
       channel: ${{ steps.release.outputs.channel }}
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
       artifact: ${{ steps.release.outputs.artifact }}
+      stable_version: ${{ steps.release.outputs.stable_version }}
+      stable_base: ${{ steps.release.outputs.stable_base }}
+      rolling_base: ${{ steps.release.outputs.rolling_base }}
+      rolling_run_number: ${{ steps.release.outputs.rolling_run_number }}
+      rolling_run_attempt: ${{ steps.release.outputs.rolling_run_attempt }}
     defaults:
       run:
         shell: pwsh
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: global.json
       - name: Resolve release version
         id: release
         env:
@@ -85,8 +89,23 @@ jobs:
           "stable_version=$stableVersion" >> $env:GITHUB_OUTPUT
           "stable_base=$($stable.ArtifactBase)" >> $env:GITHUB_OUTPUT
           "rolling_base=$($rolling.ArtifactBase)" >> $env:GITHUB_OUTPUT
+          "rolling_run_number=$env:GITHUB_RUN_NUMBER" >> $env:GITHUB_OUTPUT
+          "rolling_run_attempt=$env:GITHUB_RUN_ATTEMPT" >> $env:GITHUB_OUTPUT
       - name: Check version rules
         run: ./installer/Test-ReleaseInfo.ps1
+
+  tests:
+    name: Build and regression tests
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
       - name: Restore
         run: dotnet restore GoBoard.slnx --locked-mode
       - name: Build
@@ -100,27 +119,49 @@ jobs:
           name: msi-test-results
           path: artifacts/test-results/*.trx
           if-no-files-found: ignore
+
+  package:
+    name: MSI (${{ matrix.channel }})
+    needs: versions
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - channel: stable
+            artifact_base: ${{ needs.versions.outputs.stable_base }}
+          - channel: rolling
+            artifact_base: ${{ needs.versions.outputs.rolling_base }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
       - name: Build and check Stable MSI
+        if: matrix.channel == 'stable'
         env:
-          MSI_VERSION: ${{ steps.release.outputs.stable_version }}
+          MSI_VERSION: ${{ needs.versions.outputs.stable_version }}
         run: ./build-msi.ps1 -Channel stable -Version $env:MSI_VERSION
       - name: Build and check Rolling MSI
-        run: ./build-msi.ps1 -Channel rolling -RunNumber $env:GITHUB_RUN_NUMBER -RunAttempt $env:GITHUB_RUN_ATTEMPT
-      - name: Upload Stable MSI, checksum, and provenance
+        if: matrix.channel == 'rolling'
+        env:
+          # Use the resolved attempt even when only this failed job is retried.
+          MSI_RUN_NUMBER: ${{ needs.versions.outputs.rolling_run_number }}
+          MSI_RUN_ATTEMPT: ${{ needs.versions.outputs.rolling_run_attempt }}
+        run: ./build-msi.ps1 -Channel rolling -RunNumber $env:MSI_RUN_NUMBER -RunAttempt $env:MSI_RUN_ATTEMPT
+      - name: Upload MSI, checksum, and provenance
         uses: actions/upload-artifact@v4
         with:
-          name: GoBoard-stable-msi
-          path: artifacts/msi/${{ steps.release.outputs.stable_base }}.*
-          if-no-files-found: error
-      - name: Upload Rolling MSI, checksum, and provenance
-        uses: actions/upload-artifact@v4
-        with:
-          name: GoBoard-rolling-msi
-          path: artifacts/msi/${{ steps.release.outputs.rolling_base }}.*
+          name: GoBoard-${{ matrix.channel }}-msi
+          path: artifacts/msi/${{ matrix.artifact_base }}.*
           if-no-files-found: error
 
   release:
-    needs: package
+    needs: [versions, tests, package]
     if: github.event_name == 'push'
     runs-on: windows-latest
     permissions:
@@ -131,16 +172,16 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.package.outputs.artifact }}
+          name: ${{ needs.versions.outputs.artifact }}
           path: release-assets
       - name: Publish release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_CHANNEL: ${{ needs.package.outputs.channel }}
-          RELEASE_TAG: ${{ needs.package.outputs.tag }}
-          RELEASE_VERSION: ${{ needs.package.outputs.version }}
+          RELEASE_CHANNEL: ${{ needs.versions.outputs.channel }}
+          RELEASE_TAG: ${{ needs.versions.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.versions.outputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
           if ($env:RELEASE_CHANNEL -eq 'rolling') {
