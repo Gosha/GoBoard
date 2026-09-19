@@ -4,6 +4,8 @@ GoBoard follows the focused application's full Windows HKL in desktop and VR mod
 
 ## How labels are obtained safely
 
+Contributor constraints for input targeting, label generation, and fallback behavior are summarized in [AGENTS.md](../AGENTS.md#input-and-layout-constraints). The implementation and its validation limits are detailed below.
+
 `WindowsLayoutProvider` resolves the full HKL to its KLID on a fresh, windowless thread. It activates only an already-loaded layout on that thread, reads its name, and restores the thread's previous layout. It does not install input languages or activate a layout on the target application's thread. The provider caches immutable results by full HKL and arrangement setting for the process lifetime; restart GoBoard after replacing a layout DLL.
 
 `KeyboardTables` loads the registry-named `kbd*.dll` from System32 with System32-only dependency resolution. It reads the `KbdLayerDescriptor` export and the x64 `KBDTABLES`, `MODIFIERS`, and character/ligature tables defined by the Windows SDK's `um/kbd.h`. Pointer reads are checked against the DLL image and table scans are bounded. Unsupported table versions, locale flags, lock modes, or missing data cause a fallback. No code calls `ToUnicodeEx` in the production label path, and rendering reads only copied managed data.

@@ -1,24 +1,12 @@
 # Development
 
-The production app is separate from `src/GoBoard.Poc`, which remains a working reference. Both use the same confirmed interaction model, but have distinct executable names, OpenVR overlay keys, and runtime files. Do not run both at once: `start-goboard.ps1` and the production executable refuse to start while `GoBoard.Poc` is running.
+See [AGENTS.md](../AGENTS.md) for production/POC boundaries, contributor workflows, and engineering constraints. This document covers implementation details, troubleshooting, and validation evidence.
 
 ## Prerequisites and commands
 
-- Windows x64
-- .NET SDK 10.0.101 or a later 10.0 patch selected by `global.json`
-- SteamVR only when running the overlay; builds, tests, and PNG rendering do not require a headset
+The canonical [build, test, preview, and launch commands](../AGENTS.md#build-and-validation) are in AGENTS.md. Feature-specific previews and native integration commands are documented below alongside their coverage and limitations.
 
-```powershell
-dotnet restore GoBoard.slnx --locked-mode
-dotnet build GoBoard.slnx -c Release --no-restore
-dotnet test GoBoard.slnx -c Release --no-build
-dotnet run --project src/GoBoard.App -c Release -- --render .runtime\panel.png
-dotnet run --project src/GoBoard.App -c Release -- --render .runtime\swedish.png --layout sv --state hover
-dotnet run --project src/GoBoard.App -c Release -- --render-settings .runtime\settings-vr.png
-dotnet run --project src/GoBoard.App -c Release -- --render-desktop-settings .runtime\settings-desktop.png
-```
-
-Run the overlay with `./start-goboard.ps1` and stop it with `./stop-goboard.ps1`. The launcher builds VR into `artifacts/vr-build` and desktop into `artifacts/desktop-build`, independently of normal builds and standalone Settings. If another GoBoard process still has the selected build loaded, it uses a fresh suffixed build directory instead of overwriting locked DLLs. Add `-BuildOnly` to compile without starting the keyboard or SteamVR. Production logs and the graceful stop signal live under `.runtime/app`; the POC continues to use its original `.runtime/poc.*` and `.runtime/stop` files.
+If another GoBoard process still has the selected launcher build loaded, the launcher uses a fresh suffixed build directory instead of overwriting locked DLLs. The production launcher and executable refuse to start while `GoBoard.Poc` is running. The POC continues to use its original `.runtime/poc.*` and `.runtime/stop` files.
 
 ## Desktop mode
 
@@ -80,14 +68,7 @@ Source credits ship as `SOUND-CREDITS.md`; extraction provenance and regeneratio
 
 ## Project boundaries
 
-| Project | Responsibility |
-| --- | --- |
-| `GoBoard.Core` | Keyboard geometry and legends, modifier/repeat state, pointer identity, grab ownership, relative pose math, and shared settings persistence/interaction. It has no Windows, SkiaSharp, or OpenVR dependency. |
-| `GoBoard.Platform.Windows` | Foreground thread/HKL observation, balanced scan-code `SendInput`, controlled native checks, and nonblocking key-down/key-up audio. |
-| `GoBoard.Presentation.Skia` | The keyboard, grab-line, and settings dashboard drawing. It consumes Core state and does not own input or VR lifecycle. |
-| `GoBoard.OpenVR` | Independent overlay lifecycle, dashboard-relative placement, two-controller event routing, controller-relative grabs, and persistent double-buffered OpenGL texture submission. |
-| `GoBoard.App` | Executable entry point and Windows Forms hosts for the shared Skia keyboard/settings renderers. |
-| `GoBoard.Tests` | Discoverable pure regression tests for layout/state, two-hand typing while dragging, stale events, relative poses, OpenVR matrix conversion, and extended scan flags. |
+See [project responsibilities](../AGENTS.md#project-boundaries) and [rendering constraints](../AGENTS.md#rendering-settings-and-dependencies) in AGENTS.md.
 
 The outer margin is 4 logical units on all sides. Adjacent keys have consistent 2-unit horizontal and vertical gaps, including modifiers, function keys, navigation, and the Swedish Enter notch. Larger separations between key groups are preserved. Physical dimensions follow the cropped logical bounds so removing padding also reduces the dashboard area covered.
 

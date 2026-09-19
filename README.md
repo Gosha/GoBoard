@@ -4,56 +4,32 @@
 
 # GoBoard
 
-A Windows keyboard overlay for SteamVR, inspired by [YuuBoard](https://yuuzami.itch.io/yuuboard), with its own interface and automatic Windows keyboard labels matching the focused application's layout.
+A keyboard for SteamVR and Windows desktop, inspired by [YuuBoard](https://yuuzami.itch.io/yuuboard). Labels follow your active Windows keyboard layout.
 
-![GoBoard keyboard with the Steam Soft theme and US English layout](docs/images/goboard-keyboard.png)
+![GoBoard keyboard](docs/images/goboard-keyboard.png)
 
 ## Run
 
-Requires Windows x64 and the .NET 10 SDK (see [global.json](global.json)). VR mode also requires SteamVR running with a connected headset.
+Requires Windows x64 and the [.NET 10 SDK](global.json). VR mode needs SteamVR and a connected headset.
 
 From the repository root in PowerShell:
 
-```powershell
-.\start-goboard.ps1
-```
+| Mode     | Command                        |
+| -------- | ------------------------------ |
+| SteamVR  | `.\start-goboard.ps1`          |
+| Desktop  | `.\start-goboard.ps1 -Desktop` |
+| Settings | `.\settings-goboard.ps1`       |
+| Stop     | `.\stop-goboard.ps1`           |
 
-Open the SteamVR dashboard, focus a text field in Desktop, then point at keys and pull the trigger to type. Drag the line beneath the keyboard to reposition it. Hold the trigger on the small bottom-right corner grip and drag to resize around the keyboard center (50–150%); release to save the size. Typing pauses while resizing.
+In VR, open the dashboard, focus a text field in Desktop, then point and pull the trigger to type. Drag the line below the keyboard to move it or the corner grip to resize it.
 
-For a complete desktop application without SteamVR:
+On desktop, select a window and click the keys. Open **Settings** for size, themes, sounds, and effects.
 
-```powershell
-.\start-goboard.ps1 -Desktop
-```
+![GoBoard settings with size, sound presets, volume, keyboard arrangement, and themes](docs/images/goboard-settings.png)
 
-Select a window, then click the floating keyboard to send keys. Select a text field when you want to type text; shortcuts also work without one, including while GoBoard Settings is focused. Click **Win** once to arm a shortcut, or twice to send a Windows-key tap. Drag the header to move the keyboard, click **Settings** for size and sound, or **×** to exit. It stays above other windows and preserves the target window's focus. The same layouts, modifiers, shortcuts, repeat, and saved settings work in both modes.
+## More
 
-To stop either mode:
-
-```powershell
-.\stop-goboard.ps1
-```
-
-Open **GoBoard Settings** in the SteamVR dashboard to change keyboard size, theme, mute, volume, or sound preset. Changes apply live and are saved for the next launch. **Steam Soft**, the default theme, follows the supplied v13 mockup with shaded keys and blue accents; **Steam Flat** retains the earlier flat appearance. Both themes are also available from desktop Settings; the Steam Soft button previews its shaded key style. **Reset position**, beside **Reset to defaults**, returns the keyboard below the VR dashboard or to the bottom center of the desktop screen under the pointer, preserving size and other preferences.
-
-On the **General** tab, the four sound presets appear side by side: **Cushioned wood**, **Soft low thud**, **Cherry MX Blue**, and **Gateron Yellow**. Click a preset to select and preview it; the current selection is highlighted. Click it again to replay the preview. Blue rotates BO3/B01/B03 for normal keys and uses B07 for Space, Enter, Backspace and Shift. Blue and Gateron play matching releases when you let go and allow overlapping tails. Gateron retains its four-sample rotation, size-based pitch on Space/Shift/Enter and slight per-press pitch variation. Older saved Gateron selections migrate to this approved version. [Sound credits](assets/audio/mechanical/CREDITS.md) are also included with the app.
-
-The **Effects** tab in desktop and VR Settings offers **Crossfade** and **Lift** for changing character labels, plus **Afterglow**, **Spotlight**, **Proximity edges**, **Click ripple**, and **Press flash / tint**. Adjust character duration and lift distance, hover fade-in/out, light radius, strength, and click duration independently. Unchanged legends stay stationary and animations never delay typing. Effects start disabled; all choices are saved and shared between desktop and VR. **Reset effects** restores only this tab's defaults; the General tab's reset restores all settings.
-
-Keyboard labels follow Windows, including Shift, Caps Lock, AltGr, and dead keys. **Keyboard arrangement** cycles Auto, ANSI, and ISO independently of the language. Unsupported layouts remain usable with US labels and a warning. See [layout support and validation limits](docs/automatic-keyboard-layouts.md), including IME and complex-script limitations.
-
-When Japanese is selected, an **あ/A** button appears beside Space in both desktop and VR mode. Click it to toggle Japanese and Latin input within the Japanese IME. Its label identifies the action; it does not display the current IME mode.
-
-For the desktop settings window (works without SteamVR):
-
-```powershell
-.\settings-goboard.ps1
-```
-
-## Documentation
-
-- [Development, builds, tests, and previews](docs/development.md)
-- [Technical design](docs/technical-design.md)
-- [Automatic Windows keyboard layouts](docs/automatic-keyboard-layouts.md)
-- [Proof of concept: usage, implementation, and history](docs/proof-of-concept.md)
-- [Stereo dashboard experiment](experiments/SteamVR.StereoDashboard/README.md)
+- [Keyboard layouts and limitations](docs/automatic-keyboard-layouts.md)
+- [Development and feature details](docs/development.md)
+- [Contributing](AGENTS.md)
+- [Sound credits](assets/audio/mechanical/CREDITS.md)

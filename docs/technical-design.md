@@ -1,8 +1,10 @@
 # Technical design draft
 
+This document retains design rationale and implementation history, including earlier POC behavior. Current contributor rules are in [AGENTS.md](../AGENTS.md); current production layout support is described in [automatic-keyboard-layouts.md](automatic-keyboard-layouts.md).
+
 ## Implementation boundaries
 
-These boundaries are implemented in `GoBoard.slnx`; see [development.md](development.md) for project ownership and build commands. The POC remains intact as a runtime reference.
+These boundaries are implemented in `GoBoard.slnx`; see [AGENTS.md](../AGENTS.md#project-boundaries) for project ownership and [build commands](../AGENTS.md#build-and-validation). The POC remains intact as a runtime reference.
 
 Use C#/.NET, SkiaSharp, and OpenVR. SkiaSharp was selected during implementation discussion. Keep keyboard behavior independent of the renderer and OpenVR so layout and input behavior can be checked without a headset.
 
