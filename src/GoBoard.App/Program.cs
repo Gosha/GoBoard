@@ -9,6 +9,7 @@ internal static class Program
         if (args is ["--desktop-effects-benchmark"]) { DesktopEffectsBenchmark.Run(); return 0; }
         if (args.Length > 0 && args[0] == "--desktop") return DesktopRuntime.Run(args);
         if (args is ["--render-desktop", var desktopPath]) return DesktopRuntime.Render(desktopPath);
+        if (args is ["--render-desktop", var shortcutDesktopPath, "--shortcuts"]) return DesktopRuntime.Render(shortcutDesktopPath, shortcuts: true);
         if (args is ["--desktop-input-check"]) return DesktopInputCheck.Run();
         if (args is ["--desktop-shell-check"]) return DesktopInputCheck.Run(shell: true);
         if (args is ["--desktop-launch-check"]) return DesktopInputCheck.RunLaunch();

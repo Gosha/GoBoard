@@ -12,13 +12,13 @@ internal sealed record CharacterKey(KeyboardKey Key, CharacterLayer[] Layers);
 internal sealed class CharacterLayers : IDisposable
 {
     public readonly Dictionary<string, CharacterKey> Keys = new();
-    public static CharacterLayers Capture(WindowsLayout layout, bool shift, bool altGr, bool caps, KeyboardTheme style)
+    public static CharacterLayers Capture(WindowsLayout layout, bool shift, bool altGr, bool caps, KeyboardTheme style, IReadOnlyList<KeyboardKey> keys = null)
     {
         var result = new CharacterLayers();
         using var face = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Normal);
         using var letter = new SKFont(face, 21);
         altGr &= layout.HasAltGr;
-        foreach (var key in layout.Keys.Where(k => k.Printable))
+        foreach (var key in (keys ?? layout.Keys).Where(k => k.Printable))
         {
             var b = key.Bounds;
             var normal = layout.Legend(key, false, false, false);

@@ -7,7 +7,7 @@ internal readonly record struct KeyBounds(float X, float Y, float Width, float H
 
 // ISO Enter excludes its lower-left corner. Drawing and picking share this shape.
 internal sealed record KeyboardKey(string Id, string Label, ushort Scan, KeyBounds Bounds,
-    bool Repeat = true, bool Printable = false, float CutoutWidth = 0, float CutoutTop = 0)
+    bool Repeat = true, bool Printable = false, float CutoutWidth = 0, float CutoutTop = 0, KeyboardShortcut Shortcut = null)
 {
     public bool IsModifier => Id is "Shift" or "RightShift" or "Ctrl" or "RightCtrl" or "Alt" or "AltGr" or "Win";
     public bool Contains(float x, float y) => Bounds.Contains(x, y) &&

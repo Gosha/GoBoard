@@ -18,7 +18,9 @@ internal sealed class OverlayGraphics : IDisposable
         public int Front = -1;
     }
     private readonly NativeWindow context;
-    private readonly Dictionary<ulong, Surface> surfaces = new();
+    // Keep each supported palette-size texture pair alive until OpenVR shutdown.
+    // Reuse them on grid changes; never delete a submitted texture.
+    private readonly Dictionary<(ulong Handle, int Width, int Height), Surface> surfaces = new();
 
     public OverlayGraphics()
     {
@@ -35,7 +37,8 @@ internal sealed class OverlayGraphics : IDisposable
     public void Upload(CVROverlay overlay, ulong handle, SKBitmap bitmap)
     {
         context.Context.MakeCurrent();
-        if (!surfaces.TryGetValue(handle, out var surface))
+        var identity = (handle, bitmap.Width, bitmap.Height);
+        if (!surfaces.TryGetValue(identity, out var surface))
         {
             // Skia's first row is the top of the image; OpenGL texture rows
             // start at the bottom. Reverse V when presenting CPU-drawn pixels.
@@ -45,7 +48,7 @@ internal sealed class OverlayGraphics : IDisposable
             if (boundsResult != EVROverlayError.None)
                 throw new InvalidOperationException($"Set overlay texture orientation: {boundsResult}");
             surface = new Surface(bitmap.Width, bitmap.Height);
-            surfaces.Add(handle, surface);
+            surfaces.Add(identity, surface);
             for (var i = 0; i < 2; i++)
             {
                 surface.Textures[i] = GL.GenTexture();

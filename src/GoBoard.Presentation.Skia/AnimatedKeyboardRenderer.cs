@@ -30,7 +30,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
     public SKBitmap Render(KeyboardState keyboard, bool shift, string status, bool altGr, bool caps,
         bool scroll, string theme, EffectSettings options, double now, SKImageInfo? outputInfo = null)
     {
-        var output = outputInfo ?? new SKImageInfo(Panel.LayoutWidth * Panel.RasterScale, Panel.LayoutHeight * Panel.RasterScale,
+        var output = outputInfo ?? new SKImageInfo(keyboard.Width * Panel.RasterScale, keyboard.Height * Panel.RasterScale,
             SKColorType.Rgba8888, SKAlphaType.Unpremul);
         var reset = bound != keyboard || layout != keyboard.Layout || this.theme != theme || this.options != options ||
             cancellationRevision != keyboard.CancellationRevision;
@@ -40,7 +40,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
             bound = keyboard; layout = keyboard.Layout; this.theme = theme; this.options = options;
             cancellationRevision = keyboard.CancellationRevision;
             style = KeyboardTheme.Resolve(theme);
-            keys = layout.Keys;
+            keys = keyboard.Keys;
             foreach (var key in keys) paths[key.Id] = KeyPath(key);
             // Never replay clicks from before a layout/settings change or cancel.
             foreach (var p in keyboard.VisualPointers) pointers[p.Cursor] = (new(), p.PressSequence);
@@ -49,7 +49,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
         var dirty = drawn != signature;
         var labels = (shift, altGr, caps);
         if (legends != labels && options.Transition != CharacterTransition.None && options.TransitionMs > 0)
-            transitions.Update(layout, shift, altGr, caps, style, options, now, legends == null);
+            transitions.Update(layout, shift, altGr, caps, style, options, now, legends == null, keys);
         legends = labels;
 
         var motion = visualRevision != keyboard.VisualRevision;
@@ -64,7 +64,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
                     fx.Down(now, options);
                 }
                 if (p.Focused && float.IsFinite(p.X) && float.IsFinite(p.Y) &&
-                    p.X >= 0 && p.Y >= 0 && p.X < Panel.LayoutWidth && p.Y < Panel.LayoutHeight)
+                    p.X >= 0 && p.Y >= 0 && p.X < keyboard.Width && p.Y < keyboard.Height)
                     fx.Move(new(p.X, p.Y), keys, options, now);
                 else fx.Leave(options, now);
                 fx.SetPressed(p.Held == fx.Hover ? p.Held : null);
@@ -112,7 +112,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
         using var canvas = new SKCanvas(result);
         canvas.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Background : SKColors.Transparent);
         canvas.DrawImage(outputBaseline ?? baseline, new SKRect(0, 0, output.Width, output.Height), new SKSamplingOptions(SKFilterMode.Nearest));
-        canvas.Scale(output.Width / (float)Panel.LayoutWidth, output.Height / (float)Panel.LayoutHeight);
+        canvas.Scale(output.Width / (float)keyboard.Width, output.Height / (float)keyboard.Height);
         if (surfaces != null) transitions.Draw(canvas, baseline, surfaces, keyboard, style, now, filledPress: !options.PressFlash);
         if (options.PointerEnabled)
             foreach (var p in pointers.Values) DrawPointer(canvas, keyboard, p.Effects, options, now);

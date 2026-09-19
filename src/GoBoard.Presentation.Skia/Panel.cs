@@ -16,8 +16,11 @@ internal static class Panel
         var Accent = style.Accent;
         var Ink = style.Ink;
         var layout = keyboard?.Layout ?? new WindowsLayout((nint)WindowsLayout.UsHandle);
+        var width = keyboard?.Width ?? LayoutWidth;
+        var height = keyboard?.Height ?? LayoutHeight;
+        var keys = keyboard?.Keys ?? layout.Keys;
         // OpenVR consumes straight RGBA, including coverage at the rounded edge.
-        var bitmap = new SKBitmap(new SKImageInfo(LayoutWidth * RasterScale, LayoutHeight * RasterScale, SKColorType.Rgba8888, SKAlphaType.Unpremul));
+        var bitmap = new SKBitmap(new SKImageInfo(width * RasterScale, height * RasterScale, SKColorType.Rgba8888, SKAlphaType.Unpremul));
         using var canvas = new SKCanvas(bitmap);
         canvas.Scale(RasterScale);
         using var paint = new SKPaint { IsAntialias = true };
@@ -30,7 +33,7 @@ internal static class Panel
         using var secondary = new SKFont(face, 12);
         using var notice = new SKFont(face, 9);
         canvas.Clear(SKColors.Transparent);
-        var panelRect = new SKRect(.5f, .5f, LayoutWidth - .5f, LayoutHeight - .5f);
+        var panelRect = new SKRect(.5f, .5f, width - .5f, height - .5f);
         paint.Color = style.PanelFrame ? style.Surface : style.Background;
         canvas.DrawRoundRect(panelRect, 6, 6, paint);
         if (style.PanelFrame)
@@ -42,7 +45,8 @@ internal static class Panel
             paint.Style = SKPaintStyle.Fill;
         }
 
-        foreach (var key in layout.Keys)
+        var shortcutNumber = 0;
+        foreach (var key in keys)
         {
             var b = key.Bounds;
             var rect = new SKRect(b.X, b.Y, b.X + b.Width, b.Y + b.Height);
@@ -93,6 +97,18 @@ internal static class Panel
                 }
                 canvas.Restore();
             }
+            else if (key.Shortcut is { } shortcut)
+            {
+                var caption = shortcut.ChordFor(layout);
+                var hasCaption = caption != key.Label;
+                using var title = new SKFont(face, Math.Min(12, 12 * (rect.Width - 10) / Math.Max(1, secondary.MeasureText(key.Label))));
+                Center(canvas, key.Label, rect.MidX, rect.MidY - (hasCaption ? 6 : 0), title, paint);
+                paint.Color = filled ? Ink : style.Secondary;
+                using var detail = new SKFont(face, 8);
+                canvas.DrawText((++shortcutNumber).ToString(), rect.Left + 5, rect.Top + 11, SKTextAlign.Left, detail, paint);
+                detail.Size = Math.Min(8, 8 * (rect.Width - 8) / Math.Max(1, detail.MeasureText(caption)));
+                if (hasCaption) Center(canvas, caption, rect.MidX, rect.MidY + 12, detail, paint);
+            }
             else if (key.Id == "ImeToggle")
             {
                 paint.Color = filled ? Ink : Accent;
@@ -136,13 +152,18 @@ internal static class Panel
             else if (toggleOn) canvas.DrawCircle(rect.Right - 7, rect.Top + 7, 2, paint);
         }
         var message = !string.IsNullOrWhiteSpace(status) ? status : layout.Notice;
-        if (!string.IsNullOrWhiteSpace(message))
+        if (!string.IsNullOrWhiteSpace(message) && keyboard?.ShortcutFooter == true)
+        {
+            paint.Color = style.Notice;
+            DrawNotice(canvas, message, new SKRect(4, height - ProgrammableKeys.StatusHeight, width - 4, height - 2), notice, paint);
+        }
+        if (!string.IsNullOrWhiteSpace(message) && keyboard?.ShortcutsOnly != true)
         {
             // Use the existing gap between navigation and arrows instead of
             // reserving an otherwise empty footer around the whole keyboard.
-            var delete = layout.Keys.Single(k => k.Id == "Delete").Bounds;
-            var pageDown = layout.Keys.Single(k => k.Id == "PageDown").Bounds;
-            var up = layout.Keys.Single(k => k.Id == "Up").Bounds;
+            var delete = keys.Single(k => k.Id == "Delete").Bounds;
+            var pageDown = keys.Single(k => k.Id == "PageDown").Bounds;
+            var up = keys.Single(k => k.Id == "Up").Bounds;
             var area = new SKRect(delete.X, delete.Y + delete.Height + 6,
                 pageDown.X + pageDown.Width, up.Y - 4);
             paint.Color = style.Notice;
@@ -215,7 +236,7 @@ internal static class Panel
         canvas.Restore();
     }
 
-    private static void DrawKey(SKCanvas canvas, KeyboardKey key, SKPaint paint)
+    internal static void DrawKey(SKCanvas canvas, KeyboardKey key, SKPaint paint)
     {
         var b = key.Bounds;
         if (key.CutoutWidth == 0)

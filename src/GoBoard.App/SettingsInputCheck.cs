@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using GoBoard.Core;
+using GoBoard.Platform.Windows;
 
 namespace GoBoard.App;
 
@@ -24,7 +25,7 @@ internal static class SettingsInputCheck
                 var v = SettingsViewport.Fit(form.ClientSize.Width, form.ClientSize.Height);
                 Point Center(SettingsAction action)
                 {
-                    var b = SettingsControls.All.Concat(SettingsControls.Tabs).Concat(SettingsControls.Effects).Single(c => c.Action == action).Bounds;
+                    var b = form.ControlFor(action).Bounds;
                     return new((int)(v.X + (b.X + b.Width / 2) * v.Scale), (int)(v.Y + (b.Y + b.Height / 2) * v.Scale));
                 }
                 void Mouse(uint message, Point point) => SendMessage(form.Handle, message, message == 0x201 ? 1 : 0,
@@ -33,6 +34,15 @@ internal static class SettingsInputCheck
                 {
                     Mouse(0x201, Center(action));
                     Mouse(0x202, Center(action));
+                }
+                void Preview(string grid)
+                {
+                    if (Environment.GetEnvironmentVariable("GOBOARD_SHORTCUT_ARTIFACTS") is not { Length: > 0 } directory) return;
+                    Directory.CreateDirectory(directory);
+                    using var bitmap = new Bitmap(form.Width, form.Height);
+                    form.DrawToBitmap(bitmap, new Rectangle(Point.Empty, bitmap.Size));
+                    bitmap.Save(Path.Combine(directory, $"desktop-shortcut-settings-{grid}-{size.Width}x{size.Height}.png"),
+                        System.Drawing.Imaging.ImageFormat.Png);
                 }
                 var before = store.Current.SizePercent;
                 Click(SettingsAction.Larger);
@@ -92,9 +102,72 @@ internal static class SettingsInputCheck
                 Require(new SettingsStore(path).Current == store.Current, "Saved effects selection and duration");
                 Click(SettingsAction.ResetEffects);
                 Require(store.Current == general, "Effects reset preserves general preferences");
+                Click(SettingsAction.ShortcutsTab);
+                Click(SettingsAction.ToggleShortcuts);
+                Click(SettingsAction.Slot3);
+                Click(SettingsAction.ShortcutCtrl);
+                Click(SettingsAction.ChooseShortcutKey);
+                Click(SettingsAction.KeyChoiceFirst + 0x1e);
+                Require(store.Current.ProgrammableKeys.Enabled && store.Current.ProgrammableKeys.Key3 == new KeyboardShortcut(0x1e, Ctrl: true),
+                    "Custom shortcut editor");
+                Require(new SettingsStore(path).Current == store.Current, "Saved custom shortcut");
+                desktop.RefreshSettings();
+                Require(desktop.Shortcuts.State.Keys.Single(k => k.Id == "Shortcut3").Shortcut == store.Current.ProgrammableKeys.Key3,
+                    "Desktop receives edited shortcut");
+                var layout = WindowsLayoutProvider.Get(WindowsKeyboard.Foreground().Layout, store.Current.Geometry);
+                var presetIndex = Array.FindIndex(ProgrammableKeys.Presets, p => p.ForLayout(layout) == store.Current.ProgrammableKeys.Key3);
+                Click(SettingsAction.NextPreset);
+                Require(store.Current.ProgrammableKeys.Key3 == ProgrammableKeys.Presets[(presetIndex + 1) % ProgrammableKeys.Presets.Length].ForLayout(layout), "Assign next preset from custom shortcut");
+                Click(SettingsAction.MoreRows);
+                Require(store.Current.ProgrammableKeys.Rows == 5, "Add fifth row");
+                Click(SettingsAction.Slot10); Click(SettingsAction.NextPreset);
+                Preview("2x5");
+                var tenth = store.Current.ProgrammableKeys.Key10;
+                Click(SettingsAction.FewerColumns);
+                Require(store.Current.ProgrammableKeys.Columns == 1, "Remove second column");
+                Preview("1x5");
+                Click(SettingsAction.MoreColumns);
+                Require(store.Current.ProgrammableKeys.Key10 == tenth, "Restore hidden column assignments");
+                Click(SettingsAction.FewerRows);
+                Require(store.Current.ProgrammableKeys.Rows == 4, "Remove fifth row");
+                Click(SettingsAction.MoreRows);
+                Click(SettingsAction.MoreColumns); Click(SettingsAction.MoreColumns);
+                Require(store.Current.ProgrammableKeys.Columns == 4 && store.Current.ProgrammableKeys.Rows == 5, "Expand to twenty keys");
+                Click(SettingsAction.Slot20); Click(SettingsAction.NextPreset);
+                var twentieth = store.Current.ProgrammableKeys.Key20;
+                Require(twentieth == ProgrammableKeys.Presets[0].Shortcut, "Edit twentieth key");
+                Require(new SettingsStore(path).Current.ProgrammableKeys.Key20 == twentieth, "Save twentieth key");
+                Preview("4x5");
+                for (var i = 0; i < 3; i++) Click(SettingsAction.FewerColumns);
+                for (var i = 0; i < 4; i++) Click(SettingsAction.FewerRows);
+                Require(store.Current.ProgrammableKeys.Columns == 1 && store.Current.ProgrammableKeys.Rows == 1, "Shrink to one key");
+                Preview("1x1");
+                Click(SettingsAction.FewerColumns); Click(SettingsAction.FewerRows);
+                Require(store.Current.ProgrammableKeys.Columns == 1 && store.Current.ProgrammableKeys.Rows == 1, "Minimum grid controls disabled");
+                for (var i = 0; i < 3; i++) Click(SettingsAction.MoreColumns);
+                for (var i = 0; i < 4; i++) Click(SettingsAction.MoreRows);
+                Click(SettingsAction.MoreColumns); Click(SettingsAction.MoreRows);
+                Require(store.Current.ProgrammableKeys.Columns == 4 && store.Current.ProgrammableKeys.Rows == 5, "Maximum grid controls disabled");
+                Require(store.Current.ProgrammableKeys.Key20 == twentieth && store.Current.ProgrammableKeys.Key10 == tenth, "Restore hidden grid assignments");
+                Click(SettingsAction.Slot20);
+                for (var i = 0; i < Array.FindIndex(ProgrammableKeys.Presets, p => p.Shortcut.Scan == ProgrammableKeys.MediaStop); i++) Click(SettingsAction.NextPreset);
+                Require(store.Current.ProgrammableKeys.Key20.Scan == ProgrammableKeys.MediaStop, "Choose Stop preset");
+                Click(SettingsAction.ChooseShortcutKey);
+                Click(SettingsAction.KeyChoiceFirst + ProgrammableKeys.MediaStop);
+                Require(new SettingsStore(path).Current.ProgrammableKeys.Key20 == new KeyboardShortcut(ProgrammableKeys.MediaStop), "Save Stop from key picker");
+                foreach (var scan in new[] { ProgrammableKeys.VolumeMute, ProgrammableKeys.BrowserBack, ProgrammableKeys.NumEnter, (ushort)0x52 })
+                {
+                    Click(SettingsAction.ChooseShortcutKey);
+                    Preview("expanded-picker");
+                    Click(SettingsAction.KeyChoiceFirst + scan);
+                    Require(new SettingsStore(path).Current.ProgrammableKeys.Key20.Scan == scan, "Save extra key from picker");
+                }
+                Click(SettingsAction.ResetShortcuts);
+                Click(SettingsAction.ToggleShortcuts);
+                Require(store.Current == general, "Shortcut reset preserves other settings");
                 Click(SettingsAction.GeneralTab);
             }
-            Console.WriteLine("Shared settings input check passed: native mouse clicks, resized/letterboxed targets, persistence, themes, sound, desktop position reset, effects tab and reset, disabled controls, and capture cancellation. User settings were untouched.");
+            Console.WriteLine("Shared settings input check passed: native mouse clicks, resized/letterboxed targets, persistence, themes, sound, desktop position reset, effects, preset/custom shortcut editing and desktop propagation, disabled controls, and capture cancellation. User settings were untouched.");
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine($"Settings input check: {ex.Message}"); return 1; }

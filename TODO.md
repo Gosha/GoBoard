@@ -7,13 +7,15 @@
 - [x] Implement automatic Windows keyboard layouts (see [implementation and validation](docs/automatic-keyboard-layouts.md)).
 - [ ] Auto-hide/show when steamvr native keyboard is toggled
 - [x] Investigate and fix stale Notepad layout labels: follow the focused editor thread's HKL instead of the frame thread's retained language (see [findings and validation](docs/automatic-keyboard-layouts.md#following-the-focused-editor)).
-- [ ] "Programmable keys" in a little optional side extension. Think macro keys on a physical keyboard. Desired keys/presets:
-  - [ ] Ctrl-Win-Left/Right for moving between displays
-  - [ ] Play/Pause/Next/Prev media keys
-  - [ ] Win-tab for multitasking view
-  - [ ] Win-space for language switching
-  - [ ] Win-H for dictation
+- [x] Programmable keys in a floating left palette with an expand/collapse button, 1–4 columns and 1–5 rows, and layout-aware preset/custom shortcut editing on desktop and in VR.
+  - [x] Ctrl-Win-Left/Right for switching virtual desktops
+  - [x] Play/Pause/Stop/Next/Prev media keys
+  - [x] Volume and browser keys, a shortcut numpad, and editing/screenshot/window presets
+  - [x] Win-tab for multitasking view
+  - [x] Win-space for language switching
+  - [x] Win-H for dictation
 - [ ] Add a SteamVR application manifest to enable autostart.
+- [ ] Add in-app update checks with Stable/Beta preferences and a one-click update action in desktop and VR Settings. Keep GoBoard usable while downloading and verifying the update, then gracefully close running instances for installation. Preserve settings and automatically restart only the modes that were already running; do not launch the app if it was closed. Handle elevation, cancellation, and installation failures clearly.
 - [ ] Add reset button to keyboard that moves it back.
 - [ ] Validate actual German/French/US International typing and extend automatic layout support to complex scripts, additional lock modes, and IME/JIS arrangements.
 - [ ] Maybe: Numpad

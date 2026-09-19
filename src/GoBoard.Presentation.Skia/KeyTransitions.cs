@@ -13,9 +13,9 @@ internal sealed class KeyTransitions : IDisposable
     public bool Contains(string id) => tracks.Keys.Any(k => k.Key == id);
     internal bool Contains(string id, int slot) => tracks.ContainsKey((id, slot));
 
-    public void Update(WindowsLayout layout, bool shift, bool altGr, bool caps, KeyboardTheme style, EffectSettings options, double now, bool layoutChanged)
+    public void Update(WindowsLayout layout, bool shift, bool altGr, bool caps, KeyboardTheme style, EffectSettings options, double now, bool layoutChanged, IReadOnlyList<KeyboardKey> keys = null)
     {
-        var next = CharacterLayers.Capture(layout, shift, altGr, caps, style);
+        var next = CharacterLayers.Capture(layout, shift, altGr, caps, style, keys);
         if (!layoutChanged && current != null && current.Keys.All(p =>
                 p.Value.Layers.Select(l => l.Label).SequenceEqual(next.Keys[p.Key].Layers.Select(l => l.Label))))
         {

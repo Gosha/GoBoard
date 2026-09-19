@@ -15,6 +15,7 @@ internal sealed class DesktopKeyboardForm : Form
     private readonly SettingsStore settings;
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 16 };
     private readonly bool previewOnly;
+    private readonly bool fixedPreview;
     private readonly string stopFile;
     private readonly double seconds;
     private readonly double started = Now;
@@ -25,6 +26,9 @@ internal sealed class DesktopKeyboardForm : Form
     private int headerCapture;
     private SettingsForm settingsForm;
     private DesktopFrame frame;
+    private readonly DesktopShortcuts shortcuts;
+    internal DesktopShortcuts Shortcuts => shortcuts;
+    internal bool PrepareShortcutInput() => RefreshTarget();
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     private int HeaderHeight => (int)Math.Round(42 * DeviceDpi / 96f);
     private Rectangle SettingsButton => new(ClientSize.Width - (int)(144 * DeviceDpi / 96f), 0, (int)(100 * DeviceDpi / 96f), HeaderHeight);
@@ -35,14 +39,15 @@ internal sealed class DesktopKeyboardForm : Form
     internal Point SettingsPoint => new(SettingsButton.Left + SettingsButton.Width / 2, SettingsButton.Top + SettingsButton.Height / 2);
     internal Point KeyPoint(string id)
     {
-        var b = keyboard.Layout.Keys.Single(k => k.Id == id).Bounds;
-        return new((int)((b.X + b.Width / 2) * ClientSize.Width / OverlayGeometry.PanelWidth),
+        var b = keyboard.Keys.Single(k => k.Id == id).Bounds;
+        return new((int)((b.X + b.Width / 2) * ClientSize.Width / keyboard.Width),
             HeaderHeight + (int)((b.Y + b.Height / 2) * (ClientSize.Height - HeaderHeight) / OverlayGeometry.PanelHeight));
     }
 
-    public DesktopKeyboardForm(string stopFile = null, double seconds = double.PositiveInfinity, bool previewOnly = false, SettingsStore store = null)
+    public DesktopKeyboardForm(string stopFile = null, double seconds = double.PositiveInfinity, bool previewOnly = false, SettingsStore store = null, bool previewShortcuts = false)
     {
         this.stopFile = stopFile; this.seconds = seconds; this.previewOnly = previewOnly;
+        fixedPreview = previewOnly && store == null;
         settings = store ?? new SettingsStore();
         keyboard = new KeyboardState(output);
         Text = "GoBoard Desktop";
@@ -57,14 +62,15 @@ internal sealed class DesktopKeyboardForm : Form
         ForeColor = Color.FromArgb(241, 246, 252);
         Font = new Font("Segoe UI", 10);
         if (previewOnly) Opacity = 0;
-        applied = settings.Current;
+        applied = fixedPreview ? new BoardSettings { ProgrammableKeys = new() { Enabled = previewShortcuts } } : settings.Current;
         audio.Apply(applied);
         ResetPosition();
+        shortcuts = new(this, output, previewOnly);
         timer.Tick += (_, _) => Frame();
         Shown += (_, _) => { ApplySize(); Frame(); timer.Start(); };
         ResizeBegin += (_, _) => Cancel();
         DpiChanged += (_, _) => { Cancel(); ApplySize(); };
-        VisibleChanged += (_, _) => { if (!Visible) Cancel(); };
+        VisibleChanged += (_, _) => { if (!Visible) { Cancel(); shortcuts?.Update(applied, false); } };
     }
 
     // No activation on show, clicks, drag, or Windows' activate-on-hover mode.
@@ -125,6 +131,7 @@ internal sealed class DesktopKeyboardForm : Form
 
     internal void RefreshSettings()
     {
+        if (fixedPreview) return;
         settings.Reload();
         nextSettingsRead = Now + .5;
         if (applied != settings.Current)
@@ -140,6 +147,7 @@ internal sealed class DesktopKeyboardForm : Form
             audio.Apply(applied);
             if (resetPosition) ResetPosition();
             else if (resized) { Cancel(); ApplySize(); }
+            shortcuts.Update(applied, Visible);
         }
     }
 
@@ -159,6 +167,7 @@ internal sealed class DesktopKeyboardForm : Form
         }
         catch (Exception ex) { Failed(ex); }
         RenderFrame();
+        shortcuts.Update(applied, Visible && !closing);
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -192,7 +201,7 @@ internal sealed class DesktopKeyboardForm : Form
             if (keyboard.Press(0, 0, point.X, point.Y, now, now))
             {
                 keyCapture = true; Capture = true;
-                audio.Click(key: KeyboardLayout.HitOpenVr(point.X, point.Y, keyboard.Layout.Keys));
+                audio.Click(key: KeyboardLayout.HitOpenVr(point.X, point.Y, keyboard.Keys));
             }
         }
         catch (Exception ex) { Failed(ex); }
@@ -219,7 +228,7 @@ internal sealed class DesktopKeyboardForm : Form
     private void OpenSettings()
     {
         Cancel();
-        if (settingsForm == null || settingsForm.IsDisposed) settingsForm = new SettingsForm(desktopMode: true);
+        if (settingsForm == null || settingsForm.IsDisposed) settingsForm = new SettingsForm(desktopMode: true, store: settings);
         // Owning this window would make it inherit the keyboard's topmost state.
         if (settingsForm.WindowState == FormWindowState.Minimized) settingsForm.WindowState = FormWindowState.Normal;
         if (!settingsForm.Visible) settingsForm.Show();
@@ -283,6 +292,7 @@ internal sealed class DesktopKeyboardForm : Form
         closing = true;
         timer.Stop();
         Cancel();
+        shortcuts.Update(applied, false);
         settingsForm?.Close();
         base.OnFormClosing(e);
     }
@@ -293,6 +303,7 @@ internal sealed class DesktopKeyboardForm : Form
             timer.Dispose();
             settingsForm?.Dispose();
             frame?.Dispose();
+            shortcuts?.Dispose();
             renderer.Dispose();
             output.Dispose();
             audio.Dispose();

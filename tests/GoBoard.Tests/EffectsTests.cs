@@ -145,8 +145,9 @@ public sealed class EffectsTests
     {
         var p = new SettingsPointerState();
         p.Process(8, 750, 185, 1, 1, down: true); // General: size +.
-        p.Process(7, 740, 55, 1, 1, down: true);
-        Assert.Null(p.Process(7, 740, 55, 1.1, 1.1, up: true));
+        var tab = SettingsControls.Tabs.Single(c => c.Action == SettingsAction.EffectsTab).Bounds;
+        p.Process(7, tab.X + 10, tab.Y + 10, 1, 1, down: true);
+        Assert.Null(p.Process(7, tab.X + 10, tab.Y + 10, 1.1, 1.1, up: true));
         Assert.Equal(SettingsPage.Effects, p.Page);
         Assert.Null(p.Process(8, 750, 185, 1.2, 1.2, up: true));
         foreach (var c in SettingsControls.ForPage(p.Page))

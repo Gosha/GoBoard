@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using GoBoard.Core;
 using GoBoard.Presentation.Skia;
+using GoBoard.Platform.Windows;
 using Valve.VR;
 
 namespace GoBoard.Vr;
@@ -44,6 +45,7 @@ internal sealed class SettingsOverlay : IDisposable
 
     public void Update()
     {
+        pointers.Configure(store.Current, WindowsLayoutProvider.Get(WindowsKeyboard.Foreground().Layout, store.Current.Geometry));
         var visible = overlay.IsDashboardVisible() && overlay.IsActiveDashboardOverlay(handle);
         if (visible != active)
         {
@@ -79,10 +81,11 @@ internal sealed class SettingsOverlay : IDisposable
                 time, now, down, up, type == EVREventType.VREvent_FocusLeave);
             if (action.HasValue && SettingsControls.Enabled(action.Value, store.Current))
             {
-                var saved = store.Update(s => SettingsControls.Enabled(action.Value, s) ? SettingsControls.Apply(action.Value, s) : s);
+                var saved = store.Update(s => SettingsControls.Enabled(action.Value, s) ? SettingsControls.Apply(action.Value, s, pointers.ShortcutSlot, pointers.Layout) : s);
                 actionError = saved ? null : store.Error;
                 if (saved && SettingsControls.AuditionsSound(action.Value))
                     audition(store.Current);
+                pointers.Configure(store.Current, pointers.Layout);
             }
         }
         // Thumbnail events must be drained too, even though the shell activates the tab.

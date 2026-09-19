@@ -34,6 +34,8 @@ public static int Run(string[] args)
         string previewLayout = "us", previewState = "idle";
         string previewTheme = BoardThemes.Default;
         bool previewOptions = false;
+        bool previewShortcuts = false;
+        bool shortcutsSettings = false;
         string stopFile = null;
         double seconds = double.PositiveInfinity;
         for (var i = 0; i < args.Length; i++)
@@ -42,6 +44,8 @@ public static int Run(string[] args)
             {
                 case "--render" when i + 1 < args.Length: renderPath = args[++i]; break;
                 case "--render-settings" when i + 1 < args.Length: settingsRenderPath = args[++i]; break;
+                case "--shortcuts": previewShortcuts = true; break;
+                case "--render-shortcut-settings" when i + 1 < args.Length: settingsRenderPath = args[++i]; shortcutsSettings = true; break;
                 case "--layout" when i + 1 < args.Length: previewLayout = args[++i]; previewOptions = true; break;
                 case "--state" when i + 1 < args.Length: previewState = args[++i]; previewOptions = true; break;
                 case "--theme" when i + 1 < args.Length:
@@ -60,14 +64,22 @@ public static int Run(string[] args)
 
         if (settingsRenderPath != null && (renderPath != null || previewOptions)) throw new ArgumentException("--render-settings cannot be combined with keyboard preview options.");
         if (previewOptions && renderPath == null) throw new ArgumentException("--layout, --state and --theme require --render; live layouts follow Windows automatically; use Settings for live theme selection.");
+        if (previewShortcuts && renderPath == null) throw new ArgumentException("--shortcuts requires --render or --render-desktop.");
         var previewId = previewLayout switch
         {
             "us" => "00000409", "sv" => "0000041d", "uk" => "00000809", "de" => "00000407",
             "fr" => "0000040c", "us-intl" => "00020409", _ => previewLayout
         };
-        using var panel = settingsRenderPath != null ? SettingsPanel.Render(new BoardSettings()) :
-            renderPath == null ? Panel.Render() : previewLayout == "ja" ? PanelPreview.Render("ja", previewState, previewTheme) :
-            PanelPreview.Render(WindowsLayoutProvider.FromKlid(0, previewId), previewState, previewTheme);
+        var settingsPointers = new SettingsPointerState();
+        if (shortcutsSettings)
+        {
+            var b = SettingsControls.Tabs.Single(c => c.Action == SettingsAction.ShortcutsTab).Bounds;
+            settingsPointers.Process(0, b.X + 10, b.Y + 10, 1, 1, down: true);
+            settingsPointers.Process(0, b.X + 10, b.Y + 10, 1.1, 1.1, up: true);
+        }
+        using var panel = settingsRenderPath != null ? SettingsPanel.Render(new BoardSettings(), settingsPointers) :
+            renderPath == null ? Panel.Render() : previewLayout == "ja" ? PanelPreview.Render("ja", previewState, previewTheme, shortcuts: previewShortcuts) :
+            PanelPreview.Render(WindowsLayoutProvider.FromKlid(0, previewId), previewState, previewTheme, shortcuts: previewShortcuts);
         renderPath ??= settingsRenderPath;
         if (renderPath != null)
         {
@@ -132,10 +144,13 @@ public static int Run(string[] args)
         var settings = new SettingsStore();
         using var resize = new ResizeHandle(system, overlay, graphics, settings);
         var follower = new DashboardFollower(overlay, handle, grabHandle, grab, resize);
-        using var keyboard = new KeyboardOverlay(system, overlay, handle, graphics);
+        using var output = new WindowsKeyboard();
+        using var keyboard = new KeyboardOverlay(system, overlay, handle, graphics, sharedOutput: output);
+        using var shortcuts = new ShortcutOverlays(system, overlay, graphics, handle, output);
         var appliedSettings = settings.Current;
         follower.SetScale(appliedSettings.Scale);
         keyboard.ApplySettings(appliedSettings, false);
+        shortcuts.ApplySettings(appliedSettings);
         using var settingsOverlay = new SettingsOverlay(system, overlay, graphics, settings, keyboard.PreviewSound);
         Console.WriteLine($"Independent overlay: {transformType}; 15 cm grab line with an 18 x 6 cm hover target. Controller-relative movement; no smoothing.");
         Console.WriteLine($"Panel: {Panel.WidthInMeters * 100:F1} x {Panel.HeightInMeters * 100:F1} cm, {panel.Width}x{panel.Height} texture; input coordinates remain {Panel.LayoutWidth}x{Panel.LayoutHeight}.");
@@ -177,11 +192,13 @@ public static int Run(string[] args)
                 var resetPosition = appliedSettings.PositionResetId != settings.Current.PositionResetId;
                 if (resetPosition) follower.ResetPosition();
                 keyboard.ApplySettings(settings.Current, appliedSettings.SizePercent != settings.Current.SizePercent || resetPosition);
+                shortcuts.ApplySettings(settings.Current);
                 appliedSettings = settings.Current;
             }
-            var visible = follower.Update();
+            var visible = follower.Update(shortcuts.GrabOwner.HasValue);
+            shortcuts.Update(visible && !cancel.IsCancellationRequested, resize.Scale, grab.ActiveGrab != null ? grab.Controller : null, resize.Active);
             keyboard.BeginFrame(visible && !cancel.IsCancellationRequested,
-                grab.ActiveGrab != null ? grab.Controller : null, resize.Active);
+                grab.ActiveGrab != null ? grab.Controller : shortcuts.GrabOwner, resize.Active);
             while (overlay.PollNextOverlayEvent(handle, ref vrEvent, eventSize))
             {
                 var type = (EVREventType)vrEvent.eventType;

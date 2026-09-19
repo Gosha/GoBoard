@@ -1,6 +1,6 @@
 namespace GoBoard.Core;
 
-internal enum SettingsPage { General, Effects }
+internal enum SettingsPage { General, Effects, Shortcuts, ShortcutKey }
 internal enum SettingsAction
 {
     Smaller, Larger, ToggleSound, Wood, Thud, Quieter, Louder, Defaults, Geometry, SteamSoft, SteamFlat,
@@ -8,9 +8,18 @@ internal enum SettingsAction
     TransitionNone, Crossfade, Lift, TransitionFaster, TransitionSlower, TravelLess, TravelMore,
     EnterFaster, EnterSlower, LeaveFaster, LeaveSlower, RadiusLess, RadiusMore,
     StrengthLess, StrengthMore, RippleFaster, RippleSlower, ResetEffects,
-    CherryBlue, GateronYellow, ResetPosition
+    CherryBlue, GateronYellow, ResetPosition,
+    ShortcutsTab, ToggleShortcuts, Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, Slot8,
+    PreviousPreset, NextPreset, ShortcutCtrl, ShortcutAlt, ShortcutShift, ShortcutWin, ChooseShortcutKey,
+    ResetShortcuts, Slot9, Slot10, FewerColumns, MoreColumns, FewerRows, MoreRows,
+    Slot11, Slot12, Slot13, Slot14, Slot15, Slot16, Slot17, Slot18, Slot19, Slot20, KeyChoiceFirst = 1000
 }
-internal sealed record SettingsControl(SettingsAction Action, string Label, KeyBounds Bounds);
+internal sealed record SettingsControl(SettingsAction Action, string Label, KeyBounds Bounds,
+    bool Selectable = true, float CutoutWidth = 0, float CutoutTop = 0)
+{
+    public bool Contains(float x, float y) => Selectable && Bounds.Contains(x, y) &&
+        !(CutoutWidth > 0 && x < Bounds.X + CutoutWidth && y >= Bounds.Y + CutoutTop);
+}
 
 // Preserve the dashboard aspect ratio in a resizable desktop window. Painting
 // and hit testing use this same viewport, including any letterboxed margins.
@@ -51,8 +60,50 @@ internal static class SettingsControls
     ];
 
     public static readonly SettingsControl[] Tabs =
-    [new(SettingsAction.GeneralTab, "General", new(548, 32, 120, 54)),
-     new(SettingsAction.EffectsTab, "Effects", new(684, 32, 120, 54))];
+    [new(SettingsAction.GeneralTab, "General", new(412, 32, 120, 54)),
+     new(SettingsAction.EffectsTab, "Effects", new(548, 32, 120, 54)),
+     new(SettingsAction.ShortcutsTab, "Shortcuts", new(684, 32, 120, 54))];
+    public static readonly SettingsControl[] Shortcuts =
+    [
+        new(SettingsAction.ToggleShortcuts, "", new(588, 148, 216, 54)),
+        new(SettingsAction.FewerColumns, "−", new(226, 266, 44, 44)),
+        new(SettingsAction.MoreColumns, "+", new(350, 266, 44, 44)),
+        new(SettingsAction.FewerRows, "−", new(226, 322, 44, 44)),
+        new(SettingsAction.MoreRows, "+", new(350, 322, 44, 44)),
+        .. Enumerable.Range(0, ProgrammableKeySettings.Capacity).Select(i => new SettingsControl(SlotAction(i), $"Key {i + 1}", new(0, 0, 158, 54))),
+        new(SettingsAction.PreviousPreset, "←", new(454, 350, 48, 48)),
+        new(SettingsAction.NextPreset, "→", new(756, 350, 48, 48)),
+        new(SettingsAction.ShortcutWin, "Win", new(454, 464, 167, 48)),
+        new(SettingsAction.ShortcutCtrl, "Ctrl", new(637, 464, 167, 48)),
+        new(SettingsAction.ShortcutAlt, "Alt", new(454, 524, 167, 48)),
+        new(SettingsAction.ShortcutShift, "Shift", new(637, 524, 167, 48)),
+        new(SettingsAction.ChooseShortcutKey, "", new(454, 636, 350, 54)),
+        new(SettingsAction.ResetShortcuts, "Reset shortcuts", new(588, 770, 216, 48))
+    ];
+    public static SettingsAction SlotAction(int slot) => slot < 8 ? SettingsAction.Slot1 + slot : slot == 8 ? SettingsAction.Slot9 : slot == 9 ? SettingsAction.Slot10 : SettingsAction.Slot11 + slot - 10;
+    public static int SlotIndex(SettingsAction action) => action is >= SettingsAction.Slot1 and <= SettingsAction.Slot8 ? (int)action - (int)SettingsAction.Slot1 : action == SettingsAction.Slot9 ? 8 : action == SettingsAction.Slot10 ? 9 :
+        action is >= SettingsAction.Slot11 and <= SettingsAction.Slot20 ? (int)action - (int)SettingsAction.Slot11 + 10 : -1;
+    public static SettingsControl[] KeyChoices(WindowsLayout layout = null, bool shift = false)
+    {
+        layout ??= new((nint)WindowsLayout.UsHandle);
+        const float scale = 740f / OverlayGeometry.PanelWidth;
+        // Reuse the physical arrangement, including ISO Enter's shared drawing/hit shape.
+        var controls = layout.Keys.Select(key => new SettingsControl(SettingsAction.KeyChoiceFirst + key.Scan,
+            key.IsModifier || key.Scan == KeyboardLayout.ImeToggleKey ? key.Label : ProgrammableKeys.KeyName(key.Scan, layout, shift),
+            new(64 + key.Bounds.X * scale, 200 + key.Bounds.Y * scale, key.Bounds.Width * scale, key.Bounds.Height * scale),
+            !key.IsModifier && ProgrammableKeys.IsAllowed(key.Scan), key.CutoutWidth * scale, key.CutoutTop * scale)).ToList();
+        controls.AddRange(ProgrammableKeys.NumpadKeys.Select(key => new SettingsControl(SettingsAction.KeyChoiceFirst + key.Scan,
+            key.Label, key.Bounds with { X = 64 + key.Bounds.X, Y = 496 + key.Bounds.Y })));
+        for (var i = 0; i < ProgrammableKeys.SystemKeys.Length; i++)
+        {
+            var key = ProgrammableKeys.SystemKeys[i];
+            var browser = i >= 7; var index = browser ? i - 7 : i;
+            controls.Add(new(SettingsAction.KeyChoiceFirst + key.Scan, browser ? key.Label[8..] : key.Label,
+                new(270 + index % 4 * 135.5f, (browser ? 632 : 496) + index / 4 * 48, 127.5f, 40)));
+        }
+        controls.Add(new(SettingsAction.KeyChoiceFirst, "None", new(64, 768, 216, 42)));
+        return controls.ToArray();
+    }
     public static readonly (string Label, SettingsAction Less, SettingsAction More)[] Parameters =
     [
         ("Character duration", SettingsAction.TransitionFaster, SettingsAction.TransitionSlower),
@@ -86,8 +137,28 @@ internal static class SettingsControls
         }
         return controls.ToArray();
     }
-    public static IEnumerable<SettingsControl> ForPage(SettingsPage page) => Tabs.Concat(page == SettingsPage.Effects ? Effects : All);
-    public static SettingsAction? Hit(float x, float y, SettingsPage page = SettingsPage.General) => ForPage(page).FirstOrDefault(c => c.Bounds.Contains(x, y))?.Action;
+    public static IEnumerable<SettingsControl> ForPage(SettingsPage page, BoardSettings settings = null, WindowsLayout layout = null, int slot = 0) => Tabs.Concat(page switch
+    { SettingsPage.Effects => Effects,
+      SettingsPage.Shortcuts => ShortcutControls(settings?.ProgrammableKeys ?? new()),
+      SettingsPage.ShortcutKey => KeyChoices(layout, settings?.ProgrammableKeys.Get(slot).Shift ?? false), _ => All });
+    private static IEnumerable<SettingsControl> ShortcutControls(ProgrammableKeySettings settings)
+    {
+        foreach (var control in Shortcuts)
+        {
+            var slot = SlotIndex(control.Action);
+            if (slot < 0) { yield return control; continue; }
+            if (settings.VisibleSlots.Contains(slot))
+            {
+                var (row, column) = ProgrammableKeySettings.PositionOf(slot);
+                var gap = settings.Columns > 2 ? 8 : 14;
+                var width = settings.Columns == 1 ? 158 : (330f - gap * (settings.Columns - 1)) / settings.Columns;
+                yield return control with { Label = $"Key {settings.NumberFor(slot)}", Bounds = new(
+                    settings.Columns == 1 ? 150 : 64 + column * (width + gap), 388 + row * 62, width, 54) };
+            }
+        }
+    }
+    public static SettingsAction? Hit(float x, float y, SettingsPage page = SettingsPage.General, BoardSettings settings = null, WindowsLayout layout = null, int slot = 0)
+        => ForPage(page, settings, layout, slot).FirstOrDefault(c => c.Contains(x, y))?.Action;
     public static string ParameterValue(int index, EffectSettings e) => index switch
     {
         0 => $"{e.TransitionMs} ms", 1 => $"{e.Travel} px", 2 => e.EnterMs == 0 ? "Instant" : $"{e.EnterMs} ms",
@@ -99,6 +170,10 @@ internal static class SettingsControls
         SettingsAction.Larger => s.SizePercent < 150,
         SettingsAction.Quieter => s.SoundEnabled && s.VolumePercent > 0,
         SettingsAction.Louder => s.SoundEnabled && s.VolumePercent < 100,
+        SettingsAction.FewerColumns => s.ProgrammableKeys.Columns > 1,
+        SettingsAction.MoreColumns => s.ProgrammableKeys.Columns < ProgrammableKeySettings.MaxColumns,
+        SettingsAction.FewerRows => s.ProgrammableKeys.Rows > 1,
+        SettingsAction.MoreRows => s.ProgrammableKeys.Rows < ProgrammableKeySettings.MaxRows,
         >= SettingsAction.TransitionFaster and <= SettingsAction.RippleSlower => Apply(action, s) != s,
         _ => true
     };
@@ -112,8 +187,18 @@ internal static class SettingsControls
     };
     public static bool AuditionsSound(SettingsAction action) => SoundFor(action).HasValue || action is
         SettingsAction.ToggleSound or SettingsAction.Quieter or SettingsAction.Louder;
-    public static BoardSettings Apply(SettingsAction action, BoardSettings s) => (action switch
+    public static BoardSettings Apply(SettingsAction action, BoardSettings s, int slot = 0, WindowsLayout layout = null) => (action switch
     {
+        SettingsAction.ToggleShortcuts => s with { ProgrammableKeys = s.ProgrammableKeys with { Enabled = !s.ProgrammableKeys.Enabled } },
+        SettingsAction.FewerColumns => s with { ProgrammableKeys = s.ProgrammableKeys with { Columns = s.ProgrammableKeys.Columns - 1 } },
+        SettingsAction.MoreColumns => s with { ProgrammableKeys = s.ProgrammableKeys with { Columns = s.ProgrammableKeys.Columns + 1 } },
+        SettingsAction.FewerRows => s with { ProgrammableKeys = s.ProgrammableKeys with { Rows = s.ProgrammableKeys.Rows - 1 } },
+        SettingsAction.MoreRows => s with { ProgrammableKeys = s.ProgrammableKeys with { Rows = s.ProgrammableKeys.Rows + 1 } },
+        SettingsAction.ResetShortcuts => s with { ProgrammableKeys = new() { Enabled = s.ProgrammableKeys.Enabled } },
+        SettingsAction.PreviousPreset or SettingsAction.NextPreset or SettingsAction.ShortcutCtrl or SettingsAction.ShortcutAlt or
+            SettingsAction.ShortcutShift or SettingsAction.ShortcutWin => s with { ProgrammableKeys = s.ProgrammableKeys.Set(slot, EditShortcut(action, s.ProgrammableKeys.Get(slot), layout)) },
+        >= SettingsAction.KeyChoiceFirst when (int)action - (int)SettingsAction.KeyChoiceFirst <= ushort.MaxValue && ProgrammableKeys.IsAllowed((ushort)(action - SettingsAction.KeyChoiceFirst)) =>
+            s with { ProgrammableKeys = s.ProgrammableKeys.Set(slot, s.ProgrammableKeys.Get(slot) with { Scan = (ushort)(action - SettingsAction.KeyChoiceFirst) }) },
         SettingsAction.Smaller => s with { SizePercent = s.SizePercent - 5 },
         SettingsAction.Larger => s with { SizePercent = s.SizePercent + 5 },
         SettingsAction.ToggleSound => s with { SoundEnabled = !s.SoundEnabled },
@@ -150,6 +235,23 @@ internal static class SettingsControls
         SettingsAction.RippleSlower => s with { Effects = s.Effects with { RippleMs = s.Effects.RippleMs + 20 } },
         _ => s
     }).Normalize();
+    private static KeyboardShortcut EditShortcut(SettingsAction action, KeyboardShortcut key, WindowsLayout layout)
+    {
+        if (action is SettingsAction.PreviousPreset or SettingsAction.NextPreset)
+        {
+            var index = Array.FindIndex(ProgrammableKeys.Presets, p => p.ForLayout(layout) == key);
+            var step = action == SettingsAction.PreviousPreset ? -1 : 1;
+            var count = ProgrammableKeys.Presets.Length;
+            return ProgrammableKeys.Presets[index < 0 ? (step > 0 ? 0 : count - 1) : (index + step + count) % count].ForLayout(layout);
+        }
+        return action switch
+        {
+            SettingsAction.ShortcutCtrl => key with { Ctrl = !key.Ctrl },
+            SettingsAction.ShortcutAlt => key with { Alt = !key.Alt },
+            SettingsAction.ShortcutShift => key with { Shift = !key.Shift },
+            SettingsAction.ShortcutWin => key with { Win = !key.Win }, _ => key
+        };
+    }
 }
 
 // Release-to-activate; leaving a button cancels its capture. Per-controller
@@ -163,6 +265,19 @@ internal sealed class SettingsPointerState
     }
     private readonly Dictionary<uint, Pointer> pointers = new();
     public SettingsPage Page { get; private set; }
+    public int ShortcutSlot { get; private set; }
+    public WindowsLayout Layout { get; private set; } = new((nint)WindowsLayout.UsHandle);
+    private BoardSettings settings = new();
+    public void Configure(BoardSettings value, WindowsLayout layout)
+    {
+        if (Layout != layout || settings.ProgrammableKeys != value.ProgrammableKeys)
+        {
+            Reset();
+            if (!value.ProgrammableKeys.VisibleSlots.Contains(ShortcutSlot)) ShortcutSlot = 0;
+        }
+        Layout = layout;
+        settings = value;
+    }
     public int Revision { get; private set; }
     public bool Hovered(SettingsAction action) => pointers.Values.Any(p => p.Hover == action);
     public void Reset() { pointers.Clear(); Revision++; }
@@ -172,7 +287,7 @@ internal sealed class SettingsPointerState
         if (!pointers.TryGetValue(device, out var p)) pointers[device] = p = new();
         if (time < p.Last) return null;
         p.Last = time;
-        var hit = leave ? null : SettingsControls.Hit(x, y, Page);
+        var hit = leave ? null : SettingsControls.Hit(x, y, Page, settings, Layout, ShortcutSlot);
         if (p.Hover != hit) Revision++;
         p.Hover = hit;
         if (leave || (p.Capture.HasValue && p.Capture != hit)) p.Capture = null;
@@ -180,12 +295,20 @@ internal sealed class SettingsPointerState
         if (!up) return null;
         var clicked = p.Capture == hit ? hit : null;
         p.Capture = null;
-        if (clicked is SettingsAction.GeneralTab or SettingsAction.EffectsTab)
+        if (clicked.HasValue && SettingsControls.SlotIndex(clicked.Value) >= 0)
         {
-            Page = clicked == SettingsAction.GeneralTab ? SettingsPage.General : SettingsPage.Effects;
+            ShortcutSlot = SettingsControls.SlotIndex(clicked.Value);
+            Reset();
+            return null;
+        }
+        if (clicked is SettingsAction.GeneralTab or SettingsAction.EffectsTab or SettingsAction.ShortcutsTab or SettingsAction.ChooseShortcutKey)
+        {
+            Page = clicked switch { SettingsAction.GeneralTab => SettingsPage.General, SettingsAction.EffectsTab => SettingsPage.Effects,
+                SettingsAction.ChooseShortcutKey => SettingsPage.ShortcutKey, _ => SettingsPage.Shortcuts };
             Reset(); // Both hands lose captures from the old page.
             return null;
         }
+        if (clicked >= SettingsAction.KeyChoiceFirst) { Page = SettingsPage.Shortcuts; Reset(); }
         return clicked;
     }
 }

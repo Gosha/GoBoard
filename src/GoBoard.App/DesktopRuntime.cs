@@ -32,14 +32,20 @@ internal static class DesktopRuntime
         catch (Exception ex) { Console.Error.WriteLine($"GoBoard desktop: {ex.Message}"); return 1; }
     }
 
-    public static int Render(string path)
+    public static int Render(string path, bool shortcuts = false)
     {
         ApplicationConfiguration.Initialize();
-        using var form = new DesktopKeyboardForm(previewOnly: true);
+        using var form = new DesktopKeyboardForm(previewOnly: true, previewShortcuts: shortcuts);
         form.Show();
         Application.DoEvents();
-        using var bitmap = new Bitmap(form.Width, form.Height);
-        form.DrawToBitmap(bitmap, new Rectangle(Point.Empty, bitmap.Size));
+        if (shortcuts) form.Shortcuts.ExpandPreview();
+        Application.DoEvents();
+        Form[] windows = shortcuts ? [form, form.Shortcuts.Launcher, form.Shortcuts.PanelWindow] : [form];
+        var bounds = windows.Select(w => w.Bounds).Aggregate(Rectangle.Union);
+        using var bitmap = new Bitmap(bounds.Width, bounds.Height);
+        using (var graphics = Graphics.FromImage(bitmap)) graphics.Clear(Color.FromArgb(7, 16, 24));
+        foreach (var window in windows)
+            window.DrawToBitmap(bitmap, new Rectangle(window.Left - bounds.Left, window.Top - bounds.Top, window.Width, window.Height));
         var fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         bitmap.Save(fullPath, System.Drawing.Imaging.ImageFormat.Png);

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using GoBoard.Core;
 using GoBoard.Platform.Windows;
 using GoBoard.Presentation.Skia;
@@ -6,9 +7,11 @@ using Valve.VR;
 
 namespace GoBoard.Vr;
 
-internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulong handle, OverlayGraphics graphics) : IDisposable
+internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulong handle, OverlayGraphics graphics,
+    bool shortcutsOnly = false, WindowsKeyboard sharedOutput = null) : IDisposable
 {
-    private readonly WindowsKeyboard output = new();
+    private readonly WindowsKeyboard output = sharedOutput ?? new();
+    private InputTarget observedTarget;
     private readonly KeyAudio audio = new();
     private KeyboardState keyboard;
     private readonly OverlayPointers pointers = new();
@@ -23,13 +26,30 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private double lastErrorTime;
     private readonly ulong left = SourcePath("/user/hand/left"), right = SourcePath("/user/hand/right");
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
-    private KeyboardState State => keyboard ??= new KeyboardState(output);
+    internal KeyboardState State => keyboard ??= new KeyboardState(output, shortcutsOnly);
+    private double acceptAfter;
 
     public void ApplySettings(BoardSettings settings, bool resized)
     {
         effects = settings.Effects;
         theme = BoardThemes.Normalize(settings.Theme);
         if (resized) Cancel();
+        if (shortcutsOnly && State.Shortcuts != settings.ProgrammableKeys)
+        {
+            Cancel();
+            State.SetShortcuts(settings.ProgrammableKeys, Now);
+            var scale = new HmdVector2_t { v0 = State.Width, v1 = State.Height };
+            var mask = new VROverlayIntersectionMaskPrimitive_t
+            {
+                m_nPrimitiveType = EVROverlayIntersectionMaskPrimitiveType.OverlayIntersectionPrimitiveType_Rectangle,
+                m_Primitive = new VROverlayIntersectionMaskPrimitive_Data_t
+                { m_Rectangle = new IntersectionMaskRectangle_t { m_flWidth = State.Width, m_flHeight = State.Height } }
+            };
+            var error = overlay.SetOverlayMouseScale(handle, ref scale);
+            if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize pointer coordinates: {error}");
+            error = overlay.SetOverlayIntersectionMask(handle, ref mask, 1, (uint)Marshal.SizeOf<VROverlayIntersectionMaskPrimitive_t>());
+            if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize input region: {error}");
+        }
         if (geometry != settings.Geometry)
         {
             Cancel();
@@ -56,16 +76,17 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             State.SetResizing(resizing, Now);
         }
         var target = WindowsKeyboard.Foreground();
-        if (target != output.Target)
+        if (target != observedTarget)
         {
             Cancel(clearFocus: false);
             output.Target = target;
+            observedTarget = target;
             State.SetLayout(WindowsLayoutProvider.Get(target.Layout, geometry), Now);
             targetStatus = State.Layout.Notice;
             Console.WriteLine($"Windows input layout: {State.Layout.Name}, HKL {unchecked((uint)(long)target.Layout):X8}.");
             if (!faulted) status = targetStatus;
         }
-        if (!active && enabled) Cancel(clearFocus: false);
+        if (active != enabled) { Cancel(); acceptAfter = Now; }
         enabled = active;
         State.SetGrabOwner(grabbingController, Now);
         if (faulted)
@@ -81,6 +102,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     {
         var now = Now;
         var time = now - e.eventAgeSeconds;
+        if (time <= acceptAfter) return;
         var device = Controller(e.trackedDeviceIndex);
         var type = (EVREventType)e.eventType;
         if (type is not (EVREventType.VREvent_FocusEnter or EVREventType.VREvent_FocusLeave or
@@ -116,7 +138,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
                     if (!State.Press(pointer.Value, device, e.data.mouse.x, e.data.mouse.y, time, now))
                         Console.WriteLine($"Keyboard down rejected: controller {device}, laser slot {slot}, age {e.eventAgeSeconds:F3}s.");
                     else audio.Click(pointerId: pointer.Value,
-                        key: KeyboardLayout.HitOpenVr(e.data.mouse.x, e.data.mouse.y, State.Layout.Keys));
+                        key: State.Hit(e.data.mouse.x, e.data.mouse.y));
                     break;
                 case EVREventType.VREvent_MouseButtonUp when e.data.mouse.button == (uint)EVRMouseButton.Left:
                     if (State.Up(pointer.Value, device, time)) audio.Click(released: true, pointerId: pointer.Value);
@@ -182,5 +204,5 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         ulong path = 0;
         return OpenVR.Input.GetInputSourceHandle(name, ref path) == EVRInputError.None ? path : 0;
     }
-    public void Dispose() { Cancel(); renderer.Dispose(); output.Dispose(); audio.Dispose(); }
+    public void Dispose() { Cancel(); renderer.Dispose(); if (sharedOutput == null) output.Dispose(); audio.Dispose(); }
 }

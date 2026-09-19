@@ -42,8 +42,7 @@ internal sealed class WindowsKeyboard : IKeySink, IDisposable
             throw new InvalidOperationException("Focus changed. Press the key again.");
         if (!owned.Contains(scan) && !borrowed.Contains(scan))
         {
-            var vk = VirtualKeyForScan(scan, Target.Layout);
-            if (vk != 0 && (GetAsyncKeyState((int)vk) & 0x8000) != 0)
+            if (PhysicalKeyDown(scan, Target.Layout))
             {
                 // Respect physical modifiers already held; never release them ourselves.
                 if (scan is 0x2a or 0x1d or 0x38 or 0xe038 or 0xe05b) { borrowed.Add(scan); return; }
@@ -85,8 +84,7 @@ internal sealed class WindowsKeyboard : IKeySink, IDisposable
         var keys = new List<ushort>();
         foreach (var key in chord.Append(scan).Distinct())
         {
-            var vk = VirtualKeyForScan(key, Target.Layout);
-            if (vk != 0 && (GetAsyncKeyState((int)vk) & 0x8000) != 0)
+            if (PhysicalKeyDown(key, Target.Layout))
             {
                 if (key is 0x2a or 0x1d or 0x38 or 0xe038 or 0xe05b) continue;
                 throw new InvalidOperationException("Release the same key on your physical keyboard first.");
@@ -117,15 +115,37 @@ internal sealed class WindowsKeyboard : IKeySink, IDisposable
         }
     }
 
+    private static bool PhysicalKeyDown(ushort scan, nint layout)
+    {
+        var vk = VirtualKeyForScan(scan, layout);
+        if (vk != 0 && (GetAsyncKeyState((int)vk) & 0x8000) != 0) return true;
+        // Keypad digits can report navigation or numeric virtual keys depending
+        // on Num Lock/Shift. Check both before sending an owned down/up pair.
+        var numeric = scan switch { 0x52 => 0x60, 0x4f => 0x61, 0x50 => 0x62, 0x51 => 0x63,
+            0x4b => 0x64, 0x4c => 0x65, 0x4d => 0x66, 0x47 => 0x67, 0x48 => 0x68, 0x49 => 0x69, 0x53 => 0x6e, _ => 0 };
+        return numeric != 0 && (GetAsyncKeyState(numeric) & 0x8000) != 0;
+    }
+
     // Keep the E0 prefix in key identity/mapping; SendInput receives the low
     // scan byte plus EXTENDEDKEY on both down and up (arrows, navigation, Win).
     internal static uint ScanFlags(ushort scan, bool up)
         => 0x0008u | ((scan & 0xff00) == 0xe000 ? 0x0001u : 0) | (up ? 0x0002u : 0);
     internal static uint VirtualKeyForScan(ushort scan, nint layout)
-        => scan switch { KeyboardLayout.PauseScan => 0x13u, KeyboardLayout.ImeToggleKey => 0x19u, _ => MapVirtualKeyEx(scan, 3, layout) };
+        => ProgrammableKeys.IsSystemKey(scan) ? (uint)(scan & 0xff) : scan switch
+        { KeyboardLayout.PauseScan => 0x13u, KeyboardLayout.ImeToggleKey => 0x19u, ProgrammableKeys.NumLock => 0x90u,
+            _ => MapVirtualKeyEx(scan, 3, layout) };
 
     internal static Input MakeInput(ushort scan, bool up)
     {
+        // Media, volume and browser keys use documented virtual-key codes.
+        // https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+        if (ProgrammableKeys.IsSystemKey(scan))
+            return new() { Type = 1, VirtualKey = (ushort)(scan & 0xff), Flags = up ? 2u : 0u, ExtraInfo = 0x474f4244 };
+        // Num Lock needs an explicit VK_NUMLOCK; scan-only E045 can resolve to
+        // an undefined key. Preserve the conventional extended 45 identity.
+        // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-keybd_event
+        if (scan == ProgrammableKeys.NumLock)
+            return new() { Type = 1, VirtualKey = 0x90, Scan = 0x45, Flags = 1u | (up ? 2u : 0u), ExtraInfo = 0x474f4244 };
         // Pause has an E1 sequence, not an E0 extended scan. Send VK_PAUSE
         // explicitly so dropping the prefix cannot inject Num Lock instead.
         // https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-keybdinput

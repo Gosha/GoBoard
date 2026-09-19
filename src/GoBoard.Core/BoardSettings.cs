@@ -16,6 +16,7 @@ internal sealed record BoardSettings
     public KeyboardGeometry Geometry { get; init; } = KeyboardGeometry.Auto;
     public string Theme { get; init; } = BoardThemes.Default;
     public EffectSettings Effects { get; init; } = new();
+    public ProgrammableKeySettings ProgrammableKeys { get; init; } = new();
     // A new request is observed once by each running host through the shared settings file.
     public Guid PositionResetId { get; init; }
     public float Scale => SizePercent / 100f;
@@ -27,7 +28,8 @@ internal sealed record BoardSettings
         Sound = Enum.IsDefined(Sound) ? KeySounds.Canonical(Sound) : KeySound.CushionedWood,
         Geometry = Enum.IsDefined(Geometry) ? Geometry : KeyboardGeometry.Auto,
         Theme = BoardThemes.Normalize(Theme),
-        Effects = (Effects ?? new()).Normalize()
+        Effects = (Effects ?? new()).Normalize(),
+        ProgrammableKeys = (ProgrammableKeys ?? new()).Normalize()
     };
 
     public static BoardSettings Defaults => new()

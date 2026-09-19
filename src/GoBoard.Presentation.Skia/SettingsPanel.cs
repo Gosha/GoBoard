@@ -25,8 +25,50 @@ internal static class SettingsPanel
         }
         Text("GoBoard", 64, 72, heading, text);
         var effectsPage = pointers?.Page == SettingsPage.Effects;
-        Text(effectsPage ? "Effects · Changes apply immediately" : "Settings · Changes apply immediately", 64, 110, small, accent);
-        if (effectsPage)
+        var shortcutsPage = pointers?.Page is SettingsPage.Shortcuts or SettingsPage.ShortcutKey;
+        var choosingKey = pointers?.Page == SettingsPage.ShortcutKey;
+        var slot = pointers?.ShortcutSlot ?? 0;
+        var shortcut = settings.ProgrammableKeys.Get(slot);
+        var keyNumber = settings.ProgrammableKeys.NumberFor(slot);
+        var layout = pointers?.Layout ?? new WindowsLayout((nint)WindowsLayout.UsHandle);
+        Text(shortcutsPage ? "Shortcuts · Changes apply immediately" : effectsPage ? "Effects · Changes apply immediately" : "Settings · Changes apply immediately", 64, 110, small, accent);
+        if (choosingKey)
+        {
+            Text($"Key {keyNumber} · {layout.Name}", 64, 151, label, text);
+            Text(shortcut.Shift ? "Choose a key · Shift labels" : "Choose a key", 64, 180, small, accent);
+            Text("Numpad", 64, 480, small, accent);
+            Text("Media & volume", 270, 480, small, accent);
+            Text("Browser", 270, 616, small, accent);
+            using var hint = new SKFont(face, 14);
+            Text("Numpad follows Num Lock.", 64, 740, hint, accent);
+            Text("Choose modifiers on the Shortcuts page.", 310, 795, hint, accent);
+            if (error == null) Text(layout.Notice ?? "Keys and labels follow the active Windows layout.", 64, 834, hint, accent);
+        }
+        else if (shortcutsPage)
+        {
+            Text("Floating button", 64, 183, label, text);
+            paint.Color = new SKColor(0x1b, 0x2c, 0x39);
+            canvas.DrawRect(423, 232, 1, 458, paint);
+            Text("Keys", 64, 248, label, text);
+            Text("Columns", 64, 295, small, text);
+            Text("Rows", 64, 351, small, text);
+            paint.Color = text;
+            canvas.DrawText(settings.ProgrammableKeys.Columns.ToString(), 310, 295, SKTextAlign.Center, small, paint);
+            canvas.DrawText(settings.ProgrammableKeys.Rows.ToString(), 310, 351, SKTextAlign.Center, small, paint);
+            Text($"Edit Key {keyNumber}", 454, 248, label, text);
+            var chord = shortcut.ChordFor(layout);
+            using var chordFont = new SKFont(face, Math.Min(19, 19 * 350 / Math.Max(1, small.MeasureText(chord))));
+            Text(chord, 454, 282, chordFont, accent);
+            Text("Preset", 454, 332, small, accent);
+            var presetName = shortcut.LabelFor(layout);
+            using var presetFont = new SKFont(face, Math.Min(19, 19 * 230 / Math.Max(1, small.MeasureText(presetName))));
+            paint.Color = text;
+            canvas.DrawText(presetName, 629, 381, SKTextAlign.Center, presetFont, paint);
+            Text("Modifiers", 454, 444, small, accent);
+            Text("Main key", 454, 616, small, accent);
+            Text("Click the floating button to expand or collapse shortcuts.", 64, 734, small, accent);
+        }
+        else if (effectsPage)
         {
             Text("Character changes", 64, 306, small, accent);
             for (var i = 0; i < SettingsControls.Parameters.Length; i++)
@@ -50,15 +92,23 @@ internal static class SettingsPanel
         Text("Keyboard theme", 64, 648, small, accent);
         }
         if (error != null)
-            Text("Settings unavailable · Last working values kept", 64, 760, small, new SKColor(0xff, 0xb0, 0xa0));
-        foreach (var c in SettingsControls.ForPage(pointers?.Page ?? SettingsPage.General))
+            Text("Settings unavailable · Last working values kept", 64, choosingKey ? 834 : 760, small, new SKColor(0xff, 0xb0, 0xa0));
+        foreach (var c in SettingsControls.ForPage(pointers?.Page ?? SettingsPage.General, settings, layout, slot))
         {
             var preset = SettingsControls.SoundFor(c.Action);
             var selected = preset == KeySounds.Canonical(settings.Sound) ||
                 c.Action == SettingsAction.ToggleSound && settings.SoundEnabled ||
                 c.Action == SettingsAction.SteamSoft && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamSoft ||
                 c.Action == SettingsAction.SteamFlat && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamFlat ||
-                c.Action == SettingsAction.GeneralTab && !effectsPage || c.Action == SettingsAction.EffectsTab && effectsPage ||
+                c.Action == SettingsAction.GeneralTab && !effectsPage && !shortcutsPage || c.Action == SettingsAction.EffectsTab && effectsPage ||
+                c.Action == SettingsAction.ShortcutsTab && shortcutsPage ||
+                c.Action == SettingsAction.ToggleShortcuts && settings.ProgrammableKeys.Enabled ||
+                c.Action == SettingsControls.SlotAction(slot) ||
+                c.Action == SettingsAction.KeyChoiceFirst + shortcut.Scan ||
+                c.Action == SettingsAction.ShortcutCtrl && shortcut.Ctrl ||
+                c.Action == SettingsAction.ShortcutAlt && shortcut.Alt ||
+                c.Action == SettingsAction.ShortcutShift && shortcut.Shift ||
+                c.Action == SettingsAction.ShortcutWin && shortcut.Win ||
                 c.Action == SettingsAction.Afterglow && settings.Effects.Afterglow ||
                 c.Action == SettingsAction.Spotlight && settings.Effects.Spotlight ||
                 c.Action == SettingsAction.Edges && settings.Effects.Edges ||
@@ -67,9 +117,17 @@ internal static class SettingsPanel
                 c.Action == SettingsAction.TransitionNone && settings.Effects.Transition == CharacterTransition.None ||
                 c.Action == SettingsAction.Crossfade && settings.Effects.Transition == CharacterTransition.Crossfade ||
                 c.Action == SettingsAction.Lift && settings.Effects.Transition == CharacterTransition.Lift;
-            var enabled = SettingsControls.Enabled(c.Action, settings);
+            var enabled = c.Selectable && SettingsControls.Enabled(c.Action, settings);
             var b = c.Bounds;
             var rect = new SKRect(b.X, b.Y, b.X + b.Width, b.Y + b.Height);
+            var keyboardChoice = choosingKey && c.Action >= SettingsAction.KeyChoiceFirst && (b.Y < 460 || b.X < 240 && b.Y < 720);
+            void DrawSurface()
+            {
+                if (keyboardChoice)
+                    Panel.DrawKey(canvas, new KeyboardKey("Choice", c.Label, 0, b,
+                        CutoutWidth: c.CutoutWidth, CutoutTop: c.CutoutTop), paint);
+                else canvas.DrawRoundRect(rect, 10, 10, paint);
+            }
             var softTheme = c.Action == SettingsAction.SteamSoft;
             var hovered = enabled && pointers?.Hovered(c.Action) == true;
             if (softTheme)
@@ -90,30 +148,52 @@ internal static class SettingsPanel
             else
             {
                 paint.Color = selected ? accent : new SKColor(0x1b, 0x2c, 0x39);
-                canvas.DrawRoundRect(rect, 10, 10, paint);
+                DrawSurface();
             }
             if (!softTheme && hovered)
             {
                 paint.Style = SKPaintStyle.Stroke;
                 paint.StrokeWidth = 3;
                 paint.Color = text;
-                canvas.DrawRoundRect(rect, 10, 10, paint);
+                DrawSurface();
                 paint.Style = SKPaintStyle.Fill;
             }
             paint.Color = !enabled ? new SKColor(0x66, 0x78, 0x82) : selected ? new SKColor(0x09, 0x19, 0x23) : text;
             if (softTheme) paint.Color = selected ? KeyboardTheme.Soft.Accent : KeyboardTheme.Soft.Text;
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
+            if (c.Action == SettingsAction.ToggleShortcuts) title = settings.ProgrammableKeys.Enabled ? "Shown" : "Hidden";
+            if (c.Action == SettingsAction.ChooseShortcutKey) title = ProgrammableKeys.KeyName(shortcut.Scan, layout, shortcut.Shift) + "   ›";
             if (c.Action == SettingsAction.Geometry) title = settings.Geometry switch
             { KeyboardGeometry.Ansi => "ANSI", KeyboardGeometry.Iso => "ISO", _ => "Auto" };
-            var font = preset.HasValue || effectsPage || c.Action is SettingsAction.Defaults or SettingsAction.ResetPosition or SettingsAction.GeneralTab or SettingsAction.EffectsTab ? small : label;
+            var font = preset.HasValue || effectsPage || shortcutsPage || c.Action is SettingsAction.Defaults or SettingsAction.ResetPosition or SettingsAction.GeneralTab or SettingsAction.EffectsTab or SettingsAction.ShortcutsTab ? small : label;
+            using var fitted = new SKFont(face, Math.Min(font.Size, font.Size * (rect.Width - 12) / Math.Max(1, font.MeasureText(title))));
+            font = fitted;
             var baseline = rect.MidY - (font.Metrics.Ascent + font.Metrics.Descent) / 2;
-            if (preset.HasValue)
+            if (SettingsControls.SlotIndex(c.Action) is var index && index >= 0)
+            {
+                canvas.DrawText(title, rect.MidX, rect.Top + 20, SKTextAlign.Center, font, paint);
+                var assignment = settings.ProgrammableKeys.Get(index).LabelFor(layout);
+                using var assignmentFont = new SKFont(face, 14);
+                if (rect.Width < 110)
+                {
+                    assignmentFont.Size = 12;
+                    if (assignmentFont.MeasureText(assignment) > rect.Width - 12)
+                    {
+                        while (assignment.Length > 0 && assignmentFont.MeasureText(assignment + "…") > rect.Width - 12)
+                            assignment = assignment[..^1];
+                        assignment += "…";
+                    }
+                }
+                else assignmentFont.Size = Math.Min(14, 14 * (rect.Width - 12) / Math.Max(1, assignmentFont.MeasureText(assignment)));
+                canvas.DrawText(assignment, rect.MidX, rect.Top + 42, SKTextAlign.Center, assignmentFont, paint);
+            }
+            else if (preset.HasValue)
             {
                 SoundPresetIcon.Draw(canvas, preset.Value, rect.MidX - SoundPresetIcon.Size / 2, rect.Top + 10);
                 var labelY = rect.Top + 68 - (font.Metrics.Ascent + font.Metrics.Descent) / 2;
                 canvas.DrawText(title, rect.MidX, labelY, SKTextAlign.Center, font, paint);
             }
-            else canvas.DrawText(title, rect.MidX, baseline, SKTextAlign.Center, font, paint);
+            else canvas.DrawText(title, rect.MidX + c.CutoutWidth / 2, baseline, SKTextAlign.Center, font, paint);
         }
         return bitmap;
     }

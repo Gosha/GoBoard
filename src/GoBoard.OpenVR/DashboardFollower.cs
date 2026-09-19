@@ -35,7 +35,7 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         pose.Reset();
     }
 
-    public bool Update()
+    public bool Update(bool externalGrab = false)
     {
         ulong anchor = 0;
         var scale = new HmdVector2_t();
@@ -68,14 +68,14 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         var update = pose.Update(parent);
         // An existing resize owns the interaction. For simultaneous fresh presses,
         // moving wins this frame and the resize queue is drained without capture.
-        var dragged = grab.Update(true, update.World, interactive: !resize.Active);
+        var dragged = grab.Update(true, update.World, interactive: !resize.Active && !externalGrab);
         if (dragged.HasValue)
         {
             pose.SetWorld(parent, dragged.Value);
             var dragUpdate = pose.Update(parent);
             update = (dragUpdate.World, update.Write || dragUpdate.Write);
         }
-        resize.Update(true, update.World, canStart: grab.ActiveGrab == null);
+        resize.Update(true, update.World, canStart: grab.ActiveGrab == null && !externalGrab);
         SetScale(resize.Scale);
         if (grab.ActiveGrab != null)
         {
@@ -123,5 +123,4 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         if (error != EVROverlayError.None) throw new InvalidOperationException($"{operation}: {error}");
     }
 }
-
 

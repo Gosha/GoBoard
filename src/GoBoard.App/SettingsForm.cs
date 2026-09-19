@@ -25,6 +25,7 @@ internal sealed class SettingsForm : Form
     private (BoardSettings Settings, int Hover, string Error)? drawn;
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     private SettingsViewport Viewport => SettingsViewport.Fit(ClientSize.Width, ClientSize.Height);
+    internal SettingsControl ControlFor(SettingsAction action) => SettingsControls.ForPage(pointers.Page, store.Current, pointers.Layout, pointers.ShortcutSlot).Single(c => c.Action == action);
     protected override bool ShowWithoutActivation => previewOnly;
 
     protected override void SetVisibleCore(bool value)
@@ -74,11 +75,12 @@ internal sealed class SettingsForm : Form
     {
         if (previewOnly || Disposing || IsDisposed) return;
         var point = Viewport.ToPanel(location.X, location.Y);
+        RefreshLayout();
         var now = Now;
         var action = pointers.Process(0, point.X, point.Y, now, now, down, up, leave);
         if (action.HasValue && SettingsControls.Enabled(action.Value, store.Current))
         {
-            var saved = store.Update(s => SettingsControls.Enabled(action.Value, s) ? SettingsControls.Apply(action.Value, s) : s);
+            var saved = store.Update(s => SettingsControls.Enabled(action.Value, s) ? SettingsControls.Apply(action.Value, s, pointers.ShortcutSlot, pointers.Layout) : s);
             actionError = saved ? null : store.Error;
             audio.Apply(store.Current);
             if (saved && SettingsControls.AuditionsSound(action.Value))
@@ -119,6 +121,7 @@ internal sealed class SettingsForm : Form
 
     private void RenderFrame()
     {
+        RefreshLayout();
         var hover = pointers.Revision;
         var error = actionError ?? store.Error;
         var signature = (store.Current, hover, error);
@@ -135,6 +138,8 @@ internal sealed class SettingsForm : Form
         audio.Apply(store.Current);
         Invalidate();
     }
+    private void RefreshLayout() => pointers.Configure(store.Current,
+        WindowsLayoutProvider.Get(WindowsKeyboard.Foreground().Layout, store.Current.Geometry));
 
     protected override void OnPaint(PaintEventArgs e)
     {

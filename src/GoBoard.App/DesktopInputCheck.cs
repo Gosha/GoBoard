@@ -50,6 +50,7 @@ internal static class DesktopInputCheck
     {
         ApplicationConfiguration.Initialize();
         var previous = WindowsKeyboard.Foreground().Window;
+        var settingsPath = Path.Combine(Path.GetTempPath(), $"GoBoard-desktop-check-{Guid.NewGuid():N}.json");
         try
         {
             foreach (var vk in new[] { 0x10, 0x11, 0x12, 0x5b, 0x5c })
@@ -63,7 +64,8 @@ internal static class DesktopInputCheck
             Require(WindowsKeyboard.Foreground().Window == target.Handle, "The disposable text window could not get focus; no input was sent.");
             // Exercise the normal production input path, without a test-only
             // exemption for windows owned by this process.
-            using var keyboard = new DesktopKeyboardForm();
+            var store = new SettingsStore(settingsPath);
+            using var keyboard = new DesktopKeyboardForm(store: store);
             Require(WindowsKeyboard.Foreground().Window == target.Handle, $"Constructing the keyboard changed focus (expected {target.Handle}, actual {WindowsKeyboard.Foreground().Window}, keyboard {keyboard.Handle}).");
             keyboard.Show();
             Require(WindowsKeyboard.Foreground().Window == target.Handle, $"Showing the keyboard stole focus (expected {target.Handle}, keyboard {keyboard.Handle}, actual {WindowsKeyboard.Foreground().Window}).");
@@ -76,10 +78,10 @@ internal static class DesktopInputCheck
 
             var expectedWindow = target.Handle;
             void Guard() => Require(WindowsKeyboard.Foreground().Window == expectedWindow, "Focus left the disposable test window; input check aborted.");
-            void Mouse(uint message, Point p)
+            void Mouse(uint message, Point p, Form surface = null)
             {
                 Guard();
-                SendMessage(keyboard.Handle, message, message == 0x201 ? 1 : 0, (nint)((p.Y << 16) | (p.X & 0xffff)));
+                SendMessage((surface ?? keyboard).Handle, message, message == 0x201 ? 1 : 0, (nint)((p.Y << 16) | (p.X & 0xffff)));
                 Pump(20);
                 Guard();
             }
@@ -96,6 +98,79 @@ internal static class DesktopInputCheck
             Tap("o"); Tap("a"); Tap("r"); Tap("d"); Tap("x"); Tap("Backspace");
             var expected = WindowsKeyboard.CapsLock ? "gO bOARD" : "Go Board";
             Require(text.Text == expected, $"Desktop text mismatch: expected '{expected}', received '{text.Text}'.");
+            // Use disposable settings and the real desktop side-key hit path.
+            var mainSize = keyboard.Size;
+            Require(store.Update(s => s with { ProgrammableKeys = s.ProgrammableKeys with
+                { Enabled = true, Key1 = new(0x1e, Ctrl: true) } }), "Could not save test shortcuts.");
+            keyboard.RefreshSettings(); Pump(50);
+            var shortcutButton = keyboard.Shortcuts.Launcher;
+            Require(shortcutButton.Visible && !keyboard.Shortcuts.Expanded && !keyboard.Shortcuts.PanelWindow.Visible, "Shortcuts did not start collapsed.");
+            var buttonPoint = new Point(shortcutButton.Width / 2, shortcutButton.Height / 2);
+            Mouse(0x201, buttonPoint, shortcutButton); Mouse(0x202, buttonPoint, shortcutButton);
+            Require(keyboard.Shortcuts.PanelWindow.Visible, "Floating shortcut button did not expand the palette.");
+            var shortcutPoint = keyboard.Shortcuts.KeyPoint("Shortcut1");
+            Mouse(0x201, shortcutPoint, keyboard.Shortcuts.PanelWindow); Mouse(0x202, shortcutPoint, keyboard.Shortcuts.PanelWindow);
+            Require(text.SelectionLength == text.TextLength, "Custom side-key Ctrl+A did not select the text.");
+            Require(!keyboard.HasOwnedKeys, "Custom shortcut left an injected key held.");
+            var paletteSize = keyboard.Shortcuts.PanelWindow.Size;
+            Require(store.Update(s => s with { ProgrammableKeys = s.ProgrammableKeys with { Columns = 1, Rows = 5 } }), "Save narrow palette");
+            keyboard.RefreshSettings(); Pump(50);
+            Require(keyboard.Shortcuts.PanelWindow.Width < paletteSize.Width && keyboard.Shortcuts.PanelWindow.Height > paletteSize.Height,
+                "Floating palette did not resize independently.");
+            Require(keyboard.Size == mainSize && keyboard.Shortcuts.State.Keys.Count == 5, "Grid change affected main keyboard geometry.");
+            Require(store.Update(s => s with { ProgrammableKeys = s.ProgrammableKeys with
+                { Columns = 4, Rows = 5, Key20 = new(0x1e, Ctrl: true) } }), "Save maximum palette");
+            keyboard.RefreshSettings(); Pump(50);
+            Require(keyboard.Size == mainSize && keyboard.Shortcuts.State.Keys.Count == 20 &&
+                keyboard.Shortcuts.PanelWindow.Width > paletteSize.Width, "Maximum palette geometry");
+            text.Select(text.TextLength, 0);
+            var twentiethPoint = keyboard.Shortcuts.KeyPoint("Shortcut20");
+            Mouse(0x201, twentiethPoint, keyboard.Shortcuts.PanelWindow); Mouse(0x202, twentiethPoint, keyboard.Shortcuts.PanelWindow);
+            Require(text.SelectionLength == text.TextLength && !keyboard.HasOwnedKeys, "Twentieth shortcut injection and cleanup");
+            var keypadDowns = new List<Keys>();
+            KeyEventHandler recordKeypad = (_, e) => keypadDowns.Add(e.KeyCode);
+            text.KeyDown += recordKeypad;
+            var initialNumLock = Control.IsKeyLocked(Keys.NumLock);
+            void TapKeypad(ushort scan)
+            {
+                Require(store.Update(s => s with { ProgrammableKeys = s.ProgrammableKeys with { Key20 = new(scan) } }), "Save keypad shortcut");
+                keyboard.RefreshSettings(); Pump(30);
+                var point = keyboard.Shortcuts.KeyPoint("Shortcut20");
+                Mouse(0x201, point, keyboard.Shortcuts.PanelWindow); Mouse(0x202, point, keyboard.Shortcuts.PanelWindow);
+            }
+            try
+            {
+                foreach (var (scan, expectedKey) in new (ushort, Keys)[]
+                    { (0x37, Keys.Multiply), (ProgrammableKeys.NumDivide, Keys.Divide), (ProgrammableKeys.NumEnter, Keys.Enter),
+                      (0x4f, initialNumLock ? Keys.NumPad1 : Keys.End) })
+                {
+                    keypadDowns.Clear(); TapKeypad(scan);
+                    Require(keypadDowns.SequenceEqual(new[] { expectedKey }) && !keyboard.HasOwnedKeys, "Keypad physical input and cleanup");
+                }
+                keypadDowns.Clear(); TapKeypad(ProgrammableKeys.NumLock);
+                Require(keypadDowns.SequenceEqual(new[] { Keys.NumLock }) && Control.IsKeyLocked(Keys.NumLock) != initialNumLock,
+                    $"Num Lock shortcut: events={string.Join(',', keypadDowns)}, before={initialNumLock}, after={Control.IsKeyLocked(Keys.NumLock)}");
+                keypadDowns.Clear(); TapKeypad(0x4f);
+                Require(keypadDowns.SequenceEqual(new[] { initialNumLock ? Keys.End : Keys.NumPad1 }), "Keypad follows Num Lock");
+            }
+            finally
+            {
+                if (Control.IsKeyLocked(Keys.NumLock) != initialNumLock) TapKeypad(ProgrammableKeys.NumLock);
+                text.KeyDown -= recordKeypad;
+            }
+            Require(Control.IsKeyLocked(Keys.NumLock) == initialNumLock, "Restore original Num Lock state");
+            text.Text = expected;
+            Require(store.Update(s => s with { ProgrammableKeys = s.ProgrammableKeys with { Columns = 1, Rows = 1 } }), "Save minimum palette");
+            keyboard.RefreshSettings(); Pump(50);
+            Require(keyboard.Size == mainSize && keyboard.Shortcuts.State.Keys.Count == 1 &&
+                keyboard.Shortcuts.PanelWindow.Height < paletteSize.Height, "Minimum palette geometry");
+            Require(store.Update(s => s with { ProgrammableKeys = s.ProgrammableKeys with { Columns = 2, Rows = 4 } }), "Restore default palette");
+            keyboard.RefreshSettings(); Pump(50);
+            Mouse(0x201, buttonPoint, shortcutButton); Mouse(0x202, buttonPoint, shortcutButton);
+            Require(!keyboard.Shortcuts.PanelWindow.Visible && shortcutButton.Visible, "Collapsing shortcuts hid the launcher.");
+            Require(store.Update(s => s with { ProgrammableKeys = s.ProgrammableKeys with { Enabled = false } }), "Could not hide test shortcuts.");
+            keyboard.RefreshSettings(); Pump(50);
+            Require(!keyboard.Shortcuts.Launcher.Visible && !keyboard.Shortcuts.PanelWindow.Visible, "Settings did not hide both shortcut windows.");
             Tap("Ctrl"); Tap("a");
             Require(text.SelectionLength == text.TextLength, "Desktop Ctrl+A did not select the text.");
             Tap("x");
@@ -162,11 +237,11 @@ internal static class DesktopInputCheck
             Require(!keyboard.State.HasHeldKeys && !keyboard.HasOwnedKeys, "Hiding the keyboard left input active.");
             Require(!Process.GetCurrentProcess().Modules.Cast<ProcessModule>().Any(m => m.ModuleName.Equals("openvr_api.dll", StringComparison.OrdinalIgnoreCase)),
                 "Desktop mode loaded the OpenVR native library.");
-            Console.WriteLine("Desktop input check passed: native mouse messages, focus preservation, text, Shift, Ctrl+A, repeat release, capture-loss cancellation, Settings input without a text box, Windows-key arming, and cleanup; no SteamVR required.");
+            Console.WriteLine("Desktop input check passed: native mouse messages, focus preservation, text, Shift, Ctrl+A, floating launcher/palette, custom shortcut, independent grid resize, collapse and settings visibility, repeat release, capture-loss cancellation, Settings input, Windows-key arming, and cleanup; no SteamVR required.");
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine($"Desktop input check: {ex.Message}"); return 1; }
-        finally { if (previous != 0) SetForegroundWindow(previous); }
+        finally { File.Delete(settingsPath); if (previous != 0) SetForegroundWindow(previous); }
     }
     private static void Pump(int milliseconds)
     {

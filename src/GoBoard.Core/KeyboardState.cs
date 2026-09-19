@@ -25,7 +25,7 @@ internal readonly record struct KeyboardVisualPointer(uint Cursor, bool Focused,
     KeyboardKey Held, long PressSequence, KeyboardKey LastPressed, float PressX, float PressY);
 
 // Input geometry and pointer ownership are independent of OpenVR and Windows.
-internal sealed class KeyboardState(IKeySink sink)
+internal sealed class KeyboardState(IKeySink sink, bool shortcutsOnly = false, bool shortcutFooter = true)
 {
     private sealed class Pointer
     {
@@ -50,6 +50,7 @@ internal sealed class KeyboardState(IKeySink sink)
     private uint? grabOwner;
     private bool resizing;
     private double resizeWatermark = double.NegativeInfinity;
+    private double shortcutWatermark = double.NegativeInfinity;
     public void SetResizing(bool value, double now)
     {
         if (resizing == value) return;
@@ -57,7 +58,7 @@ internal sealed class KeyboardState(IKeySink sink)
         resizeWatermark = now;
         Cancel(now);
     }
-    private bool ResizeBlocks(double time) => resizing || time <= resizeWatermark + .001;
+    private bool ResizeBlocks(double time) => resizing || time <= resizeWatermark + .001 || time <= shortcutWatermark + .001;
     private readonly Dictionary<uint, double> grabWatermarks = new();
     public void SetGrabOwner(uint? device, double now)
     {
@@ -79,11 +80,29 @@ internal sealed class KeyboardState(IKeySink sink)
     public bool Shift => Mode(0x2a) != ModifierMode.Idle;
     public bool AltGr => Mode(0xe038) != ModifierMode.Idle;
     public WindowsLayout Layout { get; private set; } = new((nint)WindowsLayout.UsHandle);
+    public ProgrammableKeySettings Shortcuts { get; private set; } = new();
+    private IReadOnlyList<KeyboardKey> keys;
+    public bool ShortcutsOnly => shortcutsOnly;
+    public bool ShortcutFooter => shortcutsOnly && shortcutFooter;
+    public IReadOnlyList<KeyboardKey> Keys => keys ??= shortcutsOnly ? ProgrammableKeys.CreatePanel(Shortcuts, Layout) : Layout.Keys;
+    public int Width => shortcutsOnly ? ProgrammableKeys.Width(Shortcuts) : OverlayGeometry.PanelWidth;
+    public int Height => shortcutsOnly ? ProgrammableKeys.Height(Shortcuts, shortcutFooter) : OverlayGeometry.PanelHeight;
+    public KeyboardKey Hit(float x, float y) => KeyboardLayout.Hit(x, Height - y, Keys);
+    public void SetShortcuts(ProgrammableKeySettings settings, double now)
+    {
+        settings = settings.Normalize();
+        if (Shortcuts == settings) return;
+        Cancel(now);
+        shortcutWatermark = now;
+        Shortcuts = settings;
+        keys = null;
+    }
     public void SetLayout(WindowsLayout layout, double now)
     {
         if (ReferenceEquals(Layout, layout)) return;
         Cancel(now, clearFocus: false);
         Layout = layout;
+        keys = null;
         // A layout change can alter geometry; discard hover from the old key list.
         foreach (var p in pointers.Values) p.Hover = null;
         Revision++; ContentRevision++;
@@ -125,7 +144,7 @@ internal sealed class KeyboardState(IKeySink sink)
         var p = Get(cursor);
         if (!p.Focused || Mismatch(p.Device, device)) return;
         Position(p, x, y);
-        var key = KeyboardLayout.HitOpenVr(x, y, Layout.Keys);
+        var key = Hit(x, y);
         Hover(p, key);
         // Leaving a captured key cancels it; sliding while held never types a new key.
         if (p.Held != null && p.Held != key) Release(p);
@@ -139,7 +158,7 @@ internal sealed class KeyboardState(IKeySink sink)
         if (!hoverTarget || !double.IsFinite(time) || now - time > .20 || time > now + .001 ||
             time < p.Entered || time <= p.Released + .001 ||
             !float.IsFinite(x) || !float.IsFinite(y)) return;
-        if (x < 0 || y < 0 || x >= OverlayGeometry.PanelWidth || y >= OverlayGeometry.PanelHeight)
+        if (x < 0 || y < 0 || x >= Width || y >= Height)
         {
             Move(cursor, device, x, y); // Existing capture still cancels on key departure.
             return;
@@ -159,8 +178,9 @@ internal sealed class KeyboardState(IKeySink sink)
         if (source.HasValue && (source == grabOwner || PredatesGrabRelease(source.Value, time))) return false;
         if (!p.Focused || p.Down || Mismatch(p.Device, device) || !(device ?? p.Device).HasValue ||
             !double.IsFinite(time) || now - time > 0.20 || time > now + 0.001 || time < p.Entered || time <= p.Released + 0.001) return false;
-        var key = KeyboardLayout.HitOpenVr(x, y, Layout.Keys);
+        var key = Hit(x, y);
         if (key == null) return false;
+        if (key.Shortcut?.Scan == 0) return false;
         p.Device ??= device;
         Hover(p, key);
         if (key.IsModifier)
@@ -179,6 +199,13 @@ internal sealed class KeyboardState(IKeySink sink)
             else modifiers[key.Scan] = (ModifierMode)(((int)Mode(key.Scan) + 1) % 3);
         }
         else if (held.TryGetValue(key.Scan, out var shared)) shared.Owners++;
+        else if (key.Shortcut is { } shortcut)
+        {
+            // Standalone shortcut buttons ignore and preserve logical modifiers.
+            // Slot identity stays distinct even when two slots send the same key.
+            Stroke(shortcut.Scan, shortcut.Modifiers);
+            held.Add(key.Scan, new HeldKey(key, shortcut.Modifiers, now));
+        }
         else
         {
             // The IME button is a standalone mode action. Keep armed modifiers
@@ -266,7 +293,7 @@ internal sealed class KeyboardState(IKeySink sink)
     }
     private void Position(Pointer p, float x, float y)
     {
-        y = OverlayGeometry.PanelHeight - y;
+        y = Height - y;
         if (p.X == x && p.Y == y) return;
         p.X = x; p.Y = y; VisualRevision++;
     }
