@@ -1,6 +1,12 @@
+<p align="center">
+  <img src="assets/branding/goboard-logo.png" alt="GoBoard logo" width="160">
+</p>
+
 # GoBoard
 
 A Windows keyboard overlay for SteamVR, inspired by [YuuBoard](https://yuuzami.itch.io/yuuboard), with its own interface and automatic Windows keyboard labels matching the focused application's layout.
+
+![GoBoard keyboard with the Steam Soft theme and US English layout](docs/images/goboard-keyboard.png)
 
 ## Run
 
