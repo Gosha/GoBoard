@@ -120,6 +120,13 @@ public sealed class NumpadTests
             using var expected = fresh.Render(state, false, null, false, false, false, theme, new(), time, output);
             Assert.NotNull(actual);
             Assert.Equal(expected.Bytes, actual.Bytes);
+            if (enabled && Environment.GetEnvironmentVariable("GOBOARD_NUMPAD_ARTIFACTS") is { Length: > 0 } directory)
+            {
+                Directory.CreateDirectory(directory);
+                using var png = actual.Encode(SKEncodedImageFormat.Png, 100);
+                using var file = File.Create(Path.Combine(directory, $"{(vr ? "vr" : "desktop")}-{theme}-numlock-{(numLock ? "on" : "off")}.png"));
+                png.SaveTo(file);
+            }
             Assert.Null(renderer.Render(state, false, null, false, false, false, theme, new(), time + .1, output));
         }
     }

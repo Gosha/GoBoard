@@ -117,7 +117,24 @@ internal static class Panel
             }
             else if (key.Id == "Win") DrawWindows(canvas, rect.MidX, rect.MidY, paint);
             else if (key.Id.StartsWith("Num", StringComparison.Ordinal))
-                Center(canvas, key.Label, rect.MidX, rect.MidY, key.Label.Length == 1 ? number : special, paint);
+            {
+                var navigation = key.Scan switch
+                {
+                    0x47 => "Home", 0x48 => "↑", 0x49 => "PgUp",
+                    0x4b => "←", 0x4c => "Clear", 0x4d => "→",
+                    0x4f => "End", 0x50 => "↓", 0x51 => "PgDn",
+                    0x52 => "Ins", 0x53 => "Del", _ => null
+                };
+                var navigationMode = keyboard?.NumLock == false;
+                if (navigation != null && navigationMode && !filled) paint.Color = style.Secondary.WithAlpha(170);
+                Center(canvas, key.Label, rect.MidX, rect.MidY - (navigation != null ? 8 : 0),
+                    key.Label.Length == 1 ? number : special, paint);
+                if (navigation != null)
+                {
+                    paint.Color = filled ? Ink : navigationMode ? Accent : style.Secondary.WithAlpha(170);
+                    Center(canvas, navigation, rect.MidX, rect.MidY + 12, secondary, paint);
+                }
+            }
             else if (key.Id is "Up" or "Down" or "Left" or "Right") DrawArrow(canvas, key.Id, rect.MidX, rect.MidY, paint);
             else if (key.Id == "Backspace")
             {
