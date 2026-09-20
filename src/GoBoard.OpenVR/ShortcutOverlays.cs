@@ -34,7 +34,7 @@ internal sealed class ShortcutOverlays : IDisposable
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     private float PanelWidth => keyboard.State.Width * ProgrammableKeys.MetersPerUnit * scale;
     private float PanelHeight => keyboard.State.Height * ProgrammableKeys.MetersPerUnit * scale;
-    private Matrix4x4 GripOffset => Matrix4x4.CreateTranslation(0, -(PanelHeight / 2 + .025f), .002f);
+    private Matrix4x4 GripOffset => OverlayGeometry.GrabFromPanelHeight(PanelHeight);
 
     public ShortcutOverlays(CVRSystem system, CVROverlay overlay, OverlayGraphics graphics, ulong main, WindowsKeyboard output)
     {
@@ -45,9 +45,10 @@ internal sealed class ShortcutOverlays : IDisposable
             Create("goboard.app.shortcuts.button", "GoBoard shortcuts button", 44, 44, .05f, ref button);
             var defaults = new ProgrammableKeySettings();
             Create("goboard.app.shortcuts", "GoBoard shortcuts", ProgrammableKeys.Width(defaults), ProgrammableKeys.Height(defaults), .2f, ref panel);
-            Create("goboard.app.shortcuts.grab", "GoBoard shortcuts grab", GrabHandle.LayoutWidth, GrabHandle.LayoutHeight, GrabHandle.Width, ref grip);
+            Create("goboard.app.shortcuts.grab", "GoBoard shortcuts grab", OverlayGeometry.ShortcutGrabWidth,
+                GrabHandle.LayoutHeight, OverlayGeometry.ShortcutGrabWidthInMeters, ref grip);
             keyboard = new(system, overlay, panel, graphics, shortcutsOnly: true, sharedOutput: output);
-            grab = new(system, overlay, grip, graphics);
+            grab = new(system, overlay, grip, graphics, OverlayGeometry.ShortcutGrabWidth);
             grab.Update(false, default);
         }
         catch { Dispose(); throw; }
