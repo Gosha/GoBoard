@@ -10,8 +10,8 @@ $resolver = Join-Path $PSScriptRoot 'Get-ReleaseInfo.ps1'
 $selected = $null
 switch ($EventName) {
     'pull_request' {
-        # Exercise both package variants without creating releases.
-        $packages = @(& $resolver -Version '1.0.0'; & $resolver -Version '1.0.1-beta.1')
+        # Validate the Beta package without creating a release.
+        $packages = @(& $resolver -Version '1.0.1-beta.1')
     }
     'push' {
         if ($RefType -ne 'tag' -or $RefName -cnotmatch '^v(.+)$') {
@@ -22,6 +22,9 @@ switch ($EventName) {
     }
     'workflow_dispatch' {
         $selected = & $resolver -Version $Version
+        if ($selected.Channel -ne 'beta') {
+            throw 'Stable CI builds require a pushed vMAJOR.MINOR.PATCH tag. Use a beta version for manual builds.'
+        }
         $packages = @($selected)
     }
 }

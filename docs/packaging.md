@@ -32,17 +32,17 @@ Assets are uploaded to a draft before publication. If publication fails, inspect
 | --- | --- |
 | Push `vMAJOR.MINOR.PATCH` | One Stable MSI and a GitHub release |
 | Push `vMAJOR.MINOR.PATCH-beta.N` | One Beta MSI and a GitHub prerelease |
-| Relevant pull request | Stable and Beta validation MSIs as workflow artifacts; no release |
-| Manual workflow run | One MSI of the supplied version as a workflow artifact; no release |
+| Relevant pull request | One Beta validation MSI as a workflow artifact; no release |
+| Manual workflow run | One Beta MSI of the supplied version as a workflow artifact; no release; Stable versions are rejected |
 | Push/merge to `main` without a tag | No run of the MSI workflow |
 
 PR packaging is limited to production source, regression tests, assets, vendor files, installer/build scripts, solution/SDK/NuGet/build configuration, and GitHub workflows. Documentation-only, launcher-only, POC-only, and experiment-only PRs skip it.
 
-Version checks and build/regression tests start independently. Once version resolution succeeds, package jobs start without waiting for regression tests. PRs check sample versions `1.0.0` and `1.0.1-beta.1` in parallel with separate results and independent artifact uploads; one failure does not cancel the other. Tags and manual runs build only the requested version. Publication waits for all checks, including regression tests, and only runs for a pushed version tag.
+Version checks and build/regression tests start independently. Once version resolution succeeds, package jobs start without waiting for regression tests. PRs check only the sample Beta version `1.0.1-beta.1`. Stable CI packages require a pushed Stable version tag. Tags build only the requested version; manual runs accept only Beta versions. Publication waits for all checks, including regression tests, and only runs for a pushed version tag.
 
 Test results upload as the `msi-test-results` TRX artifact even when tests fail. Missing results after an earlier build failure do not cause an additional upload failure. Retrying a job keeps the explicit version unchanged.
 
-For an untagged test build, use **Run workflow**, choose the branch/ref to build, and enter a version. To build an arbitrary commit locally, check it out and use the script below. Workflow artifacts are for temporary testing; use tagged releases for the versions you want to distribute and retain. No in-app updater is configured.
+For an untagged test build, use **Run workflow**, choose the branch/ref to build, and enter a Beta version such as `1.0.1-beta.1`. To build an arbitrary commit locally, check it out and use the script below. Workflow artifacts are for temporary testing; use tagged releases for the versions you want to distribute and retain. No in-app updater is configured.
 
 ## Build locally
 
