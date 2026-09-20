@@ -126,13 +126,21 @@ internal static class Panel
                     0x52 => "Ins", 0x53 => "Del", _ => null
                 };
                 var navigationMode = keyboard?.NumLock == false;
-                if (navigation != null && navigationMode && !filled) paint.Color = style.Secondary.WithAlpha(170);
-                Center(canvas, key.Label, rect.MidX, rect.MidY - (navigation != null ? 8 : 0),
-                    key.Label.Length == 1 ? number : special, paint);
-                if (navigation != null)
+                if (navigation == null)
+                    Center(canvas, key.Label, rect.MidX, rect.MidY, key.Label.Length == 1 ? number : special, paint);
+                else
                 {
-                    paint.Color = filled ? Ink : navigationMode ? Accent : style.Secondary.WithAlpha(170);
-                    Center(canvas, navigation, rect.MidX, rect.MidY + 12, secondary, paint);
+                    var active = navigationMode ? navigation : key.Label;
+                    var alternate = navigationMode ? key.Label : navigation;
+                    // Match ordinary dual legends: small alternate above, full-size
+                    // normal-colored output below. Fit long names without reducing height.
+                    using var activeFont = new SKFont(face, number.Size)
+                    {
+                        ScaleX = Math.Min(1, (rect.Width - 8) / Math.Max(1, number.MeasureText(active)))
+                    };
+                    canvas.DrawText(active, rect.MidX, rect.Bottom - 6, SKTextAlign.Center, activeFont, paint);
+                    paint.Color = filled ? Ink : Accent;
+                    canvas.DrawText(alternate, rect.MidX, rect.Top + 16, SKTextAlign.Center, secondary, paint);
                 }
             }
             else if (key.Id is "Up" or "Down" or "Left" or "Right") DrawArrow(canvas, key.Id, rect.MidX, rect.MidY, paint);
