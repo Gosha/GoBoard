@@ -13,7 +13,7 @@ internal enum SettingsAction
     ChooseShortcutPreset, BackToShortcut, ShortcutCtrl, ShortcutAlt, ShortcutShift, ShortcutWin, ChooseShortcutKey,
     ResetShortcuts, Slot9, Slot10, FewerColumns, MoreColumns, FewerRows, MoreRows,
     Slot11, Slot12, Slot13, Slot14, Slot15, Slot16, Slot17, Slot18, Slot19, Slot20,
-    Autostart, ToggleNumpad, PresetChoiceFirst = 100, KeyChoiceFirst = 1000
+    Autostart, ToggleNumpad, ToggleNumpadButton, PresetChoiceFirst = 100, KeyChoiceFirst = 1000
 }
 internal sealed record SettingsControl(SettingsAction Action, string Label, KeyBounds Bounds,
     bool Selectable = true, float CutoutWidth = 0, float CutoutTop = 0)
@@ -54,7 +54,7 @@ internal static class SettingsControls
         new(SettingsAction.Quieter, "−", new(588, 474, 100, 64)),
         new(SettingsAction.Louder, "+", new(704, 474, 100, 64)),
         new(SettingsAction.Geometry, "", new(588, 550, 216, 64)),
-        new(SettingsAction.ToggleNumpad, "", new(356, 550, 216, 64)),
+        new(SettingsAction.ToggleNumpadButton, "", new(356, 550, 216, 64)),
         new(SettingsAction.SteamSoft, BoardThemes.Name(BoardThemes.SteamSoft), new(64, 668, 340, 64)),
         new(SettingsAction.SteamFlat, BoardThemes.Name(BoardThemes.SteamFlat), new(420, 668, 384, 64)),
         new(SettingsAction.Autostart, "Register autostart", new(588, 758, 216, 64)),
@@ -216,6 +216,7 @@ internal static class SettingsControls
     public static BoardSettings Apply(SettingsAction action, BoardSettings s, int slot = 0, WindowsLayout layout = null) => (action switch
     {
         SettingsAction.ToggleNumpad => s with { NumpadEnabled = !s.NumpadEnabled },
+        SettingsAction.ToggleNumpadButton => s with { NumpadButtonEnabled = !s.NumpadButtonEnabled },
         SettingsAction.ToggleShortcuts => s with { ProgrammableKeys = s.ProgrammableKeys with { Enabled = !s.ProgrammableKeys.Enabled } },
         SettingsAction.FewerColumns => s with { ProgrammableKeys = s.ProgrammableKeys with { Columns = s.ProgrammableKeys.Columns - 1 } },
         SettingsAction.MoreColumns => s with { ProgrammableKeys = s.ProgrammableKeys with { Columns = s.ProgrammableKeys.Columns + 1 } },

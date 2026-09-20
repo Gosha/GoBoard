@@ -92,6 +92,56 @@ internal static class DesktopInputCheck
                 Mouse(0x201, point);
                 Mouse(0x202, point);
             }
+            var initialPosition = keyboard.Location;
+            var initialWidth = keyboard.Width;
+            var initialShortcuts = store.Current.ProgrammableKeys;
+            void TapControl(KeyboardAction action)
+            {
+                var button = keyboard.FloatingControls.Window(action);
+                Require(button.Visible, "Floating keyboard control is hidden.");
+                Require(SendMessage(button.Handle, 0x21, target.Handle, (nint)(0x201 << 16 | 1)) == 3,
+                    "Floating keyboard control permits mouse activation.");
+                var point = new Point(button.Width / 2, button.Height / 2);
+                Mouse(0x200, point, button); Mouse(0x201, point, button); Mouse(0x202, point, button);
+            }
+            Require(keyboard.FloatingControls.Window(KeyboardAction.ToggleNumpad).Left > keyboard.Right,
+                "Floating numpad button is not to the right of the keyboard.");
+            Require(keyboard.FloatingControls.Window(KeyboardAction.ResetPosition).Right < keyboard.Left,
+                "Reset arrow is not beside the desktop drag header.");
+            var resetWindow = keyboard.FloatingControls.Window(KeyboardAction.ResetPosition);
+            Require(WindowFromPoint(resetWindow.PointToScreen(new(resetWindow.Width / 2, resetWindow.Height / 2))) == resetWindow.Handle,
+                "The visible reset arrow is not a native mouse target.");
+            Require(WindowFromPoint(resetWindow.PointToScreen(new(1, 1))) != resetWindow.Handle,
+                "The reset arrow's empty background is not transparent to native mouse input.");
+            TapControl(KeyboardAction.ToggleNumpad);
+            Require(keyboard.State.NumpadEnabled && keyboard.Width > initialWidth &&
+                new SettingsStore(settingsPath).Current.NumpadEnabled && keyboard.State.Keys.Any(k => k.Id == "Num1"),
+                "Main numpad button did not show and persist the integrated numpad.");
+            var numpadButton = keyboard.FloatingControls.Window(KeyboardAction.ToggleNumpad);
+            var numpadPoint = new Point(numpadButton.Width / 2, numpadButton.Height / 2);
+            var openWidth = keyboard.Width;
+            Mouse(0x201, numpadPoint, numpadButton);
+            Require(store.Update(s => SettingsControls.Apply(SettingsAction.ToggleNumpadButton, s)), "Hide floating numpad button");
+            keyboard.RefreshSettings(); Pump(30);
+            Mouse(0x202, numpadPoint, numpadButton);
+            Require(!numpadButton.Visible && keyboard.State.NumpadEnabled && keyboard.Width == openWidth && resetWindow.Visible,
+                "Hiding the numpad button changed the open keypad or reset arrow, or accepted its cancelled release.");
+            Require(store.Update(s => SettingsControls.Apply(SettingsAction.ToggleNumpadButton, s)), "Restore floating numpad button");
+            keyboard.RefreshSettings(); Pump(30);
+            Mouse(0x202, numpadPoint, numpadButton);
+            Require(numpadButton.Visible && keyboard.State.NumpadEnabled, "Revealing the button accepted a stale release.");
+            TapControl(KeyboardAction.ToggleNumpad);
+            Require(!keyboard.State.NumpadEnabled && keyboard.Width == initialWidth &&
+                !new SettingsStore(settingsPath).Current.NumpadEnabled && keyboard.State.Keys.All(k => k.Id != "Num1"),
+                "Main numpad button did not hide and persist the integrated numpad.");
+            Require(store.Current.ProgrammableKeys == initialShortcuts && !keyboard.Shortcuts.PanelWindow.Visible,
+                "Main numpad button changed the shortcut panel.");
+            keyboard.Location = new(initialPosition.X + 25, initialPosition.Y - 25);
+            var resetId = store.Current.PositionResetId;
+            TapControl(KeyboardAction.ResetPosition);
+            Require(store.Current.PositionResetId != resetId && keyboard.Location != new Point(initialPosition.X + 25, initialPosition.Y - 25),
+                "Main reset button did not save and apply a position reset.");
+            Require(text.TextLength == 0 && !keyboard.HasOwnedKeys, "Main controls injected keyboard input.");
             Tap("Shift");
             Require(keyboard.State.Shift, "Releasing the mouse cleared one-shot Shift.");
             Tap("g"); Tap("o"); Tap("Space"); Tap("Shift"); Tap("b");
@@ -257,9 +307,10 @@ internal static class DesktopInputCheck
             }
             keyboard.Hide();
             Require(!keyboard.State.HasHeldKeys && !keyboard.HasOwnedKeys, "Hiding the keyboard left input active.");
+            Require(keyboard.FloatingControls.Windows.All(w => !w.Visible), "Hiding the keyboard left floating controls visible.");
             Require(!Process.GetCurrentProcess().Modules.Cast<ProcessModule>().Any(m => m.ModuleName.Equals("openvr_api.dll", StringComparison.OrdinalIgnoreCase)),
                 "Desktop mode loaded the OpenVR native library.");
-            Console.WriteLine("Desktop input check passed: native mouse messages, focus preservation, text, Shift, Ctrl+A, floating launcher/palette, custom shortcut, independent grid resize, collapse and settings visibility, repeat release, capture-loss cancellation, Settings input, Windows-key arming, and cleanup; no SteamVR required.");
+            Console.WriteLine("Desktop input check passed: floating numpad/reset controls, native arrow transparency, focus preservation, text, Shift, Ctrl+A, floating launcher/palette, custom shortcut, independent grid resize, collapse and settings visibility, repeat release, capture-loss cancellation, Settings input, Windows-key arming, and cleanup; no SteamVR required.");
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine($"Desktop input check: {ex.Message}"); return 1; }
@@ -292,4 +343,5 @@ internal static class DesktopInputCheck
     [DllImport("user32.dll")] private static extern bool AttachThreadInput(uint first, uint second, bool attach);
     [DllImport("user32.dll")] private static extern nint SetFocus(nint window);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(nint window);
+    [DllImport("user32.dll")] private static extern nint WindowFromPoint(Point point);
 }

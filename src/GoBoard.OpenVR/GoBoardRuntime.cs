@@ -39,6 +39,7 @@ public static int Run(string[] args)
         bool previewOptions = false;
         bool previewShortcuts = false;
         bool previewNumpad = false;
+        bool previewControls = false;
         bool shortcutsSettings = false;
         bool shortcutPresets = false;
         string stopFile = null;
@@ -51,6 +52,7 @@ public static int Run(string[] args)
                 case "--render-settings" when i + 1 < args.Length: settingsRenderPath = args[++i]; break;
                 case "--shortcuts": previewShortcuts = true; break;
                 case "--numpad": previewNumpad = true; break;
+                case "--controls": previewControls = true; break;
                 case "--render-shortcut-settings" when i + 1 < args.Length: settingsRenderPath = args[++i]; shortcutsSettings = true; break;
                 case "--render-shortcut-presets" when i + 1 < args.Length: settingsRenderPath = args[++i]; shortcutsSettings = shortcutPresets = true; break;
                 case "--layout" when i + 1 < args.Length: previewLayout = args[++i]; previewOptions = true; break;
@@ -72,6 +74,7 @@ public static int Run(string[] args)
         if (settingsRenderPath != null && (renderPath != null || previewOptions)) throw new ArgumentException("--render-settings cannot be combined with keyboard preview options.");
         if (previewOptions && renderPath == null) throw new ArgumentException("--layout, --state and --theme require --render; live layouts follow Windows automatically; use Settings for live theme selection.");
         if (previewShortcuts && renderPath == null) throw new ArgumentException("--shortcuts requires --render or --render-desktop.");
+        if (previewControls && (renderPath == null || previewShortcuts)) throw new ArgumentException("--controls requires a main keyboard --render preview.");
         if (previewNumpad && renderPath == null) throw new ArgumentException("--numpad requires --render or --render-desktop.");
         var previewId = previewLayout switch
         {
@@ -100,11 +103,12 @@ public static int Run(string[] args)
         {
             var fullRenderPath = Path.GetFullPath(renderPath);
             Directory.CreateDirectory(Path.GetDirectoryName(fullRenderPath)!);
-            using var image = SKImage.FromBitmap(panel);
+            using var controlsPreview = previewControls ? MainKeyboardControlRenderer.Compose(panel, previewNumpad, previewTheme) : null;
+            using var image = SKImage.FromBitmap(controlsPreview ?? panel);
             using var png = image.Encode(SKEncodedImageFormat.Png, 100);
             using var file = File.Create(fullRenderPath);
             png.SaveTo(file);
-            Console.WriteLine($"Rendered {panel.Width}x{panel.Height} panel to {fullRenderPath}");
+            Console.WriteLine($"Rendered {image.Width}x{image.Height} panel to {fullRenderPath}");
             return 0;
         }
 
@@ -168,6 +172,12 @@ public static int Run(string[] args)
         using var output = new WindowsKeyboard();
         using var keyboard = new KeyboardOverlay(system, overlay, handle, graphics, sharedOutput: output);
         using var shortcuts = new ShortcutOverlays(system, overlay, graphics, handle, output);
+        using var controls = new KeyboardControlOverlays(system, overlay, graphics, handle, action =>
+        {
+            if (!settings.Update(s => MainKeyboardControls.Apply(action, s)))
+                keyboard.ReportError(settings.Error);
+            else keyboard.CancelPending();
+        });
         var appliedSettings = settings.Current;
         follower.SetNumpad(appliedSettings.NumpadEnabled);
         follower.SetScale(appliedSettings.Scale);
@@ -225,6 +235,8 @@ public static int Run(string[] args)
             shortcuts.Update(visible && !cancel.IsCancellationRequested, resize.Scale, grab.ActiveGrab != null ? grab.Controller : null, resize.Active);
             keyboard.BeginFrame(visible && !cancel.IsCancellationRequested,
                 grab.ActiveGrab != null ? grab.Controller : shortcuts.GrabOwner, resize.Active);
+            controls.Update(appliedSettings, visible && !cancel.IsCancellationRequested,
+                grab.ActiveGrab == null && !shortcuts.GrabOwner.HasValue && !resize.Active, resize.Scale);
             while (overlay.PollNextOverlayEvent(handle, ref vrEvent, eventSize))
             {
                 var type = (EVREventType)vrEvent.eventType;

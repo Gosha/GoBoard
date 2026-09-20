@@ -94,6 +94,9 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         audio.Preview();
     }
 
+    public void CancelPending() => Cancel();
+    public void ReportError(string error) { status = error; lastErrorTime = Now; }
+
     public void BeginFrame(bool active, uint? grabbingController = null, bool isResizing = false)
     {
         if (resizing != isResizing)

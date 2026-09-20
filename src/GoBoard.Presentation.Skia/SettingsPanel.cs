@@ -119,7 +119,7 @@ internal static class SettingsPanel
             var preset = SettingsControls.SoundFor(c.Action);
             var selected = preset == KeySounds.Canonical(settings.Sound) ||
                 c.Action == SettingsAction.ToggleSound && settings.SoundEnabled ||
-                c.Action == SettingsAction.ToggleNumpad && settings.NumpadEnabled ||
+                c.Action == SettingsAction.ToggleNumpadButton && settings.NumpadButtonEnabled ||
                 c.Action == SettingsAction.SteamSoft && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamSoft ||
                 c.Action == SettingsAction.SteamFlat && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamFlat ||
                 c.Action == SettingsAction.GeneralTab && !effectsPage && !shortcutsPage || c.Action == SettingsAction.EffectsTab && effectsPage ||
@@ -185,7 +185,7 @@ internal static class SettingsPanel
             paint.Color = !enabled ? new SKColor(0x66, 0x78, 0x82) : selected ? new SKColor(0x09, 0x19, 0x23) : text;
             if (softTheme) paint.Color = selected ? KeyboardTheme.Soft.Accent : KeyboardTheme.Soft.Text;
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
-            if (c.Action == SettingsAction.ToggleNumpad) title = settings.NumpadEnabled ? "Numpad: On" : "Numpad: Off";
+            if (c.Action == SettingsAction.ToggleNumpadButton) title = settings.NumpadButtonEnabled ? "Numpad button: Shown" : "Numpad button: Hidden";
             if (c.Action == SettingsAction.Autostart) title = autostart.ButtonLabel;
             if (c.Action == SettingsAction.ToggleShortcuts) title = settings.ProgrammableKeys.Enabled ? "Shown" : "Hidden";
             if (c.Action == SettingsAction.ChooseShortcutPreset) title = shortcut.LabelFor(layout) + "   ›";
