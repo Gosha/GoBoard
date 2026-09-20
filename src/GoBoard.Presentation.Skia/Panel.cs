@@ -31,6 +31,8 @@ internal static class Panel
         using var japaneseFace = layout.Japanese ? SKFontManager.Default.MatchCharacter('あ') : null;
         using var imeLabel = new SKFont(japaneseFace ?? face, 16);
         using var secondary = new SKFont(face, 12);
+        using var numpadWord = new SKFont(face, 14);
+        using var numpadHint = new SKFont(face, 9);
         using var notice = new SKFont(face, 9);
         canvas.Clear(SKColors.Transparent);
         var panelRect = new SKRect(.5f, .5f, width - .5f, height - .5f);
@@ -127,20 +129,18 @@ internal static class Panel
                 };
                 var navigationMode = keyboard?.NumLock == false;
                 if (navigation == null)
-                    Center(canvas, key.Label, rect.MidX, rect.MidY, key.Label.Length == 1 ? number : special, paint);
+                    Center(canvas, key.Label, rect.MidX, rect.MidY,
+                        key.Label.Length == 1 ? number : key.Id == "NumLock" ? special : numpadWord, paint);
                 else
                 {
                     var active = navigationMode ? navigation : key.Label;
                     var alternate = navigationMode ? key.Label : navigation;
-                    // Match ordinary dual legends: small alternate above, full-size
-                    // normal-colored output below. Fit long names without reducing height.
-                    using var activeFont = new SKFont(face, number.Size)
-                    {
-                        ScaleX = Math.Min(1, (rect.Width - 8) / Math.Max(1, number.MeasureText(active)))
-                    };
-                    canvas.DrawText(active, rect.MidX, rect.Bottom - 6, SKTextAlign.Center, activeFont, paint);
-                    paint.Color = filled ? Ink : Accent;
-                    canvas.DrawText(alternate, rect.MidX, rect.Top + 16, SKTextAlign.Center, secondary, paint);
+                    // Keep the active action centered with natural text proportions.
+                    // Small corner hints preserve the main keyboard's alternate color.
+                    Center(canvas, active, rect.MidX, rect.MidY, active.Length == 1 ? number : numpadWord, paint);
+                    paint.Color = (filled ? Ink : Accent).WithAlpha(217);
+                    canvas.DrawText(alternate, rect.Left + 5, rect.Top + 3 - numpadHint.Metrics.Ascent,
+                        SKTextAlign.Left, numpadHint, paint);
                 }
             }
             else if (key.Id is "Up" or "Down" or "Left" or "Right") DrawArrow(canvas, key.Id, rect.MidX, rect.MidY, paint);
