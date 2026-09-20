@@ -15,19 +15,19 @@ internal sealed class SettingsForm : Form
 {
     private readonly SettingsStore store;
     private readonly KeyAudio audio = new();
-    private readonly SettingsPointerState pointers = new();
+    private readonly SettingsEditor editor;
     private readonly System.Windows.Forms.Timer refresh = new() { Interval = 500 };
     private readonly ToolTip details = new();
     private readonly bool previewOnly, desktopMode;
     private readonly AutostartController autostart;
-    private string actionError;
     private bool releasingCapture;
     private Bitmap frame;
     private readonly Icon windowIcon;
     private (BoardSettings Settings, int Hover, string Error, AutostartState Autostart)? drawn;
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     private SettingsViewport Viewport => SettingsViewport.Fit(ClientSize.Width, ClientSize.Height);
-    internal SettingsControl ControlFor(SettingsAction action) => SettingsControls.ForPage(pointers.Page, store.Current, pointers.Layout, pointers.ShortcutSlot).Single(c => c.Action == action);
+    internal SettingsControl ControlFor(SettingsAction action) => SettingsControls.ForPage(editor.Pointers.Page, editor.Current,
+        editor.Pointers.Layout, editor.Pointers.ShortcutSlot).Single(c => c.Action == action);
     protected override bool ShowWithoutActivation => previewOnly;
 
     protected override void SetVisibleCore(bool value)
@@ -52,6 +52,7 @@ internal sealed class SettingsForm : Form
         this.previewOnly = previewOnly;
         this.desktopMode = desktopMode;
         this.store = store ?? new SettingsStore();
+        editor = new(this.store, geometry => WindowsLayoutProvider.Get(WindowsKeyboard.Foreground().Layout, geometry));
         this.autostart = previewOnly ? null : autostart ?? new AutostartController(autostartExecutable);
         Text = "GoBoard Settings";
         using (var stream = typeof(SettingsForm).Assembly.GetManifestResourceStream("GoBoard.Icon.ico"))
@@ -80,17 +81,13 @@ internal sealed class SettingsForm : Form
     {
         if (previewOnly || Disposing || IsDisposed) return;
         var point = Viewport.ToPanel(location.X, location.Y);
-        RefreshLayout();
         var now = Now;
-        var action = pointers.Process(0, point.X, point.Y, now, now, down, up, leave);
-        if (action == SettingsAction.Autostart) autostart?.Toggle();
-        else if (action.HasValue && SettingsControls.Enabled(action.Value, store.Current))
+        var effect = editor.Process(0, point.X, point.Y, now, now, down, up, leave);
+        if (effect == SettingsEditorEffect.ToggleAutostart) autostart?.Toggle();
+        else if (effect == SettingsEditorEffect.AuditionSound)
         {
-            var saved = store.Update(s => SettingsControls.Enabled(action.Value, s) ? SettingsControls.Apply(action.Value, s, pointers.ShortcutSlot, pointers.Layout) : s);
-            actionError = saved ? null : store.Error;
-            audio.Apply(store.Current);
-            if (saved && SettingsControls.AuditionsSound(action.Value))
-                audio.Preview();
+            audio.Apply(editor.Current);
+            audio.Preview();
         }
         RenderFrame();
     }
@@ -121,19 +118,19 @@ internal sealed class SettingsForm : Form
     protected override void OnResize(EventArgs e) { base.OnResize(e); ResetPointer(); Invalidate(); }
     private void ResetPointer()
     {
-        pointers?.Reset();
-        if (store != null && !Disposing && !IsDisposed) RenderFrame();
+        editor?.Reset();
+        if (editor != null && !Disposing && !IsDisposed) RenderFrame();
     }
 
     private void RenderFrame()
     {
-        RefreshLayout();
-        var hover = pointers.Revision;
-        var error = actionError ?? store.Error;
+        editor.Refresh();
+        var hover = editor.Pointers.Revision;
+        var error = editor.Error;
         var autostartState = autostart?.State ?? AutostartState.Preview;
-        var signature = (store.Current, hover, error, autostartState);
+        var signature = (editor.Current, hover, error, autostartState);
         if (drawn == signature) return;
-        using var pixels = SettingsPanel.Render(store.Current, pointers, error, desktopMode, autostartState);
+        using var pixels = SettingsPanel.Render(editor.Current, editor.Pointers, error, desktopMode, autostartState);
         using var bgra = pixels.Copy(SKColorType.Bgra8888);
         using var borrowed = new Bitmap(bgra.Width, bgra.Height, bgra.RowBytes, PixelFormat.Format32bppPArgb, bgra.GetPixels());
         var next = new Bitmap(borrowed);
@@ -142,12 +139,9 @@ internal sealed class SettingsForm : Form
         drawn = signature;
         details.SetToolTip(this, error ?? autostartState.Error);
         AccessibleDescription = error ?? autostartState.Error ?? $"GoBoard settings. SteamVR autostart: {autostartState.Status}";
-        audio.Apply(store.Current);
+        audio.Apply(editor.Current);
         Invalidate();
     }
-    private void RefreshLayout() => pointers.Configure(store.Current,
-        WindowsLayoutProvider.Get(WindowsKeyboard.Foreground().Layout, store.Current.Geometry));
-
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
