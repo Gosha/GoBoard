@@ -12,16 +12,15 @@ internal sealed class SettingsOverlay : IDisposable
     private readonly CVROverlay overlay;
     private readonly CVRSystem system;
     private readonly OverlayGraphics graphics;
-    private readonly SettingsStore store;
+    private readonly SettingsEditor editor;
     private readonly Action<BoardSettings> audition;
     private ulong handle, thumbnail;
-    private readonly SettingsPointerState pointers = new();
     private readonly OverlayPointers identities = new();
     private readonly AutostartController autostart = new();
     private AutostartState drawnAutostart;
     private BoardSettings drawn;
     private int drawnHover = -1;
-    private string drawnError, actionError;
+    private string drawnError;
     private bool active;
     private double activeSince;
     private readonly ulong left = InputPath("/user/hand/left"), right = InputPath("/user/hand/right");
@@ -29,7 +28,8 @@ internal sealed class SettingsOverlay : IDisposable
 
     public SettingsOverlay(CVRSystem system, CVROverlay overlay, OverlayGraphics graphics, SettingsStore store, Action<BoardSettings> audition)
     {
-        this.system = system; this.overlay = overlay; this.graphics = graphics; this.store = store; this.audition = audition;
+        this.system = system; this.overlay = overlay; this.graphics = graphics; this.audition = audition;
+        editor = new(store, geometry => WindowsLayoutProvider.Get(WindowsKeyboard.Foreground().Layout, geometry));
         try
         {
             Check(overlay.CreateDashboardOverlay("goboard.app.settings", "GoBoard Settings", ref handle, ref thumbnail), "Create settings tab");
@@ -47,11 +47,11 @@ internal sealed class SettingsOverlay : IDisposable
 
     public void Update()
     {
-        pointers.Configure(store.Current, WindowsLayoutProvider.Get(WindowsKeyboard.Foreground().Layout, store.Current.Geometry));
+        editor.Refresh();
         var visible = overlay.IsDashboardVisible() && overlay.IsActiveDashboardOverlay(handle);
         if (visible != active)
         {
-            pointers.Reset();
+            editor.Reset();
             activeSince = Now;
             active = visible;
         }
@@ -80,17 +80,10 @@ internal sealed class SettingsOverlay : IDisposable
             var down = type == EVREventType.VREvent_MouseButtonDown;
             var up = type == EVREventType.VREvent_MouseButtonUp;
             if ((down || up) && e.data.mouse.button != (uint)EVRMouseButton.Left) continue;
-            var action = pointers.Process(identity.Value, e.data.mouse.x, SettingsControls.Height - e.data.mouse.y,
+            var effect = editor.Process(identity.Value, e.data.mouse.x, SettingsControls.Height - e.data.mouse.y,
                 time, now, down, up, type == EVREventType.VREvent_FocusLeave);
-            if (action == SettingsAction.Autostart) autostart.Toggle();
-            else if (action.HasValue && SettingsControls.Enabled(action.Value, store.Current))
-            {
-                var saved = store.Update(s => SettingsControls.Enabled(action.Value, s) ? SettingsControls.Apply(action.Value, s, pointers.ShortcutSlot, pointers.Layout) : s);
-                actionError = saved ? null : store.Error;
-                if (saved && SettingsControls.AuditionsSound(action.Value))
-                    audition(store.Current);
-                pointers.Configure(store.Current, pointers.Layout);
-            }
+            if (effect == SettingsEditorEffect.ToggleAutostart) autostart.Toggle();
+            else if (effect == SettingsEditorEffect.AuditionSound) audition(editor.Current);
         }
         // Thumbnail events must be drained too, even though the shell activates the tab.
         while (overlay.PollNextOverlayEvent(thumbnail, ref e, (uint)Marshal.SizeOf<VREvent_t>())) { }
@@ -99,12 +92,12 @@ internal sealed class SettingsOverlay : IDisposable
 
     private void Draw()
     {
-        var hover = pointers.Revision;
-        var error = actionError ?? store.Error;
-        if (drawn == store.Current && drawnHover == hover && drawnError == error && drawnAutostart == autostart.State) return;
-        using var bitmap = SettingsPanel.Render(store.Current, pointers, error, autostart: autostart.State);
+        var hover = editor.Pointers.Revision;
+        var error = editor.Error;
+        if (drawn == editor.Current && drawnHover == hover && drawnError == error && drawnAutostart == autostart.State) return;
+        using var bitmap = SettingsPanel.Render(editor.Current, editor.Pointers, error, autostart: autostart.State);
         graphics.Upload(overlay, handle, bitmap);
-        drawn = store.Current; drawnHover = hover; drawnError = error;
+        drawn = editor.Current; drawnHover = hover; drawnError = error;
         drawnAutostart = autostart.State;
     }
 

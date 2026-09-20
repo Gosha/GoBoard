@@ -50,4 +50,6 @@ Ctrl, Alt, AltGr, and Shift cycle Idle → OneShot → Locked → Idle. An ordin
 
 Desktop and VR share persisted settings. An edit merges only the changed field into the latest file under a per-file mutex and replaces the file atomically. Failed writes leave applied settings unchanged. Malformed files retain the last working values and surface an error. Stable setting IDs and migrations preserve existing preferences.
 
+`SettingsEditor` owns the shared pointer-to-edit sequence: selection, eligibility checks against current and latest saved settings, persistence, error feedback, and pointer reconfiguration. It returns sound-audition and autostart requests for the hosts to execute. The hosts retain native event translation, cached Windows layout observation, drawing, audio playback, and autostart execution; `SettingsStore` retains file locking and atomic replacement.
+
 Regression tests cover shared behavior without requiring SteamVR or a headset. Native input checks use disposable foreground targets, and settings checks use disposable settings files. PNG previews exercise the real renderers. These checks do not establish headset legibility, controller feel, real application focus behavior, sound routing, or end-to-end display latency; those remain explicit manual acceptance checks documented in [development](development.md).
