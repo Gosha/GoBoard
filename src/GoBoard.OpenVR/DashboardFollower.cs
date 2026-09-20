@@ -16,12 +16,25 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
     private ulong previousAnchor;
     private GrabPose boundGrab;
     private float panelScale = 1;
+    private float panelWidth = OverlayGeometry.PanelWidthInMeters;
     private bool sizeChanged;
+    private bool numpad;
+    public void SetNumpad(bool enabled)
+    {
+        if (numpad == enabled) return;
+        grab.Update(false, default);
+        resize.Update(false, default);
+        numpad = enabled;
+        sizeChanged = true;
+        SetScale(resize.Scale);
+    }
 
     public void SetScale(float scale)
     {
-        if (panelScale == scale) return;
-        Check(overlay.SetOverlayWidthInMeters(panel, OverlayGeometry.PanelWidthInMeters * scale), "Resize keyboard");
+        var width = OverlayGeometry.WidthInMeters(numpad) * scale;
+        if (panelWidth == width && panelScale == scale) return;
+        Check(overlay.SetOverlayWidthInMeters(panel, width), "Resize keyboard");
+        panelWidth = width;
         panelScale = scale;
         sizeChanged = true;
     }
@@ -87,7 +100,7 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(panel, grab.Controller, ref relative), "Attach panel to controller");
                 var barRelative = OpenVrPose.ToOpenVr(OverlayGeometry.GrabFromScaledPanel(panelScale) * grab.ActiveGrab.ControllerOffset);
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(handle, grab.Controller, ref barRelative), "Attach handle to controller");
-                var resizeRelative = OpenVrPose.ToOpenVr(OverlayGeometry.ResizeFromScaledPanel(panelScale) * grab.ActiveGrab.ControllerOffset);
+                var resizeRelative = OpenVrPose.ToOpenVr(OverlayGeometry.ResizeFromScaledPanel(panelScale, numpad) * grab.ActiveGrab.ControllerOffset);
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(resize.Handle, grab.Controller, ref resizeRelative), "Attach resize handle to controller");
                 boundGrab = grab.ActiveGrab;
                 Console.WriteLine($"SteamVR now tracks the held panel directly on controller {grab.Controller}; no app smoothing.");
@@ -99,7 +112,7 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
             Check(overlay.SetOverlayTransformAbsolute(panel, Origin, ref raw), "Follow dashboard pose");
             var bar = OpenVrPose.ToOpenVr(OverlayGeometry.GrabFromScaledPanel(panelScale) * update.World);
             Check(overlay.SetOverlayTransformAbsolute(handle, Origin, ref bar), "Place grab handle");
-            var corner = OpenVrPose.ToOpenVr(OverlayGeometry.ResizeFromScaledPanel(panelScale) * update.World);
+            var corner = OpenVrPose.ToOpenVr(OverlayGeometry.ResizeFromScaledPanel(panelScale, numpad) * update.World);
             Check(overlay.SetOverlayTransformAbsolute(resize.Handle, Origin, ref corner), "Place resize handle");
             boundGrab = null;
         }
@@ -123,4 +136,3 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         if (error != EVROverlayError.None) throw new InvalidOperationException($"{operation}: {error}");
     }
 }
-

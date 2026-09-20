@@ -99,12 +99,12 @@ internal static class SettingsPanel
         else
         {
         Text($"Keyboard size   {settings.SizePercent}%", 64, 186, label, text);
-        Text(desktopMode ? "Desktop scale · 50–150%" : $"{OverlayGeometry.PanelWidthInMeters * settings.Scale * 100:F0} cm wide · 50–150%", 64, 216, small, accent);
+        Text(desktopMode ? "Desktop scale · 50–150%" : $"{OverlayGeometry.WidthInMeters(settings.NumpadEnabled) * settings.Scale * 100:F0} cm wide · 50–150%", 64, 216, small, accent);
         Text("Key sounds", 64, 290, label, text);
         Text("Sound preset", 64, 347, small, accent);
         Text("Click a preset to select and preview", 64, 470, small, accent);
         Text($"Volume   {settings.VolumePercent}%", 64, 511, label, text);
-        Text("Keyboard arrangement", 64, 578, label, text);
+        Text("Arrangement", 64, 578, label, text);
         Text("Auto · ANSI · ISO", 64, 608, small, accent);
         Text("Keyboard theme", 64, 648, small, accent);
         paint.Color = new SKColor(0x1b, 0x2c, 0x39);
@@ -119,6 +119,7 @@ internal static class SettingsPanel
             var preset = SettingsControls.SoundFor(c.Action);
             var selected = preset == KeySounds.Canonical(settings.Sound) ||
                 c.Action == SettingsAction.ToggleSound && settings.SoundEnabled ||
+                c.Action == SettingsAction.ToggleNumpad && settings.NumpadEnabled ||
                 c.Action == SettingsAction.SteamSoft && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamSoft ||
                 c.Action == SettingsAction.SteamFlat && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamFlat ||
                 c.Action == SettingsAction.GeneralTab && !effectsPage && !shortcutsPage || c.Action == SettingsAction.EffectsTab && effectsPage ||
@@ -184,6 +185,7 @@ internal static class SettingsPanel
             paint.Color = !enabled ? new SKColor(0x66, 0x78, 0x82) : selected ? new SKColor(0x09, 0x19, 0x23) : text;
             if (softTheme) paint.Color = selected ? KeyboardTheme.Soft.Accent : KeyboardTheme.Soft.Text;
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
+            if (c.Action == SettingsAction.ToggleNumpad) title = settings.NumpadEnabled ? "Numpad: On" : "Numpad: Off";
             if (c.Action == SettingsAction.Autostart) title = autostart.ButtonLabel;
             if (c.Action == SettingsAction.ToggleShortcuts) title = settings.ProgrammableKeys.Enabled ? "Shown" : "Hidden";
             if (c.Action == SettingsAction.ChooseShortcutPreset) title = shortcut.LabelFor(layout) + "   ›";

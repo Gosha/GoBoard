@@ -24,6 +24,17 @@ internal static class KeyboardLayout
     public static readonly IReadOnlyList<KeyboardKey> IsoKeys = Create(true);
     public static readonly IReadOnlyList<KeyboardKey> JapaneseKeys = Create(false, japanese: true);
     public static IReadOnlyList<KeyboardKey> SwedishKeys => IsoKeys;
+    private const int NumpadGroupGap = 14;
+    public const int NumpadExtraWidth = 4 * RowPitch + NumpadGroupGap - KeyGap;
+    public static IReadOnlyList<KeyboardKey> WithNumpad(IReadOnlyList<KeyboardKey> keys) => keys.Concat(
+        ProgrammableKeys.NumpadKeys.Select(key => key with
+        {
+            Bounds = new(OverlayGeometry.PanelWidth - OverlayGeometry.PanelPadding + NumpadGroupGap + key.Bounds.X / 44 * RowPitch,
+                OverlayGeometry.PanelPadding + RowPitch + key.Bounds.Y / 44 * RowPitch,
+                (key.Bounds.Width + KeyGap) / 44 * RowPitch - KeyGap,
+                (key.Bounds.Height + KeyGap) / 44 * RowPitch - KeyGap),
+            Repeat = key.Scan is not (ProgrammableKeys.NumLock or ProgrammableKeys.NumEnter)
+        })).ToArray();
     public static KeyboardKey Hit(float x, float y, IReadOnlyList<KeyboardKey> keys = null) => float.IsFinite(x) && float.IsFinite(y)
         ? (keys ?? Keys).FirstOrDefault(k => k.Contains(x, y)) : null;
 

@@ -17,7 +17,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private KeyboardState keyboard;
     private readonly OverlayPointers pointers = new();
     private readonly TrackedDevicePose_t[] devices = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
-    private bool enabled, faulted, resizing, shortcutGeometryApplied;
+    private bool enabled, faulted, resizing, geometryApplied;
     private string theme = BoardThemes.Default;
     private EffectSettings effects = new();
     private readonly AnimatedKeyboardRenderer renderer = new();
@@ -36,6 +36,13 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         ProgrammableKeys.Width(new() { Columns = ProgrammableKeySettings.MaxColumns }) * Panel.RasterScale,
         ProgrammableKeys.Height(new() { Rows = ProgrammableKeySettings.MaxRows }) * Panel.RasterScale,
         SKColorType.Rgba8888, SKAlphaType.Unpremul);
+    // Keep texture dimensions fixed when the optional numpad changes the logical width.
+    internal static readonly SKImageInfo MainTextureInfo = new(
+        OverlayGeometry.Width(true) * Panel.RasterScale, Panel.LayoutHeight * Panel.RasterScale,
+        SKColorType.Rgba8888, SKAlphaType.Unpremul);
+    private SKImageInfo TextureInfo => shortcutsOnly ? ShortcutTextureInfo : MainTextureInfo;
+    internal static (float X, float Y) MainPointerPosition(float x, float y, KeyboardState state) =>
+        (x * state.Width / MainTextureInfo.Width, y * state.Height / MainTextureInfo.Height);
 
     internal static (float X, float Y) ShortcutPointerPosition(float x, float y, KeyboardState state) =>
         (x * state.Width / ShortcutTextureInfo.Width, y * state.Height / ShortcutTextureInfo.Height);
@@ -45,14 +52,16 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         effects = settings.Effects;
         theme = BoardThemes.Normalize(settings.Theme);
         if (resized) Cancel();
-        if (shortcutsOnly && (!shortcutGeometryApplied || State.Shortcuts != settings.ProgrammableKeys))
+        if (!geometryApplied || (shortcutsOnly ? State.Shortcuts != settings.ProgrammableKeys : State.NumpadEnabled != settings.NumpadEnabled))
         {
             Cancel();
-            State.SetShortcuts(settings.ProgrammableKeys, Now);
+            acceptAfter = Now;
+            if (shortcutsOnly) State.SetShortcuts(settings.ProgrammableKeys, Now);
+            else State.SetNumpad(settings.NumpadEnabled, Now);
             // SteamVR applies texel aspect to ray intersection using the mouse
             // scale's aspect too. Match the fixed raster here, then convert
             // event coordinates to the current logical grid in Process.
-            var scale = new HmdVector2_t { v0 = ShortcutTextureInfo.Width, v1 = ShortcutTextureInfo.Height };
+            var scale = new HmdVector2_t { v0 = TextureInfo.Width, v1 = TextureInfo.Height };
             var mask = new VROverlayIntersectionMaskPrimitive_t
             {
                 m_nPrimitiveType = EVROverlayIntersectionMaskPrimitiveType.OverlayIntersectionPrimitiveType_Rectangle,
@@ -64,9 +73,9 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             error = overlay.SetOverlayIntersectionMask(handle, ref mask, 1, (uint)Marshal.SizeOf<VROverlayIntersectionMaskPrimitive_t>());
             if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize input region: {error}");
             error = overlay.SetOverlayTexelAspect(handle,
-                State.Width * (float)ShortcutTextureInfo.Height / (State.Height * ShortcutTextureInfo.Width));
-            if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize shortcut proportions: {error}");
-            shortcutGeometryApplied = true;
+                State.Width * (float)TextureInfo.Height / (State.Height * TextureInfo.Width));
+            if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize keyboard proportions: {error}");
+            geometryApplied = true;
         }
         if (geometry != settings.Geometry)
         {
@@ -137,7 +146,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         }
         device = pointer;
         var (x, y) = shortcutsOnly ? ShortcutPointerPosition(e.data.mouse.x, e.data.mouse.y, State)
-            : (e.data.mouse.x, e.data.mouse.y);
+            : MainPointerPosition(e.data.mouse.x, e.data.mouse.y, State);
         try
         {
             switch (type)
@@ -193,8 +202,9 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             (State.Mode(0x1d) != ModifierMode.Idle && State.Mode(0x38) != ModifierMode.Idle);
         var caps = WindowsKeyboard.CapsLock;
         var scrollLock = WindowsKeyboard.ScrollLock;
+        State.SetNumLock(WindowsKeyboard.NumLock);
         using var bitmap = renderer.Render(State, shift, status, altGr, caps, scrollLock, theme, effects, Now,
-            shortcutsOnly ? ShortcutTextureInfo : null);
+            TextureInfo);
         if (bitmap == null) return;
         graphics.Upload(overlay, handle, bitmap);
     }

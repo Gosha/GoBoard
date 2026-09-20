@@ -11,6 +11,8 @@ internal static class OverlayGeometry
     public const int RasterScale = 3;
     public const float PanelWidthInMeters = 0.5445f * PanelWidth / 512;
     public const float PanelHeightInMeters = PanelWidthInMeters * PanelHeight / PanelWidth;
+    public static int Width(bool numpad) => PanelWidth + (numpad ? KeyboardLayout.NumpadExtraWidth : 0);
+    public static float WidthInMeters(bool numpad) => PanelWidthInMeters * Width(numpad) / PanelWidth;
 
     public const int GrabWidth = 180;
     public const int GrabHeight = 60;
@@ -21,8 +23,8 @@ internal static class OverlayGeometry
     public const float ResizeSizeInMeters = 0.07f;
     public const float ResizeCornerSpacingInMeters = 0.006f;
     // Offset slightly outward from the corner while keeping the grip close to both edges.
-    public static Matrix4x4 ResizeFromScaledPanel(float scale) =>
-        Matrix4x4.CreateTranslation(PanelWidthInMeters * scale / 2 + ResizeCornerSpacingInMeters,
+    public static Matrix4x4 ResizeFromScaledPanel(float scale, bool numpad = false) =>
+        Matrix4x4.CreateTranslation(WidthInMeters(numpad) * scale / 2 + ResizeCornerSpacingInMeters,
             -(PanelHeightInMeters * scale / 2 + ResizeCornerSpacingInMeters), 0.002f);
 
     // OpenVR mouse coordinates start at the bottom left. Exclude the upper-left
@@ -34,9 +36,9 @@ internal static class OverlayGeometry
         .Select(r => r with { Y = ResizeSize - r.Y - r.Height }).ToArray();
     public static bool ResizeHit(float x, float y) => ResizeTargets.Any(r => r.Contains(x, y));
 
-    public static Vector3 ResizePoint(float scale, float x, float y) =>
+    public static Vector3 ResizePoint(float scale, float x, float y, bool numpad = false) =>
         Vector3.Transform(new Vector3((x / ResizeSize - .5f) * ResizeSizeInMeters,
-            (y / ResizeSize - .5f) * ResizeSizeInMeters, 0), ResizeFromScaledPanel(scale));
+            (y / ResizeSize - .5f) * ResizeSizeInMeters, 0), ResizeFromScaledPanel(scale, numpad));
     public static readonly Matrix4x4 GrabFromPanel =
         GrabFromScaledPanel(1);
 

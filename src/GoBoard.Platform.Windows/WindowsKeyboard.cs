@@ -24,6 +24,7 @@ internal sealed class WindowsKeyboard : IKeySink, IDisposable
     public InputTarget Target { get; set; }
     public static bool CapsLock => (GetKeyState(0x14) & 1) != 0;
     public static bool ScrollLock => (GetKeyState(0x91) & 1) != 0;
+    public static bool NumLock => (GetKeyState(0x90) & 1) != 0;
     public static bool PhysicalShift => (GetAsyncKeyState(0xa0) & 0x8000) != 0 || (GetAsyncKeyState(0xa1) & 0x8000) != 0;
     public static bool PhysicalAltGr => (GetAsyncKeyState(0xa5) & 0x8000) != 0;
 

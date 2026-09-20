@@ -36,10 +36,10 @@ internal static class DesktopRuntime
         finally { session?.Dispose(); }
     }
 
-    public static int Render(string path, bool shortcuts = false)
+    public static int Render(string path, bool shortcuts = false, bool numpad = false)
     {
         ApplicationConfiguration.Initialize();
-        using var form = new DesktopKeyboardForm(previewOnly: true, previewShortcuts: shortcuts);
+        using var form = new DesktopKeyboardForm(previewOnly: true, previewShortcuts: shortcuts, previewNumpad: numpad);
         form.Show();
         Application.DoEvents();
         if (shortcuts) form.Shortcuts.ExpandPreview();

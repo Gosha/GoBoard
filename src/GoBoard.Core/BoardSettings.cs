@@ -14,6 +14,7 @@ internal sealed record BoardSettings
     public int VolumePercent { get; init; } = 100;
     public KeySound Sound { get; init; } = KeySound.SoftLowThud;
     public KeyboardGeometry Geometry { get; init; } = KeyboardGeometry.Auto;
+    public bool NumpadEnabled { get; init; }
     public string Theme { get; init; } = BoardThemes.Default;
     public EffectSettings Effects { get; init; } = new();
     public ProgrammableKeySettings ProgrammableKeys { get; init; } = new();

@@ -84,8 +84,25 @@ internal sealed class KeyboardState(IKeySink sink, bool shortcutsOnly = false, b
     private IReadOnlyList<KeyboardKey> keys;
     public bool ShortcutsOnly => shortcutsOnly;
     public bool ShortcutFooter => shortcutsOnly && shortcutFooter;
-    public IReadOnlyList<KeyboardKey> Keys => keys ??= shortcutsOnly ? ProgrammableKeys.CreatePanel(Shortcuts, Layout) : Layout.Keys;
-    public int Width => shortcutsOnly ? ProgrammableKeys.Width(Shortcuts) : OverlayGeometry.PanelWidth;
+    public bool NumpadEnabled { get; private set; }
+    public bool NumLock { get; private set; }
+    public void SetNumLock(bool value)
+    {
+        if (NumLock == value) return;
+        NumLock = value;
+        Revision++; ContentRevision++;
+    }
+    public void SetNumpad(bool enabled, double now)
+    {
+        if (shortcutsOnly || NumpadEnabled == enabled) return;
+        Cancel(now);
+        shortcutWatermark = now;
+        NumpadEnabled = enabled;
+        keys = null;
+    }
+    public IReadOnlyList<KeyboardKey> Keys => keys ??= shortcutsOnly ? ProgrammableKeys.CreatePanel(Shortcuts, Layout) :
+        NumpadEnabled ? KeyboardLayout.WithNumpad(Layout.Keys) : Layout.Keys;
+    public int Width => shortcutsOnly ? ProgrammableKeys.Width(Shortcuts) : OverlayGeometry.Width(NumpadEnabled);
     public int Height => shortcutsOnly ? ProgrammableKeys.Height(Shortcuts, shortcutFooter) : OverlayGeometry.PanelHeight;
     public KeyboardKey Hit(float x, float y) => KeyboardLayout.Hit(x, Height - y, Keys);
     public void SetShortcuts(ProgrammableKeySettings settings, double now)

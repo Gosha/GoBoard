@@ -9,6 +9,7 @@ internal sealed class ResizeSession(SettingsStore settings)
 {
     private ResizePose pose;
     private int startingPercent;
+    private bool startingNumpad;
     private bool watchTrigger;
     public bool Active => pose != null;
     public float Scale => pose?.Scale ?? settings.Current.Scale;
@@ -18,7 +19,8 @@ internal sealed class ResizeSession(SettingsStore settings)
     {
         if (Active || (triggerAvailable && !triggerHeld)) return false;
         startingPercent = settings.Current.SizePercent;
-        pose = ResizePose.Capture(panel, controller, OverlayGeometry.ResizePoint(Scale, x, y), Scale);
+        startingNumpad = settings.Current.NumpadEnabled;
+        pose = ResizePose.Capture(panel, controller, OverlayGeometry.ResizePoint(Scale, x, y, startingNumpad), Scale, startingNumpad);
         watchTrigger = triggerAvailable && triggerHeld;
         return Active;
     }
@@ -45,7 +47,7 @@ internal sealed class ResizeSession(SettingsStore settings)
 
     public bool Synchronize()
     {
-        if (!Active || settings.Current.SizePercent == startingPercent) return false;
+        if (!Active || (settings.Current.SizePercent == startingPercent && settings.Current.NumpadEnabled == startingNumpad)) return false;
         Cancel();
         return true;
     }
@@ -57,7 +59,7 @@ internal sealed class ResizeSession(SettingsStore settings)
         Cancel();
         // Avoid a write for a click without a size change. Still observe other editors.
         if (percent == startingPercent) return settings.Reload() || settings.Error == null;
-        return settings.Update(s => s.SizePercent == startingPercent ? s with { SizePercent = percent } : s);
+        return settings.Update(s => s.SizePercent == startingPercent && s.NumpadEnabled == startingNumpad ? s with { SizePercent = percent } : s);
     }
 
     public void Cancel() => pose = null;

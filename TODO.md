@@ -19,4 +19,4 @@
 - [ ] Add reset button to keyboard that moves it back.
 - [ ] Validate actual German/French/US International typing and extend automatic layout support to complex scripts, additional lock modes, and IME/JIS arrangements.
 - [x] Replace shortcut preset arrows with a grouped chooser for direct selection.
-- [ ] Maybe: Numpad
+- [x] Optional numpad beside the main keyboard in desktop and VR.

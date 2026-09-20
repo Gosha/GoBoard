@@ -31,6 +31,8 @@ internal static class Panel
         using var japaneseFace = layout.Japanese ? SKFontManager.Default.MatchCharacter('あ') : null;
         using var imeLabel = new SKFont(japaneseFace ?? face, 16);
         using var secondary = new SKFont(face, 12);
+        using var numpadWord = new SKFont(face, 14);
+        using var numpadHint = new SKFont(face, 9);
         using var notice = new SKFont(face, 9);
         canvas.Clear(SKColors.Transparent);
         var panelRect = new SKRect(.5f, .5f, width - .5f, height - .5f);
@@ -54,7 +56,8 @@ internal static class Panel
             var mode = key.IsModifier ? keyboard?.Mode(key.Scan) ?? ModifierMode.Idle : ModifierMode.Idle;
             var filled = mode == ModifierMode.Locked || (!suppressPressed && !key.IsModifier && keyboard?.Pressed(key) == true);
             var armed = mode == ModifierMode.OneShot;
-            var toggleOn = (key.Id == "Caps" && caps) || (key.Id == "ScrollLock" && scrollLock);
+            var toggleOn = (key.Id == "Caps" && caps) || (key.Id == "ScrollLock" && scrollLock) ||
+                (key.Id == "NumLock" && keyboard?.NumLock == true);
             if (cacheSurfaces && style.ShadowBlur > 0)
                 KeySurfaceCache.Draw(canvas, key, style, hover, filled, armed || toggleOn);
             else
@@ -115,6 +118,31 @@ internal static class Panel
                 Center(canvas, key.Label, rect.MidX, rect.MidY, imeLabel, paint);
             }
             else if (key.Id == "Win") DrawWindows(canvas, rect.MidX, rect.MidY, paint);
+            else if (key.Id.StartsWith("Num", StringComparison.Ordinal))
+            {
+                var navigation = key.Scan switch
+                {
+                    0x47 => "Home", 0x48 => "↑", 0x49 => "PgUp",
+                    0x4b => "←", 0x4c => "Clear", 0x4d => "→",
+                    0x4f => "End", 0x50 => "↓", 0x51 => "PgDn",
+                    0x52 => "Ins", 0x53 => "Del", _ => null
+                };
+                var navigationMode = keyboard?.NumLock == false;
+                if (navigation == null)
+                    Center(canvas, key.Label, rect.MidX, rect.MidY,
+                        key.Label.Length == 1 ? number : key.Id == "NumLock" ? special : numpadWord, paint);
+                else
+                {
+                    var active = navigationMode ? navigation : key.Label;
+                    var alternate = navigationMode ? key.Label : navigation;
+                    // Keep the active action centered with natural text proportions.
+                    // Small corner hints preserve the main keyboard's alternate color.
+                    Center(canvas, active, rect.MidX, rect.MidY, active.Length == 1 ? number : numpadWord, paint);
+                    paint.Color = (filled ? Ink : Accent).WithAlpha(217);
+                    canvas.DrawText(alternate, rect.Left + 5, rect.Top + 3 - numpadHint.Metrics.Ascent,
+                        SKTextAlign.Left, numpadHint, paint);
+                }
+            }
             else if (key.Id is "Up" or "Down" or "Left" or "Right") DrawArrow(canvas, key.Id, rect.MidX, rect.MidY, paint);
             else if (key.Id == "Backspace")
             {

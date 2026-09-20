@@ -71,6 +71,13 @@ internal static class SettingsInputCheck
                 Click(SettingsAction.Geometry);
                 Require(store.Current.Geometry == (KeyboardGeometry)(((int)geometry + 1) % 3), "Arrangement selection");
                 Require(new SettingsStore(path).Current.Geometry == store.Current.Geometry, "Saved arrangement");
+                Click(SettingsAction.ToggleNumpad);
+                desktop.RefreshSettings();
+                Require(store.Current.NumpadEnabled && new SettingsStore(path).Current.NumpadEnabled &&
+                    desktop.State.Keys.Any(k => k.Id == "NumEnter"), "Numpad toggle persistence and desktop propagation");
+                Click(SettingsAction.ToggleNumpad);
+                desktop.RefreshSettings();
+                Require(!desktop.State.NumpadEnabled, "Hide numpad");
                 foreach (var (action, sound) in new[] { (SettingsAction.Thud, KeySound.SoftLowThud),
                     (SettingsAction.CherryBlue, KeySound.CherryMxBlue),
                     (SettingsAction.GateronYellow, KeySound.GateronYellowPairs), (SettingsAction.Wood, KeySound.CushionedWood) })

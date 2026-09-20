@@ -12,7 +12,7 @@ namespace GoBoard.Vr;
 // or input events. Kept out of the headset-independent regression test suite.
 internal static class ShortcutResizeCheck
 {
-    public static int Run()
+    public static int Run(bool numpad = false)
     {
         var error = EVRInitError.None;
         var system = OpenVR.Init(ref error, EVRApplicationType.VRApplication_Overlay);
@@ -33,7 +33,7 @@ internal static class ShortcutResizeCheck
             var pose = OpenVrPose.ToOpenVr(transform);
             Check(overlay.SetOverlayTransformAbsolute(handle, ETrackingUniverseOrigin.TrackingUniverseStanding, ref pose));
             graphics = new();
-            keyboard = new(system, overlay, handle, graphics, shortcutsOnly: true);
+            keyboard = new(system, overlay, handle, graphics, shortcutsOnly: !numpad);
             var grids = Enumerable.Range(1, ProgrammableKeySettings.MaxColumns).Reverse()
                 .SelectMany(c => Enumerable.Range(1, ProgrammableKeySettings.MaxRows).Reverse().Select(r => (Columns: c, Rows: r))).ToArray();
             // Include default settings before enablement, every size in both
@@ -44,9 +44,13 @@ internal static class ShortcutResizeCheck
             var updates = 0;
             Verify(settings);
             foreach (var theme in new[] { BoardThemes.SteamSoft, BoardThemes.SteamFlat })
-            foreach (var grid in grids.Concat(grids.Reverse()))
-                Verify(settings with { Theme = theme, ProgrammableKeys = new() { Enabled = true, Columns = grid.Columns, Rows = grid.Rows } });
-            Console.WriteLine("SteamVR shortcut resize check passed: 81 updates, all 20 grids growing/shrinking, both themes, texture readback, physical dimensions, pointer scale, ray hitboxes and UV orientation at 50/100/150% scale. No input or user settings changed.");
+                if (numpad)
+                    foreach (var enabled in new[] { true, false, true, false, true, false })
+                        Verify(settings with { Theme = theme, NumpadEnabled = enabled });
+                else
+                    foreach (var grid in grids.Concat(grids.Reverse()))
+                        Verify(settings with { Theme = theme, ProgrammableKeys = new() { Enabled = true, Columns = grid.Columns, Rows = grid.Rows } });
+            Console.WriteLine($"SteamVR {(numpad ? "numpad" : "shortcut")} resize check passed: {updates} updates, both themes, texture readback, physical dimensions, pointer scale, ray hitboxes and UV orientation at 50/100/150% scale. No input or user settings changed.");
             return 0;
 
             void Verify(BoardSettings next)
@@ -60,7 +64,7 @@ internal static class ShortcutResizeCheck
                 keyboard.BeginFrame(true);
                 keyboard.EndFrame();
                 Require(GL.GetError() == ErrorCode.NoError, "OpenGL publication error");
-                var texture = KeyboardOverlay.ShortcutTextureInfo;
+                var texture = numpad ? KeyboardOverlay.MainTextureInfo : KeyboardOverlay.ShortcutTextureInfo;
                 uint width = 0, height = 0;
                 Check(overlay.GetOverlayTextureSize(handle, ref width, ref height));
                 Require(width == texture.Width && height == texture.Height, "Texture dimensions changed");
@@ -107,7 +111,8 @@ internal static class ShortcutResizeCheck
                         (b.X + 1, b.Y + 1), (b.X + b.Width - 1, b.Y + b.Height - 1) })
                     {
                         Require(Ray(x, y, out var hit), $"Ray missed {key.Id}");
-                        var p = KeyboardOverlay.ShortcutPointerPosition(hit.vUVs.v0 * mouse.v0, hit.vUVs.v1 * mouse.v1, state);
+                        var p = numpad ? KeyboardOverlay.MainPointerPosition(hit.vUVs.v0 * mouse.v0, hit.vUVs.v1 * mouse.v1, state) :
+                            KeyboardOverlay.ShortcutPointerPosition(hit.vUVs.v0 * mouse.v0, hit.vUVs.v1 * mouse.v1, state);
                         Require(Math.Abs(p.X - x) < .03f && Math.Abs(p.Y - (state.Height - y)) < .03f &&
                             state.Hit(p.X, p.Y) == key, $"Ray targets the wrong shortcut at {key.Id}");
                     }
@@ -118,7 +123,7 @@ internal static class ShortcutResizeCheck
                 using var pixels = new SKBitmap(texture);
                 Check(overlay.GetOverlayImageData(handle, pixels.GetPixels(), (uint)pixels.ByteCount, ref width, ref height));
                 var fingerprint = Convert.ToHexString(SHA256.HashData(pixels.Bytes));
-                var identity = (next.Theme, next.ProgrammableKeys.Columns, next.ProgrammableKeys.Rows);
+                var identity = (next.Theme, Columns: numpad ? state.Width : next.ProgrammableKeys.Columns, Rows: numpad ? state.Height : next.ProgrammableKeys.Rows);
                 if (lastIdentity.HasValue && lastIdentity != identity)
                     Require(lastFingerprint != fingerprint, "Panel image did not update");
                 lastIdentity = identity; lastFingerprint = fingerprint;

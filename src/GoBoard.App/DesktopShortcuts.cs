@@ -148,7 +148,7 @@ internal sealed class DesktopShortcuts : IDisposable
         if (applied != settings || appliedDpi != owner.DeviceDpi)
         {
             Cancel(); toggle.Reset(Now, collapse: !settings.ProgrammableKeys.Enabled);
-            var reset = applied == null || applied.PositionResetId != settings.PositionResetId;
+            var reset = applied == null || applied.PositionResetId != settings.PositionResetId || applied.NumpadEnabled != settings.NumpadEnabled;
             applied = settings; appliedDpi = owner.DeviceDpi; audio.Apply(settings); keyboard.SetShortcuts(settings.ProgrammableKeys, Now);
             var scale = settings.Scale * owner.DeviceDpi / 96f;
             var area = Screen.FromControl(owner).WorkingArea;

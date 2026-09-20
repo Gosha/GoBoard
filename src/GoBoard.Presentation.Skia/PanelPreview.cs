@@ -24,24 +24,26 @@ internal static class PanelPreview
         }
     }
 
-    public static readonly string[] States = ["idle", "hover", "pressed", "oneshot", "locked", "shift", "caps", "scrolllock", "altgr", "unsupported", "error", "reference"];
+    public static readonly string[] States = ["idle", "hover", "pressed", "oneshot", "locked", "shift", "caps", "scrolllock", "altgr", "unsupported", "error", "reference", "numlock-off"];
     private sealed class PreviewSink : IKeySink
     {
         public void Down(ushort scan) { }
         public void Up(ushort scan) { }
     }
 
-    public static SKBitmap Render(string language, string visualState, string theme = BoardThemes.Default, bool cacheSurfaces = true, bool shortcuts = false)
+    public static SKBitmap Render(string language, string visualState, string theme = BoardThemes.Default, bool cacheSurfaces = true, bool shortcuts = false, bool numpad = false)
     {
         if (language is not ("us" or "sv" or "ja")) throw new ArgumentException("Preview layout must be us, sv or ja.");
-        return Render(new WindowsLayout((nint)(language == "ja" ? 0x04110411u : language == "sv" ? WindowsLayout.SwedishHandle : WindowsLayout.UsHandle)), visualState, theme, cacheSurfaces, shortcuts);
+        return Render(new WindowsLayout((nint)(language == "ja" ? 0x04110411u : language == "sv" ? WindowsLayout.SwedishHandle : WindowsLayout.UsHandle)), visualState, theme, cacheSurfaces, shortcuts, numpad);
     }
 
-    public static SKBitmap Render(WindowsLayout layout, string visualState, string theme = BoardThemes.Default, bool cacheSurfaces = true, bool shortcuts = false)
+    public static SKBitmap Render(WindowsLayout layout, string visualState, string theme = BoardThemes.Default, bool cacheSurfaces = true, bool shortcuts = false, bool numpad = false)
     {
         if (!States.Contains(visualState)) throw new ArgumentException($"Preview state must be {string.Join(", ", States)}.");
         var keyboard = new KeyboardState(new PreviewSink());
         keyboard.SetLayout(layout, 0);
+        keyboard.SetNumpad(numpad, 0);
+        keyboard.SetNumLock(visualState != "numlock-off");
         keyboard.SetShortcuts(new() { Enabled = shortcuts }, 0);
         keyboard.Enter(0, 7, 1);
         double time = 2;

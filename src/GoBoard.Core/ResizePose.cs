@@ -5,20 +5,20 @@ namespace GoBoard.Core;
 // The panel pose stays rigid. Only its physical dimensions change, around its center.
 internal sealed class ResizePose
 {
-    private static readonly Vector2 Corner = new(OverlayGeometry.PanelWidthInMeters / 2,
-        -OverlayGeometry.PanelHeightInMeters / 2);
+    private readonly Vector2 corner;
     private readonly Vector3 localRay;
     private readonly Vector2 initialHit;
     private readonly float initialScale;
     public float Scale { get; private set; }
     public int SizePercent => Math.Clamp((int)MathF.Round(Scale * 100, MidpointRounding.AwayFromZero), 50, 150);
 
-    private ResizePose(Vector3 ray, Vector2 hit, float scale)
+    private ResizePose(Vector3 ray, Vector2 hit, float scale, bool numpad)
     {
         localRay = ray; initialHit = hit; initialScale = Scale = scale;
+        corner = new(OverlayGeometry.WidthInMeters(numpad) / 2, -OverlayGeometry.PanelHeightInMeters / 2);
     }
 
-    public static ResizePose Capture(Matrix4x4 panel, Matrix4x4 controller, Vector3 panelPoint, float scale)
+    public static ResizePose Capture(Matrix4x4 panel, Matrix4x4 controller, Vector3 panelPoint, float scale, bool numpad = false)
     {
         if (!float.IsFinite(scale) || scale < .5f || scale > 1.5f ||
             !Matrix4x4.Invert(controller, out var inverse)) return null;
@@ -26,13 +26,13 @@ internal sealed class ResizePose
         if (!float.IsFinite(direction.LengthSquared()) || direction.LengthSquared() < 1e-8f) return null;
         var localRay = Vector3.TransformNormal(Vector3.Normalize(direction), inverse);
         if (!Intersect(panel, controller, localRay, out var hit)) return null;
-        return new(localRay, hit, scale);
+        return new(localRay, hit, scale, numpad);
     }
 
     public float Update(Matrix4x4 panel, Matrix4x4 controller)
     {
         if (Intersect(panel, controller, localRay, out var hit))
-            Scale = Math.Clamp(initialScale + Vector2.Dot(hit - initialHit, Corner) / Corner.LengthSquared(), .5f, 1.5f);
+            Scale = Math.Clamp(initialScale + Vector2.Dot(hit - initialHit, corner) / corner.LengthSquared(), .5f, 1.5f);
         return Scale;
     }
 

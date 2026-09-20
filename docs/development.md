@@ -113,7 +113,28 @@ See [project responsibilities](../AGENTS.md#project-boundaries) and [rendering c
 
 The outer margin is 4 logical units on all sides. Adjacent keys have consistent 2-unit horizontal and vertical gaps, including modifiers, function keys, navigation, and the Swedish Enter notch. Larger separations between key groups are preserved. Physical dimensions follow the cropped logical bounds so removing padding also reduces the dashboard area covered.
 
-The production panel is 850 x 282 logical units, rendered at 2550 x 846 and displayed at about 90.4 x 30.0 cm at the default 100% size. OpenVR mouse coordinates use a bottom-left origin; Skia uses top-left. The shared geometry performs that inversion. Texture UV bounds remain U 0→1 and V 1→0 in `OverlayGraphics`; changing that flips the panel.
+The default panel is 850 x 282 logical units, rendered at 2550 x 846 and displayed at about 90.4 x 30.0 cm at 100% size. The optional numpad widens it to 1046 logical units. VR submission uses a fixed 3138 x 846 raster with texel aspect preserving the current logical proportions. OpenVR mouse coordinates use a bottom-left origin; Skia uses top-left. The shared geometry performs that inversion. Texture UV bounds remain U 0→1 and V 1→0 in `OverlayGraphics`; changing that flips the panel.
+
+## Optional numpad
+
+![Keyboard with optional numpad](images/goboard-numpad.png)
+
+**Settings → General → Arrangement → Numpad** adds a standard 17-key keypad to the right of the main keyboard in desktop and VR. It defaults to off and is saved independently of the physical ANSI/ISO arrangement and shortcut palette. Main key positions and sizes are unchanged; the panel grows from 850 to 1046 logical units (about 111 cm wide at 100% in VR). Desktop mode fits the wider keyboard to the monitor's work area when necessary.
+
+The keys use physical keypad identities, including extended Divide and Enter, through the same guarded input path as the main keys. Digits and decimal follow Windows Num Lock; the NumLk indicator reflects the Windows toggle. Each dual-purpose key centers its active action in the normal text color, with a small cyan alternate in the upper-left corner. Digits and arrows use 18-unit type, words use 14-unit type, and hints use 9-unit type; all retain their natural proportions. Turning Num Lock off swaps the numeric and navigation labels (Home/End, PgUp/PgDn, arrows, Ins/Del and Clear on keypad 5). Clear is a Windows key action, with behavior determined by the receiving app ([Windows keypad mappings](https://github.com/microsoft/Windows-driver-samples/blob/main/input/layout/all_kbds/kbdfr/kbdfr.c)). `Dec` is an action label because Windows controls the decimal separator. Digits and operators repeat with their captured modifier chord; Num Lock and Enter do not repeat. Main-keyboard one-shot and locked modifiers also apply to the keypad.
+
+Changing the toggle cancels keyboard captures, repeat, hover and queued input from the old geometry, plus active VR move/resize gestures. The VR resize grip follows the new right corner, while the move handle remains centered. Shortcut panels return beside the resized keyboard. Settings writes preserve unrelated preferences. VR keeps a fixed 3138×846 texture and adjusts texel aspect and pointer conversion, preserving texture lifetime and UV orientation across toggles.
+
+```powershell
+dotnet run --project src/GoBoard.App -c Release -- --render .runtime/numpad.png --numpad
+dotnet run --project src/GoBoard.App -c Release -- --render .runtime/numpad-navigation.png --numpad --state numlock-off
+dotnet run --project src/GoBoard.App -c Release -- --render-desktop .runtime/numpad-desktop.png --numpad
+dotnet run --project src/GoBoard.App -c Release -- --numpad-resize-check
+```
+
+The last command requires a running SteamVR runtime. It uses a transparent diagnostic overlay away from the play space, without injecting input or changing settings. It checks toggling in both themes, fixed texture publication/readback, physical dimensions, ray targets and UV orientation at 50/100/150% scale. Regression tests cover ANSI/ISO/Japanese geometry, desktop fitting, VR pointer conversion, captured modifier repeat, cancellation, settings merging, resize math and idle rendering. `--settings-input-check` covers the toggle at multiple window sizes with a disposable settings file; `--desktop-input-check` covers keypad injection, Num Lock and hiding during repeat using a disposable text window (US, UK or Swedish layout).
+
+Remaining headset acceptance: verify numpad legibility and two-controller typing, toggle while typing/moving/resizing, and check the wider keyboard, corner grip and shortcut placement at different dashboard sizes. Automated checks do not establish controller feel or headset presentation latency.
 
 ## Keyboard themes
 
