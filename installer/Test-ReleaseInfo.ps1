@@ -44,13 +44,18 @@ foreach ($version in @('', 'v1.2.3', '01.2.3', '1.02.3', '1.2.03', '1.2', '1.2.3
     RequireRejected { & $resolver -Version $version }
 }
 $pr = & $ciResolver -EventName pull_request
-Require ($pr.Matrix.include.Count -eq 2 -and !$pr.ReleaseTag) 'PR must check both variants without selecting a release.'
+Require ($pr.Matrix.include.Count -eq 1 -and $pr.Matrix.include[0].channel -eq 'beta' -and $pr.Matrix.include[0].version -eq '1.0.1-beta.1') 'PR must build only the Beta validation package.'
+Require (!$pr.ReleaseTag -and !$pr.Channel -and !$pr.Version -and !$pr.Artifact) 'PR must not select a release.'
 foreach ($version in @('1.0.0', '1.0.1-beta.2')) {
     $tag = & $ciResolver -EventName push -RefType tag -RefName "v$version"
     Require ($tag.Matrix.include.Count -eq 1 -and $tag.Version -eq $version) 'Tag must build only its requested version.'
-    $manual = & $ciResolver -EventName workflow_dispatch -RefType tag -RefName v9.0.0 -Version $version
-    Require ($manual.Matrix.include.Count -eq 1 -and $manual.Version -eq $version) 'Manual input must win over the checkout ref.'
+    $expectedChannel = if ($version -like '*-beta.*') { 'beta' } else { 'stable' }
+    Require ($tag.Matrix.include[0].channel -eq $expectedChannel -and $tag.Channel -eq $expectedChannel -and $tag.ReleaseTag -eq "v$version" -and $tag.Artifact -eq "GoBoard-$expectedChannel-msi") 'Tag must select the matching release channel and artifact.'
 }
+$manual = & $ciResolver -EventName workflow_dispatch -RefType tag -RefName v9.0.0 -Version '1.0.1-beta.2'
+Require ($manual.Matrix.include.Count -eq 1 -and $manual.Matrix.include[0].channel -eq 'beta' -and $manual.Version -eq '1.0.1-beta.2') 'Manual Beta input must win over the checkout ref.'
+RequireRejected { & $ciResolver -EventName workflow_dispatch -Version '1.0.0' }
+RequireRejected { & $ciResolver -EventName workflow_dispatch -RefType tag -RefName v1.0.0 -Version '1.0.0' }
 RequireRejected { & $ciResolver -EventName push -RefType branch -RefName main }
 RequireRejected { & $ciResolver -EventName push -RefType tag -RefName 'v1.0.0-rc.1' }
 RequireRejected { & $ciResolver -EventName workflow_dispatch -Version '' }
