@@ -94,7 +94,25 @@ See [SemVer precedence](https://semver.org/#spec-item-11) and [MSI ProductVersio
 - Current-user Start menu entries **GoBoard VR**, **GoBoard Desktop**, and **GoBoard Settings**. Installed apps names include the readable release version, such as **GoBoard 1.0.1-beta.1**; its numeric version field uses the MSI mapping above.
 - All three shortcuts launch a Windows GUI executable without opening a console. Diagnostics from launches without a terminal or redirected output go to `%LOCALAPPDATA%\GoBoard\logs\goboard-<timestamp>-<pid>.log`.
 - Shared settings at `%LOCALAPPDATA%\GoBoard\settings.json` are never owned or removed by the MSI. Future Beta settings migrations must remain compatible with Stable.
-- Installation does not launch the app or enable autostart. Repository launchers and their `.runtime/app` logs and stop signals remain development facilities.
+- Installation leaves a closed app closed and does not enable autostart. If GoBoard is running, installation closes it gracefully and restarts the installed copy in the same VR/desktop mode after files are committed. Standalone Settings windows are also closed and reopened. This includes current-user repository launches outside the installation folder. Uninstall closes only copies using the installed executable and does not restart them.
+
+### Running-app upgrades
+
+The MSI embeds a small WiX DTF lifecycle action, built for the .NET Framework already included in supported Windows versions. It uses the running keyboard's existing session-local stop event, so this works when upgrading older releases. Windows Restart Manager alone cannot close the VR loop or relaunch those releases: the loop does not pump Windows shutdown messages, and the app did not register a restart command. MSI file-lock detection also misses repository launches outside the installation folder.
+
+After the user starts installation, the execute sequence captures only the current user's live GoBoard modes in the current Windows session. It requests shutdown and waits up to 15 seconds per process before files-in-use validation. A failure stops installation without force-killing the app. Diagnostic/render processes are excluded. Nested removal of an older MSI skips these actions. After commit, the action starts the installed executable, preserving VR/desktop/Settings mode and dropping old launcher stop files/time limits. A process that exits within five seconds produces a separate restart warning in interactive UI and the MSI log. Failed or cancelled installations attempt to restore exited instances from their original paths after rollback; instances still running are left alone.
+
+Build and test an unpublished MSI against an already-running keyboard:
+
+```powershell
+.\installer\Test-RunningUpgrade.ps1 -MsiPath artifacts\msi\GoBoard-1.3.1-beta.1-win-x64.msi -ExpectedVersion 1.3.1-beta.1
+```
+
+The check deliberately does not stop GoBoard first. It runs MSI unattended, requires exit code zero without a reboot, checks the original process exited, verifies installed release metadata and the new process's path/mode, and watches it for ten more seconds after MSI's startup check. Logs go to `.runtime/running-upgrade-*.log`. Repeat with VR and desktop, including launches from repository output. Headset visibility and controller behavior still need manual verification; a live process alone does not prove those.
+
+`installer/Test-InstallerRecovery.ps1 -MsiPath <installed-test-msi>` makes a separate test package that deliberately fails after `InstallExecute`. It verifies rollback and restoration of the running app, retaining its test package and log under `.runtime/installer-recovery-*`. Use an unpublished test MSI; the original package is never modified. This is an explicit local integration check, not part of CI.
+
+Validation of this fix: all 349 regression tests passed; locked restore, Release build, and compiled MSI/payload checks passed. An unattended live VR upgrade from 1.3.0 to the unpublished 1.3.1-beta.1 stopped the original process and started the installed replacement; a repair also restarted VR. Runtime logs confirmed overlay initialization and a connected headset, and the user confirmed the keyboard reappeared normally in VR. A deliberate failure after file operations rolled back and restored VR. Desktop/source-launch lifecycle handling and interactive wizard cancellation still require separate live acceptance checks.
 
 The installer accepts Windows 10 21H2 or later; use a Windows version supported by the bundled runtime. VR requires SteamVR and a headset. Self-contained releases need rebuilding and redistribution when updating the SDK/runtime for security fixes.
 

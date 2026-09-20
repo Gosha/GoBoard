@@ -149,6 +149,32 @@ try {
         $sequence.RemoveExistingProducts -ge $sequence.InstallFiles) {
         throw 'Replacement must remove old files inside the rollback transaction before installing new files.'
     }
+    if ($properties['MSIRESTARTMANAGERCONTROL'] -ne 'Disable' -or
+        $sequence.GoBoardStop -le $sequence.CostFinalize -or
+        $sequence.GoBoardStop -ge $sequence.InstallValidate -or
+        $sequence.GoBoardRestart -le $sequence.InstallFinalize -or
+        $sequence.GoBoardRecoverError -ne -3 -or $sequence.GoBoardRecoverCancel -ne -2) {
+        throw 'Installer must stop before files-in-use validation, restart after commit, and recover on failure/cancellation.'
+    }
+    $view = $db.OpenView('SELECT `Action`, `Condition` FROM `InstallExecuteSequence`')
+    $view.Execute()
+    while ($record = $view.Fetch()) {
+        if ($record.StringData(1) -like 'GoBoard*' -and $record.StringData(2) -ne 'NOT UPGRADINGPRODUCTCODE') {
+            throw 'Nested upgrade removal must not run the outer installer lifecycle actions.'
+        }
+    }
+    $view.Close()
+    $view = $db.OpenView('SELECT `Action`, `Type`, `Source`, `Target` FROM `CustomAction`')
+    $view.Execute()
+    $lifecycleCount = 0
+    while ($record = $view.Fetch()) {
+        if ($record.StringData(1) -notin @('GoBoardStop', 'GoBoardRestart', 'GoBoardRecoverError', 'GoBoardRecoverCancel')) { continue }
+        $lifecycleCount++
+        if ($record.StringData(3) -ne 'GoBoardLifecycle' -or ($record.IntegerData(2) -band 63) -ne 1 -or
+            ($record.IntegerData(2) -band 3072) -ne 0) { throw 'Lifecycle actions must use the embedded DLL and current-user immediate execution.' }
+    }
+    $view.Close()
+    if ($lifecycleCount -ne 4) { throw 'Missing embedded lifecycle actions.' }
 } finally {
     [Runtime.InteropServices.Marshal]::FinalReleaseComObject($db) | Out-Null
     [Runtime.InteropServices.Marshal]::FinalReleaseComObject($engine) | Out-Null

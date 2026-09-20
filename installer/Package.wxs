@@ -17,6 +17,23 @@
     <MajorUpgrade DowngradeErrorMessage="A newer version of $(var.ProductName) is already installed."
                   Schedule="afterInstallInitialize" />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <!-- VR has no Windows message pump for Restart Manager; older releases
+         never registered for restart. Coordinate through their existing stop
+         event, including repository launches outside the installation folder. -->
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <Binary Id="GoBoardLifecycle" SourceFile="$(var.LifecycleActions)" />
+    <CustomAction Id="GoBoardStop" BinaryRef="GoBoardLifecycle" DllEntry="Stop" Return="check" />
+    <CustomAction Id="GoBoardRestart" BinaryRef="GoBoardLifecycle" DllEntry="Restart" Return="check" />
+    <CustomAction Id="GoBoardRecoverError" BinaryRef="GoBoardLifecycle" DllEntry="Recover" Return="ignore" />
+    <CustomAction Id="GoBoardRecoverCancel" BinaryRef="GoBoardLifecycle" DllEntry="Recover" Return="ignore" />
+    <InstallExecuteSequence>
+      <!-- Execute sequence only: navigating/cancelling the wizard leaves the
+           app alone. Stop before the files-in-use check, not at Finish. -->
+      <Custom Action="GoBoardStop" Before="InstallValidate" Condition="NOT UPGRADINGPRODUCTCODE" />
+      <Custom Action="GoBoardRestart" After="InstallFinalize" Condition="NOT UPGRADINGPRODUCTCODE" />
+      <Custom Action="GoBoardRecoverError" OnExit="error" Condition="NOT UPGRADINGPRODUCTCODE" />
+      <Custom Action="GoBoardRecoverCancel" OnExit="cancel" Condition="NOT UPGRADINGPRODUCTCODE" />
+    </InstallExecuteSequence>
     <!-- MSI's WindowsBuild can report 9600 on modern Windows. Read the real build. -->
     <Property Id="GOBOARD_WINDOWS_BUILD">
       <RegistrySearch Id="WindowsBuildSearch" Root="HKLM"

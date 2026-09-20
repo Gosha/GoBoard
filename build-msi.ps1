@@ -47,7 +47,14 @@ try {
 
     $payloadFragment = Join-Path $buildRoot 'Payload.wxs'
     & (Join-Path $PSScriptRoot 'installer\New-PayloadFragment.ps1') -PublishDir $publishDir -OutputPath $payloadFragment
-    $installerProperties = @("-p:BaseIntermediateOutputPath=$installerArtifacts\obj\", "-p:OutputPath=$installerArtifacts\bin\", "-p:PublishDir=$publishDir\", "-p:PayloadFragment=$payloadFragment", "-p:ProductVersion=$($release.MsiVersion)", "-p:ReleaseVersion=$Version", "-p:ReleaseChannel=$Channel")
+    $actionsProject = Join-Path $PSScriptRoot 'installer\GoBoard.Installer.Actions\GoBoard.Installer.Actions.csproj'
+    $actionsProperties = @("-p:BaseIntermediateOutputPath=$buildRoot\actions\obj\", "-p:OutputPath=$buildRoot\actions\bin\")
+    dotnet restore $actionsProject --locked-mode @actionsProperties
+    if ($LASTEXITCODE -ne 0) { throw 'Installer lifecycle action restore failed.' }
+    dotnet build $actionsProject -c Release --no-restore @actionsProperties
+    if ($LASTEXITCODE -ne 0) { throw 'Installer lifecycle action build failed.' }
+    $lifecycleActions = Join-Path $buildRoot 'actions\bin\GoBoard.Installer.Actions.CA.dll'
+    $installerProperties = @("-p:BaseIntermediateOutputPath=$installerArtifacts\obj\", "-p:OutputPath=$installerArtifacts\bin\", "-p:PublishDir=$publishDir\", "-p:PayloadFragment=$payloadFragment", "-p:ProductVersion=$($release.MsiVersion)", "-p:ReleaseVersion=$Version", "-p:ReleaseChannel=$Channel", "-p:LifecycleActions=$lifecycleActions")
     dotnet restore $installer --locked-mode @installerProperties
     if ($LASTEXITCODE -ne 0) { throw 'Installer restore failed.' }
     dotnet build $installer -c Release --no-restore @installerProperties

@@ -3,7 +3,7 @@
     <InstallerPlatform>x64</InstallerPlatform>
     <OutputName>GoBoard-$(ReleaseVersion)-win-x64</OutputName>
     <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\artifacts\msi\publish\</PublishDir>
-    <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir);ReleaseChannel=$(ReleaseChannel);ReleaseVersion=$(ReleaseVersion)</DefineConstants>
+    <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir);ReleaseChannel=$(ReleaseChannel);ReleaseVersion=$(ReleaseVersion);LifecycleActions=$(LifecycleActions)</DefineConstants>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- ICE91 warns that profile files cannot support ALLUSERS. This package
@@ -16,6 +16,7 @@
   </ItemGroup>
   <Target Name="CheckPublishedApp" BeforeTargets="BeforeBuild">
     <Error Condition="!Exists('$(PayloadFragment)')" Text="Run build-msi.ps1 to generate the per-user payload fragment." />
+    <Error Condition="!Exists('$(LifecycleActions)')" Text="Run build-msi.ps1 to build the installer lifecycle actions." />
     <Error Condition="'$(ReleaseChannel)' != 'stable' and '$(ReleaseChannel)' != 'beta'" Text="ReleaseChannel must be stable or beta." />
     <Error Condition="'$(ProductVersion)' == '' or '$(ReleaseVersion)' == ''" Text="Run build-msi.ps1 with an explicit release version." />
     <Error Condition="!Exists('$(PublishDir)GoBoard.exe')" Text="Run build-msi.ps1 to publish GoBoard before building the installer." />
