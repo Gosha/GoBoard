@@ -125,7 +125,7 @@ public static int Run(string[] args)
         graphics = new OverlayGraphics();
         var overlay = OpenVR.Overlay ?? throw new InvalidOperationException("SteamVR did not provide the OpenVR overlay interface.");
         Check(overlay.CreateOverlay("goboard.app", "GoBoard", ref handle), "Create independent overlay (is another copy running?)");
-        Check(overlay.SetOverlayWidthInMeters(handle, Panel.WidthInMeters), "Set width");
+        Check(overlay.SetOverlayWidthInMeters(handle, OverlayGeometry.WidthInMeters(true)), "Set width");
         Check(overlay.SetOverlayFlag(handle, VROverlayFlags.VisibleInDashboard, true), "Allow panel alongside dashboard");
 
 
