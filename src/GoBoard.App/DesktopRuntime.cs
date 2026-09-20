@@ -45,11 +45,12 @@ internal static class DesktopRuntime
         if (shortcuts) form.Shortcuts.ExpandPreview();
         Application.DoEvents();
         Form[] windows = shortcuts ? [form, form.Shortcuts.Launcher, form.Shortcuts.PanelWindow] : [form];
-        var bounds = windows.Select(w => w.Bounds).Aggregate(Rectangle.Union);
+        var bounds = windows.Concat(form.FloatingControls.Windows.Where(w => w.Visible)).Select(w => w.Bounds).Aggregate(Rectangle.Union);
         using var bitmap = new Bitmap(bounds.Width, bounds.Height);
         using (var graphics = Graphics.FromImage(bitmap)) graphics.Clear(Color.FromArgb(7, 16, 24));
         foreach (var window in windows)
             window.DrawToBitmap(bitmap, new Rectangle(window.Left - bounds.Left, window.Top - bounds.Top, window.Width, window.Height));
+        using (var graphics = Graphics.FromImage(bitmap)) form.FloatingControls.DrawPreview(graphics, bounds.Location);
         var fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         bitmap.Save(fullPath, System.Drawing.Imaging.ImageFormat.Png);

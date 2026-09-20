@@ -28,6 +28,8 @@ internal static class SettingsInputCheck
             using var desktop = new DesktopKeyboardForm(previewOnly: true, store: new SettingsStore(path));
             _ = form.Handle;
             _ = desktop.Handle;
+            desktop.Show();
+            Application.DoEvents();
             foreach (var size in new[] { new Size(900, 650), new Size(1200, 650), new Size(560, 850) })
             {
                 form.ClientSize = size;
@@ -71,13 +73,17 @@ internal static class SettingsInputCheck
                 Click(SettingsAction.Geometry);
                 Require(store.Current.Geometry == (KeyboardGeometry)(((int)geometry + 1) % 3), "Arrangement selection");
                 Require(new SettingsStore(path).Current.Geometry == store.Current.Geometry, "Saved arrangement");
-                Click(SettingsAction.ToggleNumpad);
+                var numpad = store.Current.NumpadEnabled;
+                Click(SettingsAction.ToggleNumpadButton);
                 desktop.RefreshSettings();
-                Require(store.Current.NumpadEnabled && new SettingsStore(path).Current.NumpadEnabled &&
-                    desktop.State.Keys.Any(k => k.Id == "NumEnter"), "Numpad toggle persistence and desktop propagation");
-                Click(SettingsAction.ToggleNumpad);
+                Require(!store.Current.NumpadButtonEnabled && !new SettingsStore(path).Current.NumpadButtonEnabled &&
+                    !desktop.FloatingControls.Window(KeyboardAction.ToggleNumpad).Visible &&
+                    desktop.FloatingControls.Window(KeyboardAction.ResetPosition).Visible && desktop.State.NumpadEnabled == numpad,
+                    "Numpad button visibility persistence and desktop propagation");
+                Click(SettingsAction.ToggleNumpadButton);
                 desktop.RefreshSettings();
-                Require(!desktop.State.NumpadEnabled, "Hide numpad");
+                Require(desktop.FloatingControls.Window(KeyboardAction.ToggleNumpad).Visible && desktop.State.NumpadEnabled == numpad,
+                    "Show numpad button without changing the keypad");
                 foreach (var (action, sound) in new[] { (SettingsAction.Thud, KeySound.SoftLowThud),
                     (SettingsAction.CherryBlue, KeySound.CherryMxBlue),
                     (SettingsAction.GateronYellow, KeySound.GateronYellowPairs), (SettingsAction.Wood, KeySound.CushionedWood) })

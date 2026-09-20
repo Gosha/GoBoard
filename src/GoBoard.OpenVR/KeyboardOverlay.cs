@@ -36,13 +36,21 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         ProgrammableKeys.Width(new() { Columns = ProgrammableKeySettings.MaxColumns }) * Panel.RasterScale,
         ProgrammableKeys.Height(new() { Rows = ProgrammableKeySettings.MaxRows }) * Panel.RasterScale,
         SKColorType.Rgba8888, SKAlphaType.Unpremul);
-    // Keep texture dimensions fixed when the optional numpad changes the logical width.
+    // Keep both the raster and physical overlay dimensions fixed. Center the
+    // narrower keyboard in transparent padding so toggles only publish pixels,
+    // never stretch the previous frame while SteamVR applies separate setters.
     internal static readonly SKImageInfo MainTextureInfo = new(
         OverlayGeometry.Width(true) * Panel.RasterScale, Panel.LayoutHeight * Panel.RasterScale,
         SKColorType.Rgba8888, SKAlphaType.Unpremul);
     private SKImageInfo TextureInfo => shortcutsOnly ? ShortcutTextureInfo : MainTextureInfo;
+    internal static SKRect MainContentBounds(KeyboardState state)
+    {
+        var width = state.Width * Panel.RasterScale;
+        var left = (MainTextureInfo.Width - width) / 2f;
+        return new(left, 0, left + width, MainTextureInfo.Height);
+    }
     internal static (float X, float Y) MainPointerPosition(float x, float y, KeyboardState state) =>
-        (x * state.Width / MainTextureInfo.Width, y * state.Height / MainTextureInfo.Height);
+        ((x - MainContentBounds(state).Left) / Panel.RasterScale, y / Panel.RasterScale);
 
     internal static (float X, float Y) ShortcutPointerPosition(float x, float y, KeyboardState state) =>
         (x * state.Width / ShortcutTextureInfo.Width, y * state.Height / ShortcutTextureInfo.Height);
@@ -62,18 +70,20 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             // scale's aspect too. Match the fixed raster here, then convert
             // event coordinates to the current logical grid in Process.
             var scale = new HmdVector2_t { v0 = TextureInfo.Width, v1 = TextureInfo.Height };
+            var bounds = shortcutsOnly ? new SKRect(0, 0, scale.v0, scale.v1) : MainContentBounds(State);
             var mask = new VROverlayIntersectionMaskPrimitive_t
             {
                 m_nPrimitiveType = EVROverlayIntersectionMaskPrimitiveType.OverlayIntersectionPrimitiveType_Rectangle,
                 m_Primitive = new VROverlayIntersectionMaskPrimitive_Data_t
-                { m_Rectangle = new IntersectionMaskRectangle_t { m_flWidth = scale.v0, m_flHeight = scale.v1 } }
+                { m_Rectangle = new IntersectionMaskRectangle_t
+                    { m_flTopLeftX = bounds.Left, m_flTopLeftY = bounds.Top, m_flWidth = bounds.Width, m_flHeight = bounds.Height } }
             };
             var error = overlay.SetOverlayMouseScale(handle, ref scale);
             if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize pointer coordinates: {error}");
             error = overlay.SetOverlayIntersectionMask(handle, ref mask, 1, (uint)Marshal.SizeOf<VROverlayIntersectionMaskPrimitive_t>());
             if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize input region: {error}");
             error = overlay.SetOverlayTexelAspect(handle,
-                State.Width * (float)TextureInfo.Height / (State.Height * TextureInfo.Width));
+                shortcutsOnly ? State.Width * (float)TextureInfo.Height / (State.Height * TextureInfo.Width) : 1);
             if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize keyboard proportions: {error}");
             geometryApplied = true;
         }
@@ -93,6 +103,9 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         audio.Apply(settings);
         audio.Preview();
     }
+
+    public void CancelPending() => Cancel();
+    public void ReportError(string error) { status = error; lastErrorTime = Now; }
 
     public void BeginFrame(bool active, uint? grabbingController = null, bool isResizing = false)
     {
@@ -204,7 +217,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         var scrollLock = WindowsKeyboard.ScrollLock;
         State.SetNumLock(WindowsKeyboard.NumLock);
         using var bitmap = renderer.Render(State, shift, status, altGr, caps, scrollLock, theme, effects, Now,
-            TextureInfo);
+            TextureInfo, shortcutsOnly ? null : MainContentBounds(State));
         if (bitmap == null) return;
         graphics.Upload(overlay, handle, bitmap);
     }

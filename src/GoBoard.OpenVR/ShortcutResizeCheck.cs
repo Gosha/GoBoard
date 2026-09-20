@@ -58,7 +58,7 @@ internal static class ShortcutResizeCheck
                 keyboard.ApplySettings(next, resized: true);
                 var state = keyboard.State;
                 var meters = ProgrammableKeys.MetersPerUnit * (++updates % 3 + 1) / 2f;
-                var expectedWidth = state.Width * meters;
+                var expectedWidth = (numpad ? OverlayGeometry.Width(true) : state.Width) * meters;
                 var expectedHeight = state.Height * meters;
                 Check(overlay.SetOverlayWidthInMeters(handle, expectedWidth));
                 keyboard.BeginFrame(true);
@@ -98,8 +98,10 @@ internal static class ShortcutResizeCheck
                 // SteamVR's intersection cache can lag a width/pose change.
                 // Wait for an off-center ray, then check every key without retries.
                 var ready = Stopwatch.StartNew();
+                var expectedU = numpad
+                    ? (KeyboardOverlay.MainContentBounds(state).Left + state.Width * .25f * OverlayGeometry.RasterScale) / texture.Width : .25f;
                 while (!Ray(state.Width * .25f, state.Height * .25f, out var center) ||
-                    Math.Abs(center.vUVs.v0 - .25f) > .0005f || Math.Abs(center.vUVs.v1 - .75f) > .0005f)
+                    Math.Abs(center.vUVs.v0 - expectedU) > .0005f || Math.Abs(center.vUVs.v1 - .75f) > .0005f)
                 {
                     Require(ready.Elapsed.TotalSeconds < 2, "SteamVR ray coordinates do not match the displayed grid");
                     Thread.Sleep(10);
@@ -119,9 +121,31 @@ internal static class ShortcutResizeCheck
                 }
                 foreach (var (x, y) in new[] { (-2f, state.Height / 2f), (state.Width + 2f, state.Height / 2f),
                     (state.Width / 2f, -2f), (state.Width / 2f, state.Height + 2f) })
-                    Require(!Ray(x, y, out _), "Ray hit outside the visible panel");
+                {
+                    if (!Ray(x, y, out var hit)) continue;
+                    // ComputeOverlayIntersection also reports the transparent
+                    // raster margins; the controller intersection mask is separate.
+                    Require(numpad && !state.NumpadEnabled && (x < 0 || x > state.Width), "Ray hit outside the raster");
+                    var p = KeyboardOverlay.MainPointerPosition(hit.vUVs.v0 * mouse.v0, hit.vUVs.v1 * mouse.v1, state);
+                    Require(state.Hit(p.X, p.Y) == null, "Transparent padding targets a key");
+                }
+                if (numpad)
+                {
+                    var margin = (OverlayGeometry.Width(true) - state.Width) / 2f;
+                    Require(!Ray(-margin - 2, state.Height / 2f, out _) &&
+                        !Ray(state.Width + margin + 2, state.Height / 2f, out _), "Ray hit outside the fixed raster");
+                    Require(Math.Abs(texelAspect - 1) < .00001f, "Numpad toggle changed texel aspect");
+                }
                 using var pixels = new SKBitmap(texture);
                 Check(overlay.GetOverlayImageData(handle, pixels.GetPixels(), (uint)pixels.ByteCount, ref width, ref height));
+                if (numpad && !state.NumpadEnabled)
+                {
+                    var content = KeyboardOverlay.MainContentBounds(state);
+                    for (var y = 0; y < pixels.Height; y++)
+                    for (var x = 0; x < content.Left; x++)
+                        Require(pixels.GetPixel(x, y).Alpha == 0 && pixels.GetPixel(pixels.Width - 1 - x, y).Alpha == 0,
+                            "Narrow keyboard left stale pixels in the raster padding");
+                }
                 var fingerprint = Convert.ToHexString(SHA256.HashData(pixels.Bytes));
                 var identity = (next.Theme, Columns: numpad ? state.Width : next.ProgrammableKeys.Columns, Rows: numpad ? state.Height : next.ProgrammableKeys.Rows);
                 if (lastIdentity.HasValue && lastIdentity != identity)

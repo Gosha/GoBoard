@@ -51,7 +51,7 @@ public sealed class NumpadTests
                     foreach (var (x, y) in new[] { (b.X + 1, b.Y + 1), (b.X + b.Width - 1, b.Y + b.Height - 1) })
                     {
                         Assert.Single(state.Keys, k => k.Contains(x, y));
-                        var vr = KeyboardOverlay.MainPointerPosition(x / state.Width * KeyboardOverlay.MainTextureInfo.Width,
+                        var vr = KeyboardOverlay.MainPointerPosition(KeyboardOverlay.MainContentBounds(state).Left + x * Panel.RasterScale,
                             (1 - y / state.Height) * KeyboardOverlay.MainTextureInfo.Height, state);
                         Assert.Same(key, state.Hit(vr.X, vr.Y));
                         var point = desktop.ToKeyboard(x / state.Width * desktop.Width,
@@ -115,19 +115,74 @@ public sealed class NumpadTests
             state.SetNumpad(enabled, ++time);
             state.SetNumLock(numLock);
             var output = vr ? KeyboardOverlay.MainTextureInfo : new SKImageInfo(state.Width, state.Height, SKColorType.Bgra8888, SKAlphaType.Opaque);
-            using var actual = renderer.Render(state, false, null, false, false, false, theme, new(), time, output);
+            SKRect? bounds = vr ? KeyboardOverlay.MainContentBounds(state) : null;
+            using var actual = renderer.Render(state, false, null, false, false, false, theme, new(), time, output, bounds);
             using var fresh = new AnimatedKeyboardRenderer();
-            using var expected = fresh.Render(state, false, null, false, false, false, theme, new(), time, output);
+            using var expected = fresh.Render(state, false, null, false, false, false, theme, new(), time, output, bounds);
             Assert.NotNull(actual);
             Assert.Equal(expected.Bytes, actual.Bytes);
-            if (enabled && Environment.GetEnvironmentVariable("GOBOARD_NUMPAD_ARTIFACTS") is { Length: > 0 } directory)
+            if (Environment.GetEnvironmentVariable("GOBOARD_NUMPAD_ARTIFACTS") is { Length: > 0 } directory)
             {
                 Directory.CreateDirectory(directory);
                 using var png = actual.Encode(SKEncodedImageFormat.Png, 100);
-                using var file = File.Create(Path.Combine(directory, $"{(vr ? "vr" : "desktop")}-{theme}-numlock-{(numLock ? "on" : "off")}.png"));
+                using var file = File.Create(Path.Combine(directory, $"{(vr ? "vr" : "desktop")}-{theme}-numpad-{enabled}-numlock-{(numLock ? "on" : "off")}.png"));
                 png.SaveTo(file);
             }
-            Assert.Null(renderer.Render(state, false, null, false, false, false, theme, new(), time + .1, output));
+            Assert.Null(renderer.Render(state, false, null, false, false, false, theme, new(), time + .1, output, bounds));
+        }
+    }
+
+    [Theory]
+    [InlineData(BoardThemes.SteamSoft)]
+    [InlineData(BoardThemes.SteamFlat)]
+    public void VrToggleKeepsNativePixelsAndEffectsCenteredWithoutStretching(string theme)
+    {
+        var state = new KeyboardState(new Sink());
+        using var paddedRenderer = new AnimatedKeyboardRenderer();
+        using var nativeRenderer = new AnimatedKeyboardRenderer();
+        double time = 0;
+        foreach (var enabled in new[] { false, true, false, true })
+        {
+            state.SetNumpad(enabled, ++time);
+            var bounds = KeyboardOverlay.MainContentBounds(state);
+            var key = state.Keys.Single(k => k.Id == "a").Bounds;
+            time += .01; // Fresh input after the geometry-change watermark.
+            state.Enter(0, 7, time);
+            state.Move(0, 7, key.X + key.Width / 2, state.Height - key.Y - key.Height / 2);
+            foreach (var elapsed in new[] { 0, .04, .08 })
+            {
+                using var padded = paddedRenderer.Render(state, false, null, false, false, false, theme, new(), time + elapsed,
+                    KeyboardOverlay.MainTextureInfo, bounds);
+                using var native = nativeRenderer.Render(state, false, null, false, false, false, theme, new(), time + elapsed);
+                Assert.NotNull(padded);
+                Assert.NotNull(native);
+                Assert.Equal(native.Width, bounds.Width);
+                Assert.Equal(native.Height, bounds.Height);
+                var pixels = padded.Bytes;
+                var reference = native.Bytes;
+                var marginBytes = (int)bounds.Left * 4;
+                for (var y = 0; y < padded.Height; y++)
+                {
+                    var row = pixels.AsSpan(y * padded.RowBytes, padded.RowBytes);
+                    var content = row.Slice(marginBytes, native.RowBytes);
+                    var expected = reference.AsSpan(y * native.RowBytes, native.RowBytes);
+                    // Translated gradient shaders and alpha conversion can round
+                    // channels slightly differently; a stretched key cannot pass.
+                    var largestDifference = 0;
+                    for (var x = 0; x < content.Length; x++)
+                        largestDifference = Math.Max(largestDifference, Math.Abs(content[x] - expected[x]));
+                    Assert.True(largestDifference <= 2,
+                        $"Pixel difference {largestDifference} at row {y}, numpad {enabled}, animation {elapsed}");
+                    Assert.True(row[..marginBytes].IndexOfAnyExcept((byte)0) < 0);
+                    Assert.True(row[(marginBytes + native.RowBytes)..].IndexOfAnyExcept((byte)0) < 0);
+                }
+            }
+            if (!enabled)
+                foreach (var x in new[] { bounds.Left - 1, bounds.Right + 1 })
+                {
+                    var pointer = KeyboardOverlay.MainPointerPosition(x, 100, state);
+                    Assert.Null(state.Hit(pointer.X, pointer.Y));
+                }
         }
     }
 

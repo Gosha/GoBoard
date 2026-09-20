@@ -31,7 +31,9 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
 
     public void SetScale(float scale)
     {
-        var width = OverlayGeometry.WidthInMeters(numpad) * scale;
+        // The main texture includes centered transparent padding without the
+        // numpad. Its physical size must stay independent of that toggle.
+        var width = OverlayGeometry.WidthInMeters(true) * scale;
         if (panelWidth == width && panelScale == scale) return;
         Check(overlay.SetOverlayWidthInMeters(panel, width), "Resize keyboard");
         panelWidth = width;

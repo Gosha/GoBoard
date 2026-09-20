@@ -7,7 +7,7 @@ try {
     New-Item -ItemType Directory -Force -Path $previewDirectory | Out-Null
     foreach ($theme in @('steam-soft', 'steam-flat')) {
         $previewPath = Join-Path $previewDirectory "$theme.png"
-        dotnet run --project src/GoBoard.App -c Release --no-build -- --render $previewPath --layout us --state hover --theme $theme
+        dotnet run --project src/GoBoard.App -c Release --no-build -- --render $previewPath --layout us --state hover --theme $theme --controls
         if ($LASTEXITCODE -ne 0) { throw "Rendering $theme failed." }
     }
 
