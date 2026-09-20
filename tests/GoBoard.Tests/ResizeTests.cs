@@ -372,6 +372,38 @@ public sealed class ResizeTests : IDisposable
         using var gripBitmap = ResizeHandleRenderer.Render(0);
         using var gripImage = SKImage.FromBitmap(gripBitmap);
         const float pixelsPerMeter = 1000;
+        // Compare both move handles with the panels bottom-aligned, at actual VR proportions.
+        var shortcuts = new KeyboardState(null, shortcutsOnly: true);
+        using var shortcutBitmap = Panel.Render(shortcuts);
+        using var shortcutImage = SKImage.FromBitmap(shortcutBitmap);
+        var shortcutWidth = shortcuts.Width * ProgrammableKeys.MetersPerUnit * pixelsPerMeter;
+        var shortcutHeight = shortcuts.Height * ProgrammableKeys.MetersPerUnit * pixelsPerMeter;
+        var mainWidth = OverlayGeometry.PanelWidthInMeters * pixelsPerMeter;
+        var mainHeight = OverlayGeometry.PanelHeightInMeters * pixelsPerMeter;
+        var bottom = 20 + Math.Max(shortcutHeight, mainHeight);
+        for (var state = 0; state < 3; state++)
+        {
+            using var comparison = new SKBitmap((int)Math.Ceiling(shortcutWidth + mainWidth) + 80, (int)Math.Ceiling(bottom) + 80);
+            using var target = new SKCanvas(comparison);
+            target.Clear(new SKColor(31, 40, 49));
+            void DrawPanel(SKImage image, float x, float width, float height, int handleWidth, float handleMeters)
+            {
+                target.DrawImage(image, new SKRect(x, bottom - height, x + width, bottom), new SKSamplingOptions(SKFilterMode.Linear));
+                using var handle = GrabHandleRenderer.Render(state, handleWidth);
+                var offset = OverlayGeometry.GrabFromPanelHeight(height / pixelsPerMeter);
+                var cy = bottom - height / 2 - offset.M42 * pixelsPerMeter;
+                var hw = handleMeters * pixelsPerMeter;
+                var hh = hw * OverlayGeometry.GrabHeight / handleWidth;
+                target.DrawBitmap(handle, new SKRect(x + (width - hw) / 2, cy - hh / 2,
+                    x + (width + hw) / 2, cy + hh / 2), new SKSamplingOptions(SKFilterMode.Linear));
+            }
+            DrawPanel(shortcutImage, 20, shortcutWidth, shortcutHeight, OverlayGeometry.ShortcutGrabWidth, OverlayGeometry.ShortcutGrabWidthInMeters);
+            DrawPanel(panelImage, shortcutWidth + 60, mainWidth, mainHeight, OverlayGeometry.GrabWidth, OverlayGeometry.GrabWidthInMeters);
+            using var result = SKImage.FromBitmap(comparison);
+            using var encoded = result.Encode(SKEncodedImageFormat.Png, 100);
+            using var file = File.Create(Path.Combine(path, $"shortcut-grab-comparison-{state}.png"));
+            encoded.SaveTo(file);
+        }
         foreach (var scale in new[] { .5f, 1f, 1.5f })
         {
             var width = OverlayGeometry.PanelWidthInMeters * scale * pixelsPerMeter;

@@ -15,6 +15,8 @@ internal static class OverlayGeometry
     public const int GrabWidth = 180;
     public const int GrabHeight = 60;
     public const float GrabWidthInMeters = 0.18f;
+    public const int ShortcutGrabWidth = GrabWidth / 2;
+    public const float ShortcutGrabWidthInMeters = GrabWidthInMeters / 2;
     public const int ResizeSize = 70;
     public const float ResizeSizeInMeters = 0.07f;
     public const float ResizeCornerSpacingInMeters = 0.006f;
@@ -39,5 +41,8 @@ internal static class OverlayGeometry
         GrabFromScaledPanel(1);
 
     public static Matrix4x4 GrabFromScaledPanel(float scale) =>
-        Matrix4x4.CreateTranslation(0, -(PanelHeightInMeters * scale / 2 + 0.0375f), 0.002f);
+        GrabFromPanelHeight(PanelHeightInMeters * scale);
+
+    public static Matrix4x4 GrabFromPanelHeight(float heightInMeters) =>
+        Matrix4x4.CreateTranslation(0, -(heightInMeters / 2 + 0.0375f), 0.002f);
 }

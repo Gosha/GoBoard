@@ -7,7 +7,8 @@ using Valve.VR;
 
 namespace GoBoard.Vr;
 
-internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong handle, OverlayGraphics graphics)
+internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong handle, OverlayGraphics graphics,
+    int layoutWidth = OverlayGeometry.GrabWidth)
 {
     public const int LayoutWidth = OverlayGeometry.GrabWidth, LayoutHeight = OverlayGeometry.GrabHeight;
     public const float Width = OverlayGeometry.GrabWidthInMeters;
@@ -134,7 +135,7 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
         var state = grab != null ? 2 : input.HasFocus && interactive ? 1 : 0;
         if (drawnState != state)
         {
-            using var bitmap = GrabHandleRenderer.Render(state);
+            using var bitmap = GrabHandleRenderer.Render(state, layoutWidth);
             graphics.Upload(overlay, handle, bitmap);
             drawnState = state;
         }
