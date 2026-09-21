@@ -43,6 +43,8 @@ Manual, script, and SteamVR launches share `Local\GoBoard.Runtime` and `Local\Go
 
 Each live launch writes `goboard.log` and `goboard.error.log` under `%LOCALAPPDATA%\GoBoard\runtime`, independently of its working directory; the latest launch replaces the previous logs. SteamVR quit events are acknowledged and run the existing input/overlay cleanup. The stop script no longer relies on PID files, and does not force-kill any process.
 
+In SteamVR 2.17, hovering the GoBoard Settings dashboard tab exposes **Close**, which exits the VR keyboard and all its overlays through the same cleanup, even when another tab is selected. This uses OpenVR's existing `EnableControlBarClose` flag and `VREvent_OverlayClosed` event. SteamVR owns the menu and its label; the public API does not provide custom entries for reset position or keyboard visibility. Closing GoBoard preserves its settings and autostart preference.
+
 ## Validation
 
 Automated regression tests cover the manifest identity/schema, absolute paths containing spaces and Unicode, invalid executable rejection, register/enable/disable/unregister transitions, relocation, preserved autostart settings, manifest rollback on registration failure, retryable configuration failures, and duplicate/stop/restart behavior. The API tests use a fake OpenVR applications interface; they do not modify this PC's SteamVR registration.
@@ -72,3 +74,4 @@ Before release, perform these checks with SteamVR and a headset (not established
 5. Disable, restart SteamVR, and confirm GoBoard stays closed. Change the setting in SteamVR and confirm Status reflects it. Register again and confirm the setting is preserved.
 6. Move/copy the installation, Register the new executable, and confirm only that path launches on restart. Unregister; confirm GoBoard is removed and no longer autostarts. Repeat Unregister to check idempotence.
 7. In each settings host, register and unregister using the autostart button above the reset buttons. Confirm the label/status updates, Status agrees, and typing continues. Change autostart externally in SteamVR and confirm the panel refreshes. With SteamVR unavailable, confirm the desktop panel offers Retry and shows an error instead of claiming success.
+8. Hover GoBoard Settings and select **Close**, both with its tab selected and with another tab selected. Repeat while the keyboard is hidden, and while the other controller holds a key or resize gesture. Confirm GoBoard exits, all its overlays disappear, owned keys are released, and a pending resize is not saved. Restart GoBoard and confirm settings and autostart are unchanged. The dashboard hover menu is SteamVR-rendered and is not captured by GoBoard's PNG preview commands.
