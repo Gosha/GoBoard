@@ -64,6 +64,15 @@ try {
 $config = Get-Content -Raw -LiteralPath (Join-Path $payload 'GoBoard.runtimeconfig.json') | ConvertFrom-Json
 if (@($config.runtimeOptions.includedFrameworks).Count -ne 2) { throw 'Expected a self-contained desktop runtime.' }
 
+# The shortcut/Installed apps icon must be the compact branding ICO, not a
+# second copy of the executable stored outside the compressed payload.
+$icon = $document.SelectSingleNode("//w:Icon[@Id='GoBoard.exe']", $ns)
+$iconSource = Join-Path $extracted 'Icon\GoBoard.exe'
+$brandingIcon = Join-Path $PSScriptRoot '..\assets\branding\goboard.ico'
+if (!$icon -or !(Test-Path -LiteralPath $iconSource) -or
+    (Get-FileHash -LiteralPath $iconSource).Hash -ne (Get-FileHash -LiteralPath $brandingIcon).Hash) {
+    throw 'MSI must embed the branding ICO for its shortcut and Installed apps icon.'
+}
 $shortcuts = $document.SelectNodes('//w:Shortcut', $ns)
 if ($shortcuts.Count -ne 3) { throw 'Expected three Start menu shortcuts.' }
 foreach ($entry in @(@('GoBoard VR', ''), @('GoBoard Desktop', '--desktop'), @('GoBoard Settings', '--settings'))) {
@@ -71,6 +80,7 @@ foreach ($entry in @(@('GoBoard VR', ''), @('GoBoard Desktop', '--desktop'), @('
     if ($shortcut.Count -ne 1 -or $shortcut[0].GetAttribute('Arguments') -ne $entry[1] -or
         $shortcut[0].GetAttribute('Advertise') -eq 'yes' -or
         $shortcut[0].GetAttribute('Target') -ne '[INSTALLFOLDER]GoBoard.exe' -or
+        $shortcut[0].GetAttribute('Icon') -ne 'GoBoard.exe' -or
         !$shortcut[0].ParentNode.SelectSingleNode("w:RegistryValue[@Root='HKCU' and @KeyPath='yes']", $ns)) {
         throw "Incorrect shortcut target/arguments: $($entry[0])"
     }
