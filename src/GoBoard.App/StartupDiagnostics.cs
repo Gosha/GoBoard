@@ -12,6 +12,13 @@ internal sealed class StartupDiagnostics : IDisposable
 
     public static StartupDiagnostics Open()
     {
+        var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GoBoard", "logs");
+        try { return Open(directory); }
+        finally { StartupLogRetention.Cleanup(directory, DateTime.UtcNow); }
+    }
+
+    private static StartupDiagnostics Open(string directory)
+    {
         var diagnostics = new StartupDiagnostics();
         var output = HasStream(-11);
         var error = HasStream(-12);
@@ -26,7 +33,6 @@ internal sealed class StartupDiagnostics : IDisposable
 
         try
         {
-            var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GoBoard", "logs");
             Directory.CreateDirectory(directory);
             var path = Path.Combine(directory, $"goboard-{DateTime.UtcNow:yyyyMMdd-HHmmss-fffffff}-{Environment.ProcessId}.log");
             diagnostics.log = new StreamWriter(new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read), new UTF8Encoding(false)) { AutoFlush = true };
