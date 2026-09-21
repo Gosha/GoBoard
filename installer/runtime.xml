@@ -1,0 +1,4 @@
+<!-- Pinned from Microsoft's .NET 10 releases.json; update URL and SHA-512 together. -->
+<Runtime Version="10.0.12"
+  Url="https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/10.0.12/windowsdesktop-runtime-10.0.12-win-x64.exe"
+  Sha512="0b907e9312867172a4eb82f4b5ab3f7c2d25e27d8349546d77eeb5d5b8cbecab9ebebfed189b13e9669dc578d892756c548366da539d47b3ddac5efcb7ae72fe" />

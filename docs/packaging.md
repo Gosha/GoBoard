@@ -1,146 +1,90 @@
-# MSI packaging and tagged releases
+# Standard and Offline setup
 
-Choose release numbers using [the versioning policy](versioning.md). This document covers build mechanics, publishing, and the numeric MSI mapping.
+Choose release numbers using [the versioning policy](versioning.md). Do not bump a version merely to build either setup variant.
 
-GoBoard releases are explicit Git tags. Stable tags such as `v1.0.0` publish normal releases; tags such as `v1.0.1-beta.1` publish Beta prereleases. Merging to `main` does not build or publish an MSI.
+| Download | Payload | Prerequisites |
+| --- | --- | --- |
+| `GoBoard-<version>-win-x64-standard.exe` | Framework-dependent app in a per-user MSI, wrapped by WiX Burn | Uses a compatible x64 .NET 10 Desktop Runtime; offers to download Microsoft's runtime when needed |
+| `GoBoard-<version>-win-x64-offline.msi` | Self-contained, untrimmed app | No internet or administrator access required |
 
-Stable and Beta share one installation and settings file per Windows user. Installing either channel replaces the other for that user, even when returning to an older Stable release. Within the same channel, downgrades and separately rebuilt packages of the same version are blocked.
+Both install GoBoard for the current Windows user, share settings, shortcuts and installation location, and replace each other. There is one GoBoard Installed Apps entry, owned by the MSI. Uninstall never removes the shared Microsoft runtime. Retain the original Offline MSI for repair, or use Standard setup again to check prerequisites and install/repair its original payload.
 
-## Publish a release
+## Standard setup and runtime consent
 
-Tag the intended commit and push that tag. For example:
+Standard setup runs a small .NET Framework 4.7.2 helper (supported Windows versions already include .NET Framework). Its x64 .NET apphost probe uses an exact copy of the published GoBoard runtime configuration. The host must resolve **both** `Microsoft.NETCore.App` and `Microsoft.WindowsDesktop.App`, requested at `10.0.0` with `Minor` roll-forward. Compatible servicing releases work; x86-only, Core-only, older major versions and preview-only installations do not satisfy the default policy. Deliberate `DOTNET_ROOT_X64` or roll-forward environment overrides apply just as they do to GoBoard; a broken override can prevent setup even after the shared runtime is installed.
 
-```powershell
-git tag v1.0.0 <commit>
-git push origin v1.0.0
+If the probe succeeds, no runtime download or installer runs. Otherwise interactive setup offers **Download and continue** and **Cancel**, explaining the Microsoft dependency and possible administrator prompt. Downloads use the immutable Microsoft HTTPS URL and SHA-512 pin in `installer/runtime.xml`. The helper verifies the entire file before executing it. Microsoft's runtime installer alone handles elevation; neither the GoBoard helper nor MSI requests elevation. Run setup as the intended user, not with Run as administrator or another account's credentials.
 
-# Later, publish previews of the next patch:
-git tag v1.0.1-beta.1 <commit>
-git push origin v1.0.1-beta.1
-# Follow with v1.0.1-beta.2, then v1.0.1 when ready.
-```
+The helper waits for Microsoft's `/install /quiet /norestart` operation, checks its exit code, then runs a fresh compatibility probe. Download/verification errors, refusal/cancellation, installation errors, and a failed post-install check prevent the GoBoard MSI from starting. Runtime exits 3010/1641 stop setup with instructions to restart Windows and run setup again; setup does not automatically restart Windows or install GoBoard before that retry. Cancellation during runtime installation waits for that process to finish safely, then prevents GoBoard installation. A successfully installed shared runtime is intentionally retained even if GoBoard setup is cancelled later.
 
-Replace `<commit>` with the commit you intend to distribute. Betas name the upcoming release; `1.0.0-beta.1` precedes `1.0.0`. Use `1.1.0-beta.1` when preparing the next minor release.
+The Standard MSI also runs WiX's native `DotNetCompatibilityCheck` before launch conditions and before stopping/removing an existing app. Extracting and directly running this internal MSI cannot bypass the runtime guard. Uninstall remains possible after the runtime has been removed.
 
-The workflow verifies the pushed tag, builds only its version, and publishes its MSI, checksum, and provenance after all checks pass. Beta releases are marked as prereleases and do not replace the Stable release's Latest designation. Tags and release assets must not be moved or overwritten. CI run numbers, retries, and the closest prior tag do not affect release versions.
+Burn logs go to `%TEMP%` by default (`/log <path>` overrides the setup log). Detailed prerequisite diagnostics are in `%TEMP%\GoBoard-runtime-*.log`; Microsoft installer logs have a `.microsoft.log` suffix. No typed text or settings are logged. The failure page points to both log locations.
 
-Assets are uploaded to a draft before publication. If publication fails, inspect the draft; rerunning deliberately refuses to overwrite an existing release. Verify the draft's assets and source before publishing it manually, or remove only that unpublished draft and rerun the release job. Retain the original published MSI for repair; a rebuild is not an identical maintenance package.
+For unattended setup, `/quiet /norestart` uses an existing runtime. If none resolves, it fails without downloading unless the caller explicitly supplies `AcceptRuntimeDownload=1`. That option consents to the runtime download/installation; it does not bypass Windows elevation or error checks. Use Offline setup when administrator access or internet is unavailable. Remove either variant through Windows Installed Apps or its MSI, not the transient Standard bootstrapper's `/uninstall` option.
 
-## PR and manual builds
+## WiX 5.0.2 design
 
-| Event | Result |
-| --- | --- |
-| Push `vMAJOR.MINOR.PATCH` | One Stable MSI and a GitHub release |
-| Push `vMAJOR.MINOR.PATCH-beta.N` | One Beta MSI and a GitHub prerelease |
-| Relevant pull request | One Beta validation MSI as a workflow artifact; no release |
-| Manual workflow run | One Beta MSI of the supplied version as a workflow artifact; no release; Stable versions are rejected |
-| Push/merge to `main` without a tag | No run of the MSI workflow |
+WiX SDK, UI, Netfx and Bal extensions remain pinned at **5.0.2** with dependency locks. WiX 5's `DotNetCoreSearch` enumerates the highest installed version in a major family; it is not a host compatibility check. The separate apphost probe avoids conflating that enumeration with GoBoard's roll-forward policy and works before .NET 10 is available. Newer configurable-scope bundle features are not used.
 
-PR packaging is limited to production source, regression tests, assets, vendor files, installer/build scripts, solution/SDK/NuGet/build configuration, and GitHub workflows. Documentation-only, launcher-only, POC-only, and experiment-only PRs skip it.
+Both Burn chain packages are `PerMachine="no"`, `Permanent="yes"`, `Cache="remove"` and vital. Here permanent means *not owned by Burn*: the visible per-user MSI still fully owns GoBoard uninstall/repair. WiX 5's `CalculateKeepRegistration` excludes permanent packages, so the bootstrapper removes its own registration and cached payloads after completion. There is no second bundle entry to strand when Offline replaces Standard. MSI's normal cached package remains available for maintenance.
 
-Version checks and build/regression tests start independently. Once version resolution succeeds, package jobs start without waiting for regression tests. PRs check only the sample Beta version `1.0.1-beta.1`. Stable CI packages require a pushed Stable version tag. Tags build only the requested version; manual runs accept only Beta versions. Publication waits for all checks, including regression tests, and only runs for a pushed version tag.
+The two variants retain the existing stable/beta UpgradeCodes and component identities. `RemoveExistingProducts` runs inside the rollback transaction before installing new files; switching to Standard removes the previous private runtime files. Same-channel downgrades remain blocked. Equal-version major upgrades are permitted only when switching variants; same-variant rebuilt packages remain blocked and the original package supports maintenance. A missing legacy variant marker means Offline. ICE61 is suppressed specifically for intentional equal-version replacement, alongside the existing per-user ICE91 exception; package checks and isolated transactions cover the guard.
 
-Test results upload as the `msi-test-results` TRX artifact even when tests fail. Missing results after an earlier build failure do not cause an additional upload failure. Retrying a job keeps the explicit version unchanged.
+Reference implementations: [WiX 5 runtime enumeration](https://github.com/wixtoolset/wix/blob/v5.0.2/src/ext/NetFx/netcoresearch/netcoresearch.cpp), [registration calculation](https://github.com/wixtoolset/wix/blob/v5.0.2/src/burn/engine/apply.cpp), [permanent package registration](https://github.com/wixtoolset/wix/blob/v5.0.2/src/burn/engine/package.cpp), and [Microsoft framework resolution](https://github.com/dotnet/runtime/blob/main/docs/design/features/framework-version-resolution.md).
 
-For an untagged test build, use **Run workflow**, choose the branch/ref to build, and enter a Beta version such as `1.0.1-beta.1`. To build an arbitrary commit locally, check it out and use the script below. Workflow artifacts are for temporary testing; use tagged releases for the versions you want to distribute and retain. No in-app updater is configured.
-
-## Build locally
-
-Use PowerShell on Windows x64 with the SDK selected by `global.json`:
+## Build and release
 
 ```powershell
-.\build-msi.ps1 -Version 1.0.0
-.\build-msi.ps1 -Version 1.0.1-beta.1
+.\build-msi.ps1 -Version 1.3.1-beta.1
+# Optional: build just one variant
+.\build-msi.ps1 -Version 1.3.1-beta.1 -SetupVariant standard
+.\build-msi.ps1 -Version 1.3.1-beta.1 -SetupVariant offline
 ```
 
-The version determines the channel; there is no separate channel switch. Output examples:
+Each invocation stages fresh outputs under `artifacts/msi/build-<id>`, isolated from live launcher directories. The default builds both variants. Public artifacts in `artifacts/msi` are the Standard EXE, Offline MSI, and each one's SHA-256 checksum and `.release.json` provenance: **six files**. The framework-dependent MSI is an internal build artifact, not a third download option. Provenance records version, numeric MSI version, channel, commit, dirty state and payload variant. Standard's external provenance also records the pinned runtime URL/version/hash.
 
-- `artifacts/msi/GoBoard-1.0.0-win-x64.msi`
-- `artifacts/msi/GoBoard-1.0.1-beta.1-win-x64.msi`
+Application dependency locks stay separate from `packages.win-x64.lock.json` used by both packaging modes. A lock update is intentional and reviewed; builds use `--locked-mode`. To update Microsoft's downloadable runtime, choose a supported servicing release from [Microsoft's .NET 10 release metadata](https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json), update both URL and SHA-512 in `installer/runtime.xml`, and validate its Microsoft signature without executing it. No runtime binaries are checked into the repository or embedded in Standard setup.
 
-Each MSI has a `.msi.sha256` checksum and a `.release.json` provenance file. Metadata records the readable version, numeric MSI version, channel, source commit, and whether the checkout has uncommitted changes. It is also installed as `release.json` beside the app. App informational versions include the readable version and commit.
+Explicit `vMAJOR.MINOR.PATCH` tags publish Stable releases; `vMAJOR.MINOR.PATCH-beta.N` tags publish Beta prereleases without changing Latest. Merging to main does not publish a release. Relevant PRs and manual beta runs build validation artifacts only. CI uploads both installers/checksums/provenance to a draft before publication and refuses to overwrite an existing release. Release tagging is a separate explicit action.
 
-The script restores pinned WiX dependencies from NuGet; no global WiX installation, Visual Studio, SteamVR, or headset is needed. Uncached dependencies need network access. Each run stages fresh files under `artifacts/msi/build-<id>`, separate from live launcher outputs. Intermediates and extracted previews remain for inspection and may be removed when no process is using them.
-
-## MSI version mapping
-
-Windows Installer compares only three numeric fields. The release's readable version stays in tags, filenames, Installed apps names, app informational versions, and metadata. MSI ProductVersion and assembly/file versions use a separate, deterministic mapping:
+Windows Installer compares three numeric version fields:
 
 ```text
 MSI version = major.minor.(patch * 100 + slot)
-slot        = beta number for beta.1 through beta.99
-slot        = 100 for a Stable release
+slot = beta number (1–99), or 100 for Stable
 ```
 
-| Release version | Numeric MSI version |
-| --- | --- |
-| `1.0.0-beta.1` | `1.0.1` |
-| `1.0.0-beta.2` | `1.0.2` |
-| `1.0.0` | `1.0.100` |
-| `1.0.1-beta.1` | `1.0.101` |
-| `1.0.1-beta.2` | `1.0.102` |
-| `1.0.1` | `1.0.200` |
+Thus `1.0.0-beta.1` maps to `1.0.1`, `1.0.0` to `1.0.100`, and `1.0.1-beta.1` to `1.0.101`. Supported bounds are major/minor 0–255, patch 0–654 and beta 1–99. Stable and Beta explicitly replace the other channel regardless of numeric version; same-channel ordering is retained. See `installer/Test-ReleaseInfo.ps1` and [the versioning policy](versioning.md).
 
-This preserves ordering across beta iterations, final releases, and subsequent patches. Major/minor must be 0–255, patch 0–654, and beta number 1–99, keeping the encoded number within MSI's `255.255.65535` limits. Unsupported suffixes, leading zeroes, extra fields, and overflow are rejected; values never wrap. Only Stable and `beta.N` releases are supported.
+## Existing installation and lifecycle
 
-Both channels have permanent UpgradeCodes and explicitly remove the other channel across all versions. The original Stable identity is preserved. Files, component identities, shortcuts, settings, and the install-location registry key remain shared. Removal runs inside the install transaction before new files are installed, allowing replacement of higher-versioned files when switching channels and rollback on installation failure. Keep both UpgradeCodes unchanged in `installer/Package.wxs` and `installer/Get-ReleaseInfo.ps1`; package validation checks agreement.
+GoBoard normally installs in `%LOCALAPPDATA%\Programs\GoBoard`, remembers a previous custom location in HKCU, and provides GoBoard VR, Desktop and Settings Start menu entries. Its settings under `%LOCALAPPDATA%\GoBoard` are never owned or removed by either MSI. An old all-users installation must first be uninstalled explicitly; both variants retain that migration guard and reject `ALLUSERS`.
 
-See [SemVer precedence](https://semver.org/#spec-item-11) and [MSI ProductVersion](https://learn.microsoft.com/en-us/windows/win32/msi/productversion).
+Both variants use the existing MSI lifecycle actions. Once installation starts, they capture current-user GoBoard modes, request graceful shutdown before files-in-use checks, replace files transactionally, then relaunch the installed copy in those modes. Nested removal skips the outer lifecycle actions. Failed/cancelled MSI installation attempts to restore the previous processes after rollback. Uninstall closes only installed copies and does not relaunch them. A closed app stays closed. Runtime failure occurs before these actions, leaving the old GoBoard running.
 
-## Installed behavior
-
-- Self-contained, untrimmed .NET 10 Windows x64 app with native SkiaSharp, GLFW, OpenVR, its license, and sound credits. No preinstalled .NET is required.
-- One per-user installation, normally `%LOCALAPPDATA%\Programs\GoBoard`, without requesting administrator access or UAC elevation. The folder chooser must point to a location writable by that user. The folder is remembered in `HKCU\Software\GoBoard` across channel changes; the MSI only writes current-user registry values.
-- Current-user Start menu entries **GoBoard VR**, **GoBoard Desktop**, and **GoBoard Settings**. Installed apps names include the readable release version, such as **GoBoard 1.0.1-beta.1**; its numeric version field uses the MSI mapping above.
-- All three shortcuts launch a Windows GUI executable without opening a console. Diagnostics from launches without a terminal or redirected output go to `%LOCALAPPDATA%\GoBoard\logs\goboard-<timestamp>-<pid>.log`.
-- Shared settings at `%LOCALAPPDATA%\GoBoard\settings.json` are never owned or removed by the MSI. Future Beta settings migrations must remain compatible with Stable.
-- Installation leaves a closed app closed and does not enable autostart. If GoBoard is running, installation closes it gracefully and restarts the installed copy in the same VR/desktop mode after files are committed. Standalone Settings windows are also closed and reopened. This includes current-user repository launches outside the installation folder. Uninstall closes only copies using the installed executable and does not restart them.
-
-### Running-app upgrades
-
-The MSI embeds a small WiX DTF lifecycle action, built for the .NET Framework already included in supported Windows versions. It uses the running keyboard's existing session-local stop event, so this works when upgrading older releases. Windows Restart Manager alone cannot close the VR loop or relaunch those releases: the loop does not pump Windows shutdown messages, and the app did not register a restart command. MSI file-lock detection also misses repository launches outside the installation folder.
-
-After the user starts installation, the execute sequence captures only the current user's live GoBoard modes in the current Windows session. It requests shutdown and waits up to 15 seconds per process before files-in-use validation. A failure stops installation without force-killing the app. Diagnostic/render processes are excluded. Nested removal of an older MSI skips these actions. After commit, the action starts the installed executable, preserving VR/desktop/Settings mode and dropping old launcher stop files/time limits. A process that exits within five seconds produces a separate restart warning in interactive UI and the MSI log. Failed or cancelled installations attempt to restore exited instances from their original paths after rollback; instances still running are left alone.
-
-Build and test an unpublished MSI against an already-running keyboard:
+Explicit live checks are separate from package validation:
 
 ```powershell
-.\installer\Test-RunningUpgrade.ps1 -MsiPath artifacts\msi\GoBoard-1.3.1-beta.1-win-x64.msi -ExpectedVersion 1.3.1-beta.1
+.\installer\Test-RunningUpgrade.ps1 -MsiPath <test-msi> -ExpectedVersion <version>
+.\installer\Test-InstallerRecovery.ps1 -MsiPath <installed-test-msi>
 ```
 
-The check deliberately does not stop GoBoard first. It runs MSI unattended, requires exit code zero without a reboot, checks the original process exited, verifies installed release metadata and the new process's path/mode, and watches it for ten more seconds after MSI's startup check. Logs go to `.runtime/running-upgrade-*.log`. Repeat with VR and desktop, including launches from repository output. Headset visibility and controller behavior still need manual verification; a live process alone does not prove those.
+Keep the existing app running when starting a live upgrade check and verify the new installed process actually relaunches. MSI completion alone is not success. The recovery check deliberately fails a disposable MSI after file operations and verifies rollback/relaunch.
 
-`installer/Test-InstallerRecovery.ps1 -MsiPath <installed-test-msi>` makes a separate test package that deliberately fails after `InstallExecute`. It verifies rollback and restoration of the running app, retaining its test package and log under `.runtime/installer-recovery-*`. Use an unpublished test MSI; the original package is never modified. This is an explicit local integration check, not part of CI.
+## Automated checks and remaining acceptance
 
-Validation of this fix: all 349 regression tests passed; locked restore, Release build, and compiled MSI/payload checks passed. An unattended live VR upgrade from 1.3.0 to the unpublished 1.3.1-beta.1 stopped the original process and started the installed replacement; a repair also restarted VR. Runtime logs confirmed overlay initialization and a connected headset, and the user confirmed the keyboard reappeared normally in VR. A deliberate failure after file operations rolled back and restored VR. Desktop/source-launch lifecycle handling and interactive wizard cancellation still require separate live acceptance checks.
+Every build performs locked restores, WiX validation, byte-for-byte MSI extraction checks, scope/registry/shortcuts/version/lifecycle checks, and VR/desktop rendering from extracted payloads. Standard additionally checks its actual embedded MSI and Burn manifest and tests its extracted runtime helper against the installed runtime and an empty process-local .NET directory. The latter cannot modify the machine's runtime.
 
-The installer accepts Windows 10 21H2 or later; use a Windows version supported by the bundled runtime. VR requires SteamVR and a headset. Self-contained releases need rebuilding and redistribution when updating the SDK/runtime for security fixes.
+`Test-SetupSwitching.ps1 -OfflineMsi <path> -StandardMsi <path>` clones packages with random product/upgrade/component identities, isolated registry and shortcut paths, and disabled app lifecycle actions. Real Windows Installer transactions cover equal-version switches in both directions, newer-version upgrade, same-variant rebuild rejection, same-channel downgrade rejection, cross-channel replacement in both directions, one installed product, private-runtime removal and uninstall. It does not stop the user's GoBoard or use their settings. Regression tests cover runtime installation errors, verification failure, cancellation, reboot-required results and post-install compatibility checks using injected operations.
 
-Older all-users installations must be uninstalled from Windows Installed apps before installing this per-user package. That one-time removal may require administrator approval; it retains `%LOCALAPPDATA%\GoBoard\settings.json`. The installer detects the old machine install-location key and blocks installation with these instructions. Windows Installer [major upgrades cannot change installation context](https://learn.microsoft.com/en-us/windows/win32/msi/major-upgrades). Channel replacement applies within the new per-user context; it cannot silently remove another user's or an all-users installation. `ALLUSERS` overrides are rejected.
+Before distributing, verify on disposable Windows x64 machines:
 
-## Dependencies and validation
+1. Standard with a compatible runtime: no runtime network access or elevation; per-user files/shortcuts/entry. Check standard-user and administrator accounts, x86-only, Core-only, preview-only, .NET 9/11-only, and later .NET 10 servicing versions.
+2. Standard without a runtime: consent, Cancel, network failure, corrupted download, UAC refusal and alternate-admin credentials, successful download/install, post-install verification, reboot-required retry and diagnostics. Do not remove the development machine's runtime to test these paths.
+3. Offline with networking disabled and a non-admin account: install, Desktop/Settings launch, upgrade, repair and uninstall.
+4. Standard ↔ Offline and Stable ↔ Beta with existing settings/custom folder and running VR/desktop/settings instances; verify one Installed Apps entry, no orphaned private runtime or Burn cache, rollback/recovery, and correct relaunch. Test same-version variant switches from a legacy Offline package as well.
+5. Uninstall preserves settings and Microsoft's shared runtime; another account has no GoBoard shortcuts or per-user registration.
+6. Real headset/input/focus/sound behavior. Pure tests, process liveness and rendered PNGs do not establish hardware acceptance.
 
-Normal dependency locks remain separate from `packages.win-x64.lock.json` used for packaging. After intentionally changing dependencies, refresh packaging locks and review the diff:
-
-```powershell
-dotnet restore src/GoBoard.App/GoBoard.App.csproj --runtime win-x64 --artifacts-path artifacts/msi/lock-refresh --force-evaluate -p:NuGetLockFilePath=packages.win-x64.lock.json -p:SelfContained=true
-```
-
-WiX SDK and UI extension are pinned together at 5.0.2. Review the [maintenance fee terms](https://docs.firegiant.com/wix/osmf/) before moving to WiX 6 or later. After changing the installer dependency, refresh its lock with `dotnet restore installer/GoBoard.Installer.wixproj --force-evaluate`.
-
-CI runs locked restore, the Release build, regression tests, and release tests covering numeric ordering, bounds, and event-to-package selection. Every MSI build runs WiX ICE validation with warnings as errors, extracts the actual MSI without installing it, compares every file to the publish output, checks the no-elevation summary flag, per-user properties/path, HKCU registry key paths, legacy migration guard, runtime/native/credit files, shortcuts, versions/provenance, cross-channel removal and transaction order, then renders VR and desktop PNGs.
-
-`New-PayloadFragment.ps1` generates one component per published file with stable relative-path identities and HKCU registry key paths, plus empty-directory cleanup. WiX's standard `Files` harvesting uses file key paths that fail per-user ICE validation. Shortcuts use an HKCU-backed component and explicit executable targets. Only [ICE91](https://learn.microsoft.com/en-us/windows/win32/msi/ice91) is suppressed: it warns that profile files cannot support an all-users install, which this package explicitly rejects. All other ICE checks remain enabled with warnings as errors.
-
-Before distribution, use a disposable Windows x64 VM to verify:
-
-1. Wizard and silent installation from a non-elevated standard-user account, including on a machine without .NET: no UAC prompt, current-user files/registry/shortcuts, readable version names, Desktop, and Settings. Verify another account has no GoBoard shortcuts or installed entry.
-2. Settings and a custom install folder survive Stable → Beta → Stable, including a numerically lower destination. Verify one installed entry and actual replacement of the previous files.
-3. Beta.1 → Beta.2 and Stable patch upgrades work; same-channel downgrades and separately rebuilt same-version packages are rejected. Repair using the original MSI.
-4. Uninstall removes app files/shortcuts and retains settings. Check files-in-use and rollback separately.
-5. Real VR, input focus, sound routing, and presentation latency.
-6. An older all-users installation blocks the new installer with migration instructions; uninstall the old copy, then install per-user and verify settings survive. Verify per-user repair and uninstall also work without elevation.
-
-Silent VM checks can use `msiexec /i <msi> /qn /norestart /L*v install.log` and `msiexec /x <msi> /qn /norestart /L*v uninstall.log` from a normal, non-elevated terminal. Do not pass `ALLUSERS`.
-
-Packages are unsigned. Sign the app before packaging and the MSI afterward once a certificate is available, then regenerate the checksum. See [WiX signing guidance](https://docs.firegiant.com/wix/tools/signing/). Extraction and PNG checks do not establish successful installation/channel switching, and release publication needs a real tagged workflow run.
+Packages remain unsigned. Once signing is available, sign executable payloads before packaging, sign the final MSI/EXE and regenerate checksums. See [WiX signing guidance](https://docs.firegiant.com/wix/tools/signing/).
