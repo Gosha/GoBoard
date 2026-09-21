@@ -10,6 +10,7 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
     // compatibility dependency in one place; fail visibly if it disappears.
     private const string DashboardKey = "valve.steam.gamepadui.bar";
     private const ETrackingUniverseOrigin Origin = ETrackingUniverseOrigin.TrackingUniverseStanding;
+    // Movement and reset use the main-key center; only the raster has an extra right-side offset.
     private readonly RelativePose pose = new();
     private bool visible;
     private bool warned;
@@ -31,7 +32,7 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
 
     public void SetScale(float scale)
     {
-        // The main texture includes centered transparent padding without the
+        // The main texture includes right-side transparent padding without the
         // numpad. Its physical size must stay independent of that toggle.
         var width = OverlayGeometry.WidthInMeters(true) * scale;
         if (panelWidth == width && panelScale == scale) return;
@@ -98,7 +99,7 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
             // rate instead of displaying app-polled absolute poses a frame late.
             if (boundGrab != grab.ActiveGrab || sizeChanged)
             {
-                var relative = OpenVrPose.ToOpenVr(grab.ActiveGrab.ControllerOffset);
+                var relative = OpenVrPose.ToOpenVr(OverlayGeometry.TextureFromPanel(panelScale) * grab.ActiveGrab.ControllerOffset);
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(panel, grab.Controller, ref relative), "Attach panel to controller");
                 var barRelative = OpenVrPose.ToOpenVr(OverlayGeometry.GrabFromScaledPanel(panelScale) * grab.ActiveGrab.ControllerOffset);
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(handle, grab.Controller, ref barRelative), "Attach handle to controller");
@@ -110,7 +111,7 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         }
         else if (boundGrab != null || update.Write || !visible || sizeChanged)
         {
-            var raw = OpenVrPose.ToOpenVr(update.World);
+            var raw = OpenVrPose.ToOpenVr(OverlayGeometry.TextureFromPanel(panelScale) * update.World);
             Check(overlay.SetOverlayTransformAbsolute(panel, Origin, ref raw), "Follow dashboard pose");
             var bar = OpenVrPose.ToOpenVr(OverlayGeometry.GrabFromScaledPanel(panelScale) * update.World);
             Check(overlay.SetOverlayTransformAbsolute(handle, Origin, ref bar), "Place grab handle");

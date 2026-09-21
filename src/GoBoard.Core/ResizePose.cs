@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace GoBoard.Core;
 
-// The panel pose stays rigid. Only its physical dimensions change, around its center.
+// The panel pose stays rigid. Only its physical dimensions change, around the center of its main keys.
 internal sealed class ResizePose
 {
     private readonly Vector2 corner;
@@ -15,7 +15,7 @@ internal sealed class ResizePose
     private ResizePose(Vector3 ray, Vector2 hit, float scale, bool numpad)
     {
         localRay = ray; initialHit = hit; initialScale = Scale = scale;
-        corner = new(OverlayGeometry.WidthInMeters(numpad) / 2, -OverlayGeometry.PanelHeightInMeters / 2);
+        corner = new(OverlayGeometry.RightEdgeInMeters(numpad), -OverlayGeometry.PanelHeightInMeters / 2);
     }
 
     public static ResizePose Capture(Matrix4x4 panel, Matrix4x4 controller, Vector3 panelPoint, float scale, bool numpad = false)
