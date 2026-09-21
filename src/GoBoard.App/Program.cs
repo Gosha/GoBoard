@@ -17,7 +17,6 @@ internal static class Program
 
     private static int Run(string[] args)
     {
-        if (args is ["--desktop-effects-benchmark"]) { DesktopEffectsBenchmark.Run(); return 0; }
         if (args.Length > 0 && args[0] == "--steamvr") return SteamVrApplication.Run(args);
         if (args.Length > 0 && args[0] == "--steamvr-ui") return SteamVrApplication.Run(args, json: true);
         if (args is ["--stop"])
@@ -26,6 +25,8 @@ internal static class Program
                 ? "Requested graceful GoBoard shutdown." : "GoBoard is not running in this Windows session.");
             return 0;
         }
+#if GOBOARD_DESKTOP_DEBUG
+        if (args is ["--desktop-effects-benchmark"]) { DesktopEffectsBenchmark.Run(); return 0; }
         if (args.Length > 0 && args[0] == "--desktop") return DesktopRuntime.Run(args);
         if (args is ["--render-desktop", var desktopPath]) return DesktopRuntime.Render(desktopPath);
         if (args is ["--render-desktop", var numpadDesktopPath, "--numpad"]) return DesktopRuntime.Render(numpadDesktopPath, numpad: true);
@@ -34,6 +35,12 @@ internal static class Program
         if (args is ["--desktop-shell-check"]) return DesktopInputCheck.Run(shell: true);
         if (args is ["--desktop-launch-check"]) return DesktopInputCheck.RunLaunch();
         if (args is ["--settings-input-check"]) return SettingsInputCheck.Run();
+#else
+        if (args.Length > 0 && args[0] is ("--desktop" or "--render-desktop" or
+            "--desktop-effects-benchmark" or "--desktop-input-check" or "--desktop-shell-check" or
+            "--desktop-launch-check" or "--settings-input-check"))
+            throw new ArgumentException("Desktop keyboard debugging is available only in source builds. Installed GoBoard is a VR app.");
+#endif
         if (args is ["--settings"] || args is ["--settings", "--executable", _])
         {
             ApplicationConfiguration.Initialize();

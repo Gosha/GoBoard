@@ -65,8 +65,8 @@ $config = Get-Content -Raw -LiteralPath (Join-Path $payload 'GoBoard.runtimeconf
 if (@($config.runtimeOptions.includedFrameworks).Count -ne 2) { throw 'Expected a self-contained desktop runtime.' }
 
 $shortcuts = $document.SelectNodes('//w:Shortcut', $ns)
-if ($shortcuts.Count -ne 3) { throw 'Expected three Start menu shortcuts.' }
-foreach ($entry in @(@('GoBoard VR', ''), @('GoBoard Desktop', '--desktop'), @('GoBoard Settings', '--settings'))) {
+if ($shortcuts.Count -ne 2) { throw 'Expected only VR and Settings Start menu shortcuts.' }
+foreach ($entry in @(@('GoBoard VR', ''), @('GoBoard Settings', '--settings'))) {
     $shortcut = @($shortcuts | Where-Object { $_.GetAttribute('Name') -eq $entry[0] })
     if ($shortcut.Count -ne 1 -or $shortcut[0].GetAttribute('Arguments') -ne $entry[1] -or
         $shortcut[0].GetAttribute('Advertise') -eq 'yes' -or
@@ -181,7 +181,7 @@ try {
 }
 
 # Run only rendering commands: no SteamVR initialization, typing, or saved-settings edits.
-foreach ($mode in @('render', 'render-desktop')) {
+foreach ($mode in @('render', 'render-settings', 'render-desktop-settings')) {
     $png = Join-Path $checkRoot "$mode.png"
     $stdout = Join-Path $checkRoot "$mode.stdout.log"
     $stderr = Join-Path $checkRoot "$mode.stderr.log"
@@ -189,15 +189,41 @@ foreach ($mode in @('render', 'render-desktop')) {
     if ($process.ExitCode -ne 0 -or !(Test-Path -LiteralPath $png) -or (Get-Item -LiteralPath $png).Length -lt 1000) {
         throw "Extracted MSI payload failed --$mode."
     }
-    if ((Get-Content -Raw -LiteralPath $stdout) -notmatch 'Rendered') {
+    if ($mode -ne 'render-desktop-settings' -and (Get-Content -Raw -LiteralPath $stdout) -notmatch 'Rendered') {
         throw "Extracted MSI payload lost redirected stdout for --$mode."
     }
 }
+# Inspect managed types without loading the app or its dependencies into this process.
+$assemblyStream = [IO.File]::OpenRead((Join-Path $payload 'GoBoard.dll'))
+try {
+    $reader = [System.Reflection.PortableExecutable.PEReader]::new($assemblyStream)
+    try {
+        $metadataReader = [System.Reflection.Metadata.PEReaderExtensions]::GetMetadataReader($reader)
+        foreach ($handle in $metadataReader.TypeDefinitions) {
+            $type = $metadataReader.GetTypeDefinition($handle)
+            $name = $metadataReader.GetString($type.Name)
+            if ($name -like 'Desktop*' -or $name -eq 'SettingsInputCheck') {
+                throw "Desktop debugging implementation must not ship: $name"
+            }
+        }
+    } finally { $reader.Dispose() }
+} finally { $assemblyStream.Dispose() }
+
+# Removed entry points must fail before opening a keyboard or touching SteamVR.
+foreach ($command in @('--desktop', '--render-desktop', '--desktop-effects-benchmark',
+                       '--desktop-input-check', '--desktop-shell-check', '--desktop-launch-check', '--settings-input-check')) {
+    $stderr = Join-Path $checkRoot "$command.stderr.log"
+    $process = Start-Process -FilePath (Join-Path $payload 'GoBoard.exe') -ArgumentList $command -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput (Join-Path $checkRoot "$command.stdout.log") -RedirectStandardError $stderr
+    if ($process.ExitCode -ne 1 -or (Get-Content -Raw -LiteralPath $stderr) -notmatch 'available only in source builds') {
+        throw "Packaged app did not reject desktop debugging command: $command"
+    }
+}
+
 # Argument validation exits before showing UI or initializing SteamVR.
 $stderr = Join-Path $checkRoot 'invalid-option.stderr.log'
-$process = Start-Process -FilePath (Join-Path $payload 'GoBoard.exe') -ArgumentList @('--desktop', '--invalid-option') -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput (Join-Path $checkRoot 'invalid-option.stdout.log') -RedirectStandardError $stderr
+$process = Start-Process -FilePath (Join-Path $payload 'GoBoard.exe') -ArgumentList @('--invalid-option') -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput (Join-Path $checkRoot 'invalid-option.stdout.log') -RedirectStandardError $stderr
 if ($process.ExitCode -ne 1 -or (Get-Content -Raw -LiteralPath $stderr) -notmatch 'Usage:') {
     throw 'Extracted MSI payload lost its failure exit code or redirected stderr.'
 }
-Write-Output "MSI verified: $($files.Count) files match publish output; per-user scope/privileges, registry, migration guard, GUI subsystem, redirected diagnostics, runtime, native libraries, credits, shortcuts, versions, and both render modes passed."
+Write-Output "MSI verified: $($files.Count) files match publish output; per-user scope/privileges, registry, migration guard, GUI subsystem, redirected diagnostics, runtime, native libraries, credits, shortcuts, versions, VR-only entry points, and keyboard/Settings renders passed."
 Write-Output "Inspection artifacts: $checkRoot"

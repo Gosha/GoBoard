@@ -10,7 +10,13 @@
     <RootNamespace>GoBoard.App</RootNamespace>
     <ApplicationIcon>../../assets/branding/goboard.ico</ApplicationIcon>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- Source builds retain the desktop debugging host; MSI publishing disables it. -->
+    <EnableDesktopDebug Condition="'$(EnableDesktopDebug)' == ''">true</EnableDesktopDebug>
+    <DefineConstants Condition="'$(EnableDesktopDebug)' == 'true'">$(DefineConstants);GOBOARD_DESKTOP_DEBUG</DefineConstants>
   </PropertyGroup>
+  <ItemGroup Condition="'$(EnableDesktopDebug)' != 'true'">
+    <Compile Remove="Desktop*.cs;SettingsInputCheck.cs" />
+  </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="../../assets/branding/goboard.ico" LogicalName="GoBoard.Icon.ico" />
     <ProjectReference Include="../GoBoard.OpenVR/GoBoard.OpenVR.csproj" />

@@ -31,12 +31,14 @@ $live = Get-LiveKeyboard
 if ($live.Count -ne 1 -or $live[0].ExecutablePath -ne $installedExe) {
     throw "MSI completed without exactly one keyboard running from the installed folder. See $log"
 }
-if (($live[0].CommandLine -match '(?:^|\s)--desktop(?:\s|$)') -ne $desktop) { throw 'Installer changed keyboard mode.' }
+if ($live[0].CommandLine -match '(?:^|\s)--desktop(?:\s|$)') { throw 'Installer must restart the installed keyboard in VR.' }
+$menu = Join-Path ([Environment]::GetFolderPath('Programs')) 'GoBoard'
+if (Test-Path -LiteralPath (Join-Path $menu 'GoBoard Desktop.lnk')) { throw 'Upgrade left the old desktop shortcut installed.' }
 $new = Get-Process -Id $live[0].ProcessId
 if ($new.StartTime -le $oldStarted -or $new.WaitForExit(10000)) { throw 'Relaunched keyboard did not survive startup.' }
 $text = Get-Content -Raw -LiteralPath $log
 if ($text -notmatch 'GoBoard: all captured instances exited before file replacement\.' -or
     $text -notmatch 'GoBoard: PID \d+ remained running after startup\.' -or
     $text -match 'GoBoard was installed, but could not restart') { throw "Lifecycle evidence missing or restart failed. See $log" }
-Write-Output "PASS: PID $($old.Id) exited; $ExpectedVersion is running as new PID $($new.Id) in the same mode from $installedExe."
+Write-Output "PASS: PID $($old.Id) exited; $ExpectedVersion is running in VR as new PID $($new.Id) from $installedExe; no desktop shortcut remains."
 Write-Output "MSI log: $log"

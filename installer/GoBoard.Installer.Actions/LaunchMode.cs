@@ -4,6 +4,10 @@ namespace GoBoard.Installer.Actions;
 
 internal static class LaunchMode
 {
+    // A committed upgrade launches the installed VR app. Keep the original mode
+    // in the captured instance so rollback can still restore an older desktop host.
+    internal static string InstalledArguments(string capturedMode) => capturedMode == "--desktop" ? "" : capturedMode;
+
     // Diagnostic processes must never be stopped or relaunched as keyboards.
     internal static string RestartArguments(string[] args)
     {

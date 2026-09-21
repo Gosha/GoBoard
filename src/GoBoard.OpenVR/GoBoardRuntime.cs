@@ -69,15 +69,15 @@ public static int Run(string[] args)
                     seconds = double.Parse(args[++i], CultureInfo.InvariantCulture);
                     if (!double.IsFinite(seconds) || seconds <= 0) throw new ArgumentException("Seconds must be positive and finite.");
                     break;
-                default: throw new ArgumentException("Usage: GoBoard [--desktop] [--seconds N] [--stop-file PATH] | --settings | --render-desktop PATH | --desktop-input-check | --render-settings PATH | --render-desktop-settings PATH | --render PATH [--layout us|sv|uk|de|fr|us-intl|ja|KLID] [--state idle|hover|pressed|oneshot|locked|shift|caps|scrolllock|altgr|unsupported|error|reference] [--theme steam-soft|steam-flat] | --self-test | --input-check | --shell-check | --layout-check | --ime-check");
+                default: throw new ArgumentException("Usage: GoBoard [--seconds N] [--stop-file PATH] | --settings | --render-settings PATH | --render-desktop-settings PATH | --render PATH [--layout us|sv|uk|de|fr|us-intl|ja|KLID] [--state idle|hover|pressed|oneshot|locked|shift|caps|scrolllock|altgr|unsupported|error|reference] [--theme steam-soft|steam-flat] | --self-test | --input-check | --shell-check | --layout-check | --ime-check");
             }
         }
 
         if (settingsRenderPath != null && (renderPath != null || previewOptions)) throw new ArgumentException("--render-settings cannot be combined with keyboard preview options.");
         if (previewOptions && renderPath == null) throw new ArgumentException("--layout, --state and --theme require --render; live layouts follow Windows automatically; use Settings for live theme selection.");
-        if (previewShortcuts && renderPath == null) throw new ArgumentException("--shortcuts requires --render or --render-desktop.");
+        if (previewShortcuts && renderPath == null) throw new ArgumentException("--shortcuts requires --render.");
         if (previewControls && (renderPath == null || previewShortcuts)) throw new ArgumentException("--controls requires a main keyboard --render preview.");
-        if (previewNumpad && renderPath == null) throw new ArgumentException("--numpad requires --render or --render-desktop.");
+        if (previewNumpad && renderPath == null) throw new ArgumentException("--numpad requires --render.");
         var previewId = previewLayout switch
         {
             "us" => "00000409", "sv" => "0000041d", "uk" => "00000809", "de" => "00000407",

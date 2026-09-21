@@ -1,6 +1,6 @@
 # Working on GoBoard
 
-GoBoard is a Windows x64 keyboard overlay and desktop keyboard built with C#/.NET, SkiaSharp, and OpenVR. Run commands from the repository root in PowerShell.
+GoBoard is a Windows x64 VR keyboard overlay with a source-only desktop debugging host built with C#/.NET, SkiaSharp, and OpenVR. Run commands from the repository root in PowerShell.
 
 ## Project boundaries
 
@@ -37,7 +37,7 @@ Inspect affected previews after rendering. Check both desktop and VR presentatio
 
 Whenever design, buttons, or copy change, regenerate the affected README screenshots in `docs/images/` with the real renderer and visually inspect them before completing the change (`--render-settings docs/images/goboard-settings.png` for the settings page).
 
-Use `start-goboard.ps1` for VR, `start-goboard.ps1 -Desktop` for desktop, and `stop-goboard.ps1` to stop. Add `-BuildOnly` to build without launching. Launchers isolate outputs under `artifacts/vr-build`, `artifacts/desktop-build`, and `artifacts/settings-build`; preserve this separation to avoid locked DLLs. Production logs are under `%LOCALAPPDATA%\GoBoard\runtime`; a session-local named event stops manual and SteamVR launches alike. See [SteamVR autostart](docs/steamvr-autostart.md) for registration and configuration commands.
+Use `start-goboard.ps1` for VR, `start-goboard.ps1 -Desktop` for desktop debugging, and `stop-goboard.ps1` to stop. Add `-BuildOnly` to build without launching. Launchers isolate outputs under `artifacts/vr-build`, `artifacts/desktop-build`, and `artifacts/settings-build`; preserve this separation to avoid locked DLLs. Production logs are under `%LOCALAPPDATA%\GoBoard\runtime`; a session-local named event stops manual and SteamVR launches alike. See [SteamVR autostart](docs/steamvr-autostart.md) for registration and configuration commands.
 
 When asked to build and run an MSI, run the installer unattended without first closing the running GoBoard instance. Verify that it relaunches with the newly installed version; report and investigate a failure to relaunch rather than treating installer completion alone as success.
 
