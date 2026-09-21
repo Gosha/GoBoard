@@ -14,6 +14,14 @@ internal static class OverlayGeometry
     public static int Width(bool numpad) => PanelWidth + (numpad ? KeyboardLayout.NumpadExtraWidth : 0);
     public static float WidthInMeters(bool numpad) => PanelWidthInMeters * Width(numpad) / PanelWidth;
 
+    // All keyboard placement is anchored to the center of the main keys without
+    // the numpad. The fixed VR texture reserves the extra width on the right.
+    public static float RightEdgeInMeters(bool numpad) => WidthInMeters(numpad) - PanelWidthInMeters / 2;
+    public static Matrix4x4 TextureFromPanel(float scale) =>
+        Matrix4x4.CreateTranslation((WidthInMeters(true) - PanelWidthInMeters) * scale / 2, 0, 0);
+    public static Matrix4x4 PanelFromTexture(float scale) =>
+        Matrix4x4.CreateTranslation(-TextureFromPanel(scale).M41, 0, 0);
+
     public const int GrabWidth = 180;
     public const int GrabHeight = 60;
     public const float GrabWidthInMeters = 0.18f;
@@ -24,7 +32,7 @@ internal static class OverlayGeometry
     public const float ResizeCornerSpacingInMeters = 0.006f;
     // Offset slightly outward from the corner while keeping the grip close to both edges.
     public static Matrix4x4 ResizeFromScaledPanel(float scale, bool numpad = false) =>
-        Matrix4x4.CreateTranslation(WidthInMeters(numpad) * scale / 2 + ResizeCornerSpacingInMeters,
+        Matrix4x4.CreateTranslation(RightEdgeInMeters(numpad) * scale + ResizeCornerSpacingInMeters,
             -(PanelHeightInMeters * scale / 2 + ResizeCornerSpacingInMeters), 0.002f);
 
     // OpenVR mouse coordinates start at the bottom left. Exclude the upper-left

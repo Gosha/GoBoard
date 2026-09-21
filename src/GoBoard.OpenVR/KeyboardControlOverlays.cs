@@ -69,7 +69,7 @@ internal sealed class KeyboardControlOverlays : IDisposable
             {
                 var width = MainKeyboardControls.WidthInMeters(b.Action, scale);
                 if (b.Width != width) { Check(overlay.SetOverlayWidthInMeters(b.Handle, width), "Size control"); b.Width = width; }
-                Place(b, MainKeyboardControls.Offset(b.Action, settings.NumpadEnabled, scale));
+                Place(b, MainKeyboardControls.Offset(b.Action, scale));
                 Draw(b);
             }
             if (b.Visible != showButton)
@@ -143,7 +143,7 @@ internal sealed class KeyboardControlOverlays : IDisposable
             Check(overlay.GetOverlayTransformTrackedDeviceRelative(main, ref device, ref raw), "Read keyboard controller");
         else Check(overlay.GetOverlayTransformAbsolute(main, ref origin, ref raw), "Read keyboard pose");
         if (!OpenVrPose.TryRigid(raw, out var parent)) throw new InvalidOperationException("Invalid keyboard pose.");
-        var transform = (device, origin, offset * parent);
+        var transform = (device, origin, offset * OverlayGeometry.PanelFromTexture(scale) * parent);
         if (b.Transform == transform) return;
         var pose = OpenVrPose.ToOpenVr(transform.Item3);
         Check(device == OpenVR.k_unTrackedDeviceIndexInvalid ? overlay.SetOverlayTransformAbsolute(b.Handle, origin, ref pose) :

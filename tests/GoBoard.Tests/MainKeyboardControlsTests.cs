@@ -73,11 +73,24 @@ public sealed class MainKeyboardControlsTests
     [InlineData(.5f, true)] [InlineData(1f, true)] [InlineData(1.5f, true)]
     public void VrTargetsClearKeyboardHandleAndResizeGrip(float scale, bool numpad)
     {
-        var num = MainKeyboardControls.Offset(KeyboardAction.ToggleNumpad, numpad, scale);
+        var num = MainKeyboardControls.Offset(KeyboardAction.ToggleNumpad, scale);
         var numSize = MainKeyboardControls.WidthInMeters(KeyboardAction.ToggleNumpad, scale);
-        Assert.True(num.M41 - numSize / 2 > OverlayGeometry.WidthInMeters(numpad) * scale / 2);
-        Assert.Equal(OverlayGeometry.PanelHeightInMeters * scale / 2, num.M42 + numSize / 2, 5);
-        var reset = MainKeyboardControls.Offset(KeyboardAction.ResetPosition, numpad, scale);
+        Assert.True(num.M41 - numSize / 2 > OverlayGeometry.PanelWidthInMeters * scale / 2);
+        var bounds = MainKeyboardControls.NumpadBounds;
+        Assert.Equal((OverlayGeometry.PanelHeight / 2f - bounds.Y) * ProgrammableKeys.MetersPerUnit * scale,
+            num.M42 + numSize / 2, 5);
+        var numLock = KeyboardLayout.WithNumpad(KeyboardLayout.Keys).Single(k => k.Id == "NumLock").Bounds;
+        Assert.Equal(numLock.X + numLock.Width / 2, bounds.X + bounds.Width / 2);
+        Assert.Equal(2, numLock.Y - bounds.Y - bounds.Height);
+        Assert.All(MainKeyboardControls.KeyboardInputBounds(numpad),
+            b => Assert.False(b.Contains(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2)));
+        foreach (var key in numpad ? KeyboardLayout.WithNumpad(KeyboardLayout.Keys) : KeyboardLayout.Keys)
+        {
+            var b = key.Bounds;
+            Assert.Contains(MainKeyboardControls.KeyboardInputBounds(numpad), target => target.Contains(b.X, b.Y));
+            Assert.Contains(MainKeyboardControls.KeyboardInputBounds(numpad), target => target.Contains(b.X + b.Width - .01f, b.Y + b.Height - .01f));
+        }
+        var reset = MainKeyboardControls.Offset(KeyboardAction.ResetPosition, scale);
         var size = MainKeyboardControls.WidthInMeters(KeyboardAction.ResetPosition, scale);
         Assert.True(reset.M41 - size / 2 > OverlayGeometry.GrabWidthInMeters / 2);
         Assert.True(reset.M42 + size / 2 < -OverlayGeometry.PanelHeightInMeters * scale / 2);
@@ -87,14 +100,17 @@ public sealed class MainKeyboardControlsTests
 
     [Theory]
     [InlineData(.5f)] [InlineData(1f)] [InlineData(1.5f)] [InlineData(3f)]
-    public void DesktopControlsClearKeyboardAndFollowItsWidth(float scale)
+    public void DesktopToggleAlignsAboveNumLockAtTheSamePositionInBothStates(float scale)
     {
-        var width = OverlayGeometry.Width(true) * scale;
-        var num = MainKeyboardControls.DesktopBounds(KeyboardAction.ToggleNumpad, width, 42 * scale, scale);
-        var reset = MainKeyboardControls.DesktopBounds(KeyboardAction.ResetPosition, width, 42 * scale, scale);
-        Assert.True(num.X > width);
+        var num = MainKeyboardControls.DesktopBounds(KeyboardAction.ToggleNumpad, 42 * scale, scale);
+        var reset = MainKeyboardControls.DesktopBounds(KeyboardAction.ResetPosition, 42 * scale, scale);
+        Assert.True(num.X > OverlayGeometry.PanelWidth * scale);
+        Assert.True(num.X + num.Width < OverlayGeometry.Width(true) * scale);
         Assert.True(reset.X + reset.Width < 0);
-        Assert.Equal(42 * scale, num.Y);
+        var numLock = KeyboardLayout.WithNumpad(KeyboardLayout.Keys).Single(k => k.Id == "NumLock").Bounds;
+        Assert.Equal(numLock.X * scale, num.X);
+        Assert.Equal(numLock.Width * scale, num.Width);
+        Assert.Equal((42 + numLock.Y - 2) * scale, num.Y + num.Height);
         Assert.Equal(21 * scale, reset.Y + reset.Height / 2);
     }
 

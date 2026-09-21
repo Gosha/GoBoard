@@ -36,8 +36,8 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         ProgrammableKeys.Width(new() { Columns = ProgrammableKeySettings.MaxColumns }) * Panel.RasterScale,
         ProgrammableKeys.Height(new() { Rows = ProgrammableKeySettings.MaxRows }) * Panel.RasterScale,
         SKColorType.Rgba8888, SKAlphaType.Unpremul);
-    // Keep both the raster and physical overlay dimensions fixed. Center the
-    // narrower keyboard in transparent padding so toggles only publish pixels,
+    // Keep both the raster and physical overlay dimensions fixed. Left-align the
+    // keyboard with transparent padding on the right so toggles only publish pixels,
     // never stretch the previous frame while SteamVR applies separate setters.
     internal static readonly SKImageInfo MainTextureInfo = new(
         OverlayGeometry.Width(true) * Panel.RasterScale, Panel.LayoutHeight * Panel.RasterScale,
@@ -46,7 +46,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     internal static SKRect MainContentBounds(KeyboardState state)
     {
         var width = state.Width * Panel.RasterScale;
-        var left = (MainTextureInfo.Width - width) / 2f;
+        const float left = 0;
         return new(left, 0, left + width, MainTextureInfo.Height);
     }
     internal static (float X, float Y) MainPointerPosition(float x, float y, KeyboardState state) =>
@@ -70,17 +70,28 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             // scale's aspect too. Match the fixed raster here, then convert
             // event coordinates to the current logical grid in Process.
             var scale = new HmdVector2_t { v0 = TextureInfo.Width, v1 = TextureInfo.Height };
-            var bounds = shortcutsOnly ? new SKRect(0, 0, scale.v0, scale.v1) : MainContentBounds(State);
-            var mask = new VROverlayIntersectionMaskPrimitive_t
+            var bounds = shortcutsOnly ? new[] { new KeyBounds(0, 0, scale.v0, scale.v1) } :
+                MainKeyboardControls.KeyboardInputBounds(State.NumpadEnabled).Select(b =>
+                    new KeyBounds(b.X * Panel.RasterScale, b.Y * Panel.RasterScale,
+                        b.Width * Panel.RasterScale, b.Height * Panel.RasterScale)).ToArray();
+            // Leave the numpad's function row to its toggle overlay, including
+            // when the main panel's background is directly behind the button.
+            var masks = bounds.Select(b => new VROverlayIntersectionMaskPrimitive_t
             {
                 m_nPrimitiveType = EVROverlayIntersectionMaskPrimitiveType.OverlayIntersectionPrimitiveType_Rectangle,
                 m_Primitive = new VROverlayIntersectionMaskPrimitive_Data_t
                 { m_Rectangle = new IntersectionMaskRectangle_t
-                    { m_flTopLeftX = bounds.Left, m_flTopLeftY = bounds.Top, m_flWidth = bounds.Width, m_flHeight = bounds.Height } }
-            };
+                    { m_flTopLeftX = b.X, m_flTopLeftY = b.Y, m_flWidth = b.Width, m_flHeight = b.Height } }
+            }).ToArray();
             var error = overlay.SetOverlayMouseScale(handle, ref scale);
             if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize pointer coordinates: {error}");
-            error = overlay.SetOverlayIntersectionMask(handle, ref mask, 1, (uint)Marshal.SizeOf<VROverlayIntersectionMaskPrimitive_t>());
+            var pinned = GCHandle.Alloc(masks, GCHandleType.Pinned);
+            try
+            {
+                error = overlay.SetOverlayIntersectionMask(handle, ref masks[0], (uint)masks.Length,
+                    (uint)Marshal.SizeOf<VROverlayIntersectionMaskPrimitive_t>());
+            }
+            finally { pinned.Free(); }
             if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize input region: {error}");
             error = overlay.SetOverlayTexelAspect(handle,
                 shortcutsOnly ? State.Width * (float)TextureInfo.Height / (State.Height * TextureInfo.Width) : 1);

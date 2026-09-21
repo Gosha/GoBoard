@@ -63,6 +63,53 @@ public sealed class NumpadTests
         }
     }
 
+    [Theory]
+    [InlineData(.5f)] [InlineData(1f)] [InlineData(1.5f)]
+    public void ToggleKeepsMainKeysHandleAndResetAtTheSameWorldPositions(float scale)
+    {
+        var state = new KeyboardState(new Sink());
+        var original = state.Keys.ToArray();
+        var parent = Matrix4x4.CreateFromYawPitchRoll(.4f, -.3f, .2f) * Matrix4x4.CreateTranslation(1, 2, -3);
+        var placement = new RelativePose();
+        var initial = placement.Update(parent).World;
+        var moved = Matrix4x4.CreateRotationX(.2f) * Matrix4x4.CreateTranslation(.3f, -.1f, .2f) * initial;
+        placement.SetWorld(parent, moved);
+        foreach (var resetPosition in new[] { false, true })
+        {
+            if (resetPosition) placement.Reset();
+            var anchor = placement.Update(parent).World;
+            Assert.True(RelativePose.Near(resetPosition ? initial : moved, anchor));
+            var texture = OverlayGeometry.TextureFromPanel(scale) * anchor;
+            var recovered = OverlayGeometry.PanelFromTexture(scale) * texture;
+            Assert.True(RelativePose.Near(anchor, recovered));
+            var handle = OverlayGeometry.GrabFromScaledPanel(scale) * anchor;
+            var reset = MainKeyboardControls.Offset(KeyboardAction.ResetPosition, scale) * anchor;
+            foreach (var enabled in new[] { false, true, false, true })
+            {
+                state.SetNumpad(enabled, 1);
+                var bounds = KeyboardOverlay.MainContentBounds(state);
+                Assert.Equal(0, bounds.Left);
+                Assert.True(RelativePose.Near(handle, OverlayGeometry.GrabFromScaledPanel(scale) * recovered));
+                Assert.True(RelativePose.Near(reset, MainKeyboardControls.Offset(KeyboardAction.ResetPosition, scale) * recovered));
+                foreach (var key in original)
+                {
+                    var b = key.Bounds;
+                    var x = b.X + b.Width / 2;
+                    var y = b.Y + b.Height / 2;
+                    var pixel = new Vector3(
+                        ((bounds.Left + x * Panel.RasterScale) / KeyboardOverlay.MainTextureInfo.Width - .5f) *
+                            OverlayGeometry.WidthInMeters(true) * scale,
+                        (.5f - y / state.Height) * OverlayGeometry.PanelHeightInMeters * scale, 0);
+                    var expected = new Vector3((x - OverlayGeometry.PanelWidth / 2f) * ProgrammableKeys.MetersPerUnit * scale,
+                        (state.Height / 2f - y) * ProgrammableKeys.MetersPerUnit * scale, 0);
+                    Assert.True(Vector3.Distance(Vector3.Transform(expected, anchor), Vector3.Transform(pixel, texture)) < .00001f);
+                }
+            }
+            var expansion = KeyboardLayout.NumpadExtraWidth * ProgrammableKeys.MetersPerUnit * scale;
+            Assert.Equal(expansion, OverlayGeometry.ResizeFromScaledPanel(scale, true).M41 -
+                OverlayGeometry.ResizeFromScaledPanel(scale, false).M41, 5);
+        }
+    }
     [Fact]
     public void KeypadChordsRepeatAndToggleCancelsBothPointersAndQueuedPresses()
     {
@@ -135,7 +182,7 @@ public sealed class NumpadTests
     [Theory]
     [InlineData(BoardThemes.SteamSoft)]
     [InlineData(BoardThemes.SteamFlat)]
-    public void VrToggleKeepsNativePixelsAndEffectsCenteredWithoutStretching(string theme)
+    public void VrToggleKeepsNativePixelsAndEffectsFixedWithoutStretching(string theme)
     {
         var state = new KeyboardState(new Sink());
         using var paddedRenderer = new AnimatedKeyboardRenderer();
@@ -203,7 +250,7 @@ public sealed class NumpadTests
             var point = OverlayGeometry.ResizePoint(1, 35, 35, true);
             var hand = Matrix4x4.CreateTranslation(point + Vector3.UnitZ);
             Assert.True(resize.Begin(Matrix4x4.Identity, hand, 35, 35));
-            var corner = new Vector3(OverlayGeometry.WidthInMeters(true) / 2, -OverlayGeometry.PanelHeightInMeters / 2, 0);
+            var corner = new Vector3(OverlayGeometry.RightEdgeInMeters(true), -OverlayGeometry.PanelHeightInMeters / 2, 0);
             Assert.Equal(.006f, point.X - corner.X, 5);
             resize.Update(Matrix4x4.Identity, hand * Matrix4x4.CreateTranslation(corner * .2f));
             Assert.Equal(1.2f, resize.Scale, 5);

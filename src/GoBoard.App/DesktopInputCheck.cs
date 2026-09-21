@@ -95,6 +95,8 @@ internal static class DesktopInputCheck
             var initialPosition = keyboard.Location;
             var initialWidth = keyboard.Width;
             var initialShortcuts = store.Current.ProgrammableKeys;
+            var toggleWindow = keyboard.FloatingControls.Window(KeyboardAction.ToggleNumpad);
+            var togglePosition = toggleWindow.Bounds;
             void TapControl(KeyboardAction action)
             {
                 var button = keyboard.FloatingControls.Window(action);
@@ -118,6 +120,11 @@ internal static class DesktopInputCheck
                 new SettingsStore(settingsPath).Current.NumpadEnabled && keyboard.State.Keys.Any(k => k.Id == "Num1"),
                 "Main numpad button did not show and persist the integrated numpad.");
             var numpadButton = keyboard.FloatingControls.Window(KeyboardAction.ToggleNumpad);
+            Require(numpadButton.Bounds == togglePosition, "Numpad toggle moved after opening.");
+            Require(numpadButton.Left >= keyboard.Left && numpadButton.Right <= keyboard.Right,
+                "Open numpad toggle is not inside the keyboard.");
+            Require(WindowFromPoint(numpadButton.PointToScreen(new(numpadButton.Width / 2, numpadButton.Height / 2))) == numpadButton.Handle,
+                "The embedded numpad toggle is covered by the keyboard window.");
             var numpadPoint = new Point(numpadButton.Width / 2, numpadButton.Height / 2);
             var openWidth = keyboard.Width;
             Mouse(0x201, numpadPoint, numpadButton);
@@ -134,6 +141,14 @@ internal static class DesktopInputCheck
             Require(!keyboard.State.NumpadEnabled && keyboard.Width == initialWidth &&
                 !new SettingsStore(settingsPath).Current.NumpadEnabled && keyboard.State.Keys.All(k => k.Id != "Num1"),
                 "Main numpad button did not hide and persist the integrated numpad.");
+            for (var toggle = 0; toggle < 6; toggle++)
+            {
+                Require(numpadButton.Bounds == togglePosition, "Numpad toggle moved between repeated clicks.");
+                Require(WindowFromPoint(numpadButton.PointToScreen(numpadPoint)) == numpadButton.Handle,
+                    "Numpad toggle stopped receiving native mouse input.");
+                TapControl(KeyboardAction.ToggleNumpad);
+                Require(keyboard.State.NumpadEnabled == (toggle % 2 == 0), "Repeated numpad toggle did not activate.");
+            }
             Require(store.Current.ProgrammableKeys == initialShortcuts && !keyboard.Shortcuts.PanelWindow.Visible,
                 "Main numpad button changed the shortcut panel.");
             keyboard.Location = new(initialPosition.X + 25, initialPosition.Y - 25);
