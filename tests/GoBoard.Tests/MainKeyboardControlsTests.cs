@@ -75,7 +75,7 @@ public sealed class MainKeyboardControlsTests
     {
         var num = MainKeyboardControls.Offset(KeyboardAction.ToggleNumpad, numpad, scale);
         var numSize = MainKeyboardControls.WidthInMeters(KeyboardAction.ToggleNumpad, scale);
-        Assert.True(num.M41 - numSize / 2 > OverlayGeometry.WidthInMeters(numpad) * scale / 2);
+        Assert.True(num.M41 - numSize / 2 > OverlayGeometry.RightEdgeInMeters(numpad) * scale);
         Assert.Equal(OverlayGeometry.PanelHeightInMeters * scale / 2, num.M42 + numSize / 2, 5);
         var reset = MainKeyboardControls.Offset(KeyboardAction.ResetPosition, numpad, scale);
         var size = MainKeyboardControls.WidthInMeters(KeyboardAction.ResetPosition, scale);

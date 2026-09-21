@@ -43,19 +43,18 @@ internal static class MainKeyboardControlRenderer
     public static SKBitmap Compose(SKBitmap keyboard, bool numpad, string theme)
     {
         var units = ProgrammableKeys.MetersPerUnit;
-        var width = OverlayGeometry.Width(numpad);
         var height = OverlayGeometry.PanelHeight;
         KeyBounds Bounds(KeyboardAction action)
         {
             var offset = MainKeyboardControls.Offset(action, numpad, 1);
             var size = MainKeyboardControls.WidthInMeters(action, 1) / units;
-            return new(width / 2f + offset.M41 / units - size / 2, height / 2f - offset.M42 / units - size / 2, size, size);
+            return new(OverlayGeometry.PanelWidth / 2f + offset.M41 / units - size / 2, height / 2f - offset.M42 / units - size / 2, size, size);
         }
         var toggle = Bounds(KeyboardAction.ToggleNumpad);
         var reset = Bounds(KeyboardAction.ResetPosition);
         var gripWidth = OverlayGeometry.GrabWidthInMeters / units;
         var gripHeight = .06f / units;
-        var grip = new KeyBounds((width - gripWidth) / 2, height + .0075f / units, gripWidth, gripHeight);
+        var grip = new KeyBounds((OverlayGeometry.PanelWidth - gripWidth) / 2, height + .0075f / units, gripWidth, gripHeight);
         var result = new SKBitmap((int)Math.Ceiling(toggle.X + toggle.Width + 4) * Panel.RasterScale,
             (int)Math.Ceiling(Math.Max(grip.Y + grip.Height, reset.Y + reset.Height) + 4) * Panel.RasterScale,
             SKColorType.Rgba8888, SKAlphaType.Unpremul);

@@ -83,7 +83,7 @@ internal static class ShortcutResizeCheck
 
                 bool Ray(float x, float y, out VROverlayIntersectionResults_t hit)
                 {
-                    var source = Vector3.Transform(new((x - state.Width / 2f) * meters,
+                    var source = Vector3.Transform(new((x - (numpad ? OverlayGeometry.Width(true) : state.Width) / 2f) * meters,
                         (state.Height / 2f - y) * meters, 1), transform);
                     var direction = Vector3.TransformNormal(-Vector3.UnitZ, transform);
                     var ray = new VROverlayIntersectionParams_t
@@ -131,8 +131,8 @@ internal static class ShortcutResizeCheck
                 }
                 if (numpad)
                 {
-                    var margin = (OverlayGeometry.Width(true) - state.Width) / 2f;
-                    Require(!Ray(-margin - 2, state.Height / 2f, out _) &&
+                    var margin = OverlayGeometry.Width(true) - state.Width;
+                    Require(!Ray(-2, state.Height / 2f, out _) &&
                         !Ray(state.Width + margin + 2, state.Height / 2f, out _), "Ray hit outside the fixed raster");
                     Require(Math.Abs(texelAspect - 1) < .00001f, "Numpad toggle changed texel aspect");
                 }
@@ -142,8 +142,8 @@ internal static class ShortcutResizeCheck
                 {
                     var content = KeyboardOverlay.MainContentBounds(state);
                     for (var y = 0; y < pixels.Height; y++)
-                    for (var x = 0; x < content.Left; x++)
-                        Require(pixels.GetPixel(x, y).Alpha == 0 && pixels.GetPixel(pixels.Width - 1 - x, y).Alpha == 0,
+                    for (var x = (int)content.Right; x < pixels.Width; x++)
+                        Require(pixels.GetPixel(x, y).Alpha == 0,
                             "Narrow keyboard left stale pixels in the raster padding");
                 }
                 var fingerprint = Convert.ToHexString(SHA256.HashData(pixels.Bytes));

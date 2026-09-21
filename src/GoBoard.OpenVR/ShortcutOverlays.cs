@@ -67,8 +67,8 @@ internal sealed class ShortcutOverlays : IDisposable
     public void ApplySettings(BoardSettings next)
     {
         if (settings == next) return;
-        var reset = settings == null || settings.PositionResetId != next.PositionResetId || settings.NumpadEnabled != next.NumpadEnabled;
-        if (settings == null || settings.ProgrammableKeys != next.ProgrammableKeys || settings.SizePercent != next.SizePercent || reset)
+        var reset = settings == null || settings.PositionResetId != next.PositionResetId;
+        if (settings == null || settings.ProgrammableKeys != next.ProgrammableKeys || settings.SizePercent != next.SizePercent || settings.NumpadEnabled != next.NumpadEnabled || reset)
         { grab.Update(false, default); toggle.Reset(Now, collapse: !next.ProgrammableKeys.Enabled); }
         settings = next; scale = next.Scale;
         keyboard.ApplySettings(next, resized: true);
@@ -91,7 +91,7 @@ internal sealed class ShortcutOverlays : IDisposable
             return;
         }
         var buttonSize = ProgrammableKeys.ToggleSize * ProgrammableKeys.MetersPerUnit * scale;
-        var mainWidth = OverlayGeometry.WidthInMeters(settings.NumpadEnabled) * scale;
+        var mainWidth = OverlayGeometry.PanelWidthInMeters * scale;
         var mainHeight = OverlayGeometry.PanelHeightInMeters * scale;
         var buttonOffset = Matrix4x4.CreateTranslation(-(mainWidth + buttonSize) / 2 - .012f * scale,
             (mainHeight - buttonSize) / 2, .002f * scale);
@@ -118,6 +118,7 @@ internal sealed class ShortcutOverlays : IDisposable
         var poseValid = expanded && overlay.GetTransformForOverlayCoordinates(main, ETrackingUniverseOrigin.TrackingUniverseStanding,
             new HmdVector2_t { v0 = KeyboardOverlay.MainTextureInfo.Width / 2f, v1 = KeyboardOverlay.MainTextureInfo.Height / 2f }, ref raw) == EVROverlayError.None &&
             OpenVrPose.TryRigid(raw, out world);
+        world = OverlayGeometry.PanelFromTexture(scale) * world;
         var moved = grab.Update(poseValid, panelOffset * world, interactive: !resizing && !mainGrab.HasValue);
         if (moved.HasValue && Matrix4x4.Invert(world, out var inverse))
         {
@@ -196,6 +197,7 @@ internal sealed class ShortcutOverlays : IDisposable
             Check(overlay.GetOverlayTransformTrackedDeviceRelative(parent, ref device, ref raw), "Read shortcut parent controller");
         else Check(overlay.GetOverlayTransformAbsolute(parent, ref origin, ref raw), "Read shortcut parent pose");
         if (!OpenVrPose.TryRigid(raw, out var parentPose)) throw new InvalidOperationException("Invalid shortcut parent pose.");
+        if (parent == main) parentPose = OverlayGeometry.PanelFromTexture(scale) * parentPose;
         var transform = (device, origin, offset * parentPose);
         if (transforms.TryGetValue(child, out var previous) && previous == transform) return;
         var pose = OpenVrPose.ToOpenVr(transform.Item3);

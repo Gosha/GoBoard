@@ -18,7 +18,7 @@ internal static class MainKeyboardControls
     {
         var size = WidthInMeters(action, scale);
         if (action == KeyboardAction.ToggleNumpad)
-            return Matrix4x4.CreateTranslation((OverlayGeometry.WidthInMeters(numpad) * scale + size) / 2 + .012f * scale,
+            return Matrix4x4.CreateTranslation(OverlayGeometry.RightEdgeInMeters(numpad) * scale + size / 2 + .012f * scale,
                 (OverlayGeometry.PanelHeightInMeters * scale - size) / 2, .002f * scale);
         // The handle retains its physical size while the keyboard scales. Align
         // the arrow with its visible line, outside its transparent grab target.

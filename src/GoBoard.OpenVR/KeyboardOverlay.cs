@@ -36,8 +36,8 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         ProgrammableKeys.Width(new() { Columns = ProgrammableKeySettings.MaxColumns }) * Panel.RasterScale,
         ProgrammableKeys.Height(new() { Rows = ProgrammableKeySettings.MaxRows }) * Panel.RasterScale,
         SKColorType.Rgba8888, SKAlphaType.Unpremul);
-    // Keep both the raster and physical overlay dimensions fixed. Center the
-    // narrower keyboard in transparent padding so toggles only publish pixels,
+    // Keep both the raster and physical overlay dimensions fixed. Left-align the
+    // keyboard with transparent padding on the right so toggles only publish pixels,
     // never stretch the previous frame while SteamVR applies separate setters.
     internal static readonly SKImageInfo MainTextureInfo = new(
         OverlayGeometry.Width(true) * Panel.RasterScale, Panel.LayoutHeight * Panel.RasterScale,
@@ -46,7 +46,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     internal static SKRect MainContentBounds(KeyboardState state)
     {
         var width = state.Width * Panel.RasterScale;
-        var left = (MainTextureInfo.Width - width) / 2f;
+        const float left = 0;
         return new(left, 0, left + width, MainTextureInfo.Height);
     }
     internal static (float X, float Y) MainPointerPosition(float x, float y, KeyboardState state) =>
