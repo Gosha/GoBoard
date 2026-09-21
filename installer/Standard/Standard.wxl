@@ -1,0 +1,17 @@
+<WixLocalization Culture="en-us" Language="1033" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <String Id="ConfirmCancelMessage" Value="Cancel GoBoard setup?" />
+  <String Id="ExecuteUpgradeRelatedBundleMessage" Value="Replacing previous setup" />
+  <String Id="ExecuteAddonRelatedBundleMessage" Value="Updating related setup" />
+  <String Id="ExecutePatchRelatedBundleMessage" Value="Updating related setup" />
+  <String Id="PauseAutomaticUpdatesMessage" Value="Preparing Windows Installer" />
+  <String Id="SystemRestorePointMessage" Value="Preparing Windows Installer" />
+  <String Id="FilesInUseTitle" Value="GoBoard files in use" />
+  <String Id="FilesInUseLabel" Value="Close these applications, then retry setup:" />
+  <String Id="FilesInUseCloseRadioButton" Value="Close applications and try to restart them." />
+  <String Id="FilesInUseNetfxCloseRadioButton" Value="Close applications." />
+  <String Id="FilesInUseDontCloseRadioButton" Value="Keep applications open; a restart may be required." />
+  <String Id="FilesInUseRetryButton" Value="Retry" />
+  <String Id="FilesInUseIgnoreButton" Value="Ignore" />
+  <String Id="FilesInUseExitButton" Value="Cancel setup" />
+  <String Id="FailureHyperlinkLogText" Value="GoBoard setup did not complete. If the runtime requested a restart, restart Windows and run setup again. See the &lt;a href=&quot;#&quot;&gt;setup log&lt;/a&gt; and %TEMP%\GoBoard-runtime-*.log for details." />
+</WixLocalization>

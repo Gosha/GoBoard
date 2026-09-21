@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory)][string]$MsiPath,
     [Parameter(Mandatory)][string]$PublishDir,
-    [ValidateSet('stable', 'beta')][string]$Channel = 'stable'
+    [ValidateSet('stable', 'beta')][string]$Channel = 'stable',
+    [ValidateSet('standard', 'offline')][string]$SetupVariant = 'offline'
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -43,8 +44,7 @@ foreach ($file in $files) {
 }
 $publishedFiles = @(Get-ChildItem -LiteralPath $publish -Recurse -File | Where-Object Extension -ne '.pdb')
 if ($files.Count -ne $publishedFiles.Count) { throw 'MSI file count differs from the publish output.' }
-foreach ($required in @('GoBoard.exe', 'GoBoard.dll', 'GoBoard.runtimeconfig.json', 'hostfxr.dll',
-                        'hostpolicy.dll', 'coreclr.dll', 'System.Windows.Forms.dll',
+foreach ($required in @('GoBoard.exe', 'GoBoard.dll', 'GoBoard.runtimeconfig.json',
                         'openvr_api.dll', 'libSkiaSharp.dll', 'glfw3.dll',
                         'OpenVR-LICENSE.txt', 'SOUND-CREDITS.md')) {
     if (!(Test-Path -LiteralPath (Join-Path $payload $required))) { throw "Missing payload: $required" }
@@ -62,7 +62,18 @@ try {
     } finally { $pe.Dispose() }
 } finally { $appStream.Dispose() }
 $config = Get-Content -Raw -LiteralPath (Join-Path $payload 'GoBoard.runtimeconfig.json') | ConvertFrom-Json
-if (@($config.runtimeOptions.includedFrameworks).Count -ne 2) { throw 'Expected a self-contained desktop runtime.' }
+if ($SetupVariant -eq 'offline') {
+    if (@($config.runtimeOptions.includedFrameworks).Count -ne 2) { throw 'Expected a self-contained desktop runtime.' }
+    foreach ($file in @('hostfxr.dll', 'hostpolicy.dll', 'coreclr.dll', 'System.Windows.Forms.dll')) {
+        if (!(Test-Path (Join-Path $payload $file))) { throw "Offline runtime file missing: $file" }
+    }
+} else {
+    if (@($config.runtimeOptions.frameworks).Count -ne 2 -or $config.runtimeOptions.rollForward -ne 'Minor') { throw 'Expected framework-dependent Desktop/Core runtime with Minor roll-forward.' }
+    foreach ($framework in $config.runtimeOptions.frameworks) {
+        if ($framework.version -ne '10.0.0' -or $framework.name -notin @('Microsoft.NETCore.App', 'Microsoft.WindowsDesktop.App')) { throw 'Update setup detection for the new app runtime requirements.' }
+    }
+    if (Test-Path (Join-Path $payload 'hostfxr.dll')) { throw 'Standard setup must not bundle .NET.' }
+}
 
 # The shortcut/Installed apps icon must be the compact branding ICO, not a
 # second copy of the executable stored outside the compressed payload.
@@ -93,6 +104,7 @@ $metadata = Get-Content -Raw -LiteralPath (Join-Path $payload 'release.json') | 
 if ($metadata.channel -ne $Channel -or $metadata.msiVersion -ne $package.GetAttribute('Version')) {
     throw 'Packaged release metadata does not match the requested channel/version.'
 }
+if ($metadata.setupVariant -ne $SetupVariant) { throw 'Incorrect payload variant provenance.' }
 $info = & (Join-Path $PSScriptRoot 'Get-ReleaseInfo.ps1') -Version $metadata.version
 if ($info.MsiVersion -ne $metadata.msiVersion -or $info.Channel -ne $Channel) { throw 'Release version mapping or channel does not match MSI metadata.' }
 if ([guid]$package.GetAttribute('UpgradeCode') -ne [guid]$info.UpgradeCode -or
@@ -138,7 +150,11 @@ try {
     $view = $db.OpenView('SELECT `UpgradeCode`, `VersionMin`, `VersionMax`, `Attributes`, `Remove`, `ActionProperty` FROM `Upgrade`')
     $view.Execute()
     $crossChannelFound = $false
+    $equalVersionRemoval = $false
     while ($record = $view.Fetch()) {
+        if ($record.StringData(6) -eq 'WIX_UPGRADE_DETECTED') {
+            $equalVersionRemoval = $record.StringData(3) -eq $metadata.msiVersion -and ($record.IntegerData(4) -band 512) -ne 0 -and ($record.IntegerData(4) -band 2) -eq 0
+        }
         if ($record.StringData(6) -ne 'GOBOARD_OTHER_CHANNEL_FOUND') { continue }
         # OnlyDetect (2) must be absent, VersionMinInclusive (256) present;
         # an empty Remove column removes all features.
@@ -150,6 +166,15 @@ try {
     }
     $view.Close()
     if (!$crossChannelFound) { throw 'MSI does not replace the other release channel.' }
+    if (!$equalVersionRemoval) { throw 'MSI must permit transactional equal-version replacement for variant switches.' }
+    $view = $db.OpenView('SELECT `Condition` FROM `LaunchCondition`')
+    $view.Execute()
+    $conditions = @()
+    while ($record = $view.Fetch()) { $conditions += $record.StringData(1) }
+    $view.Close()
+    if ($conditions -notcontains ('Installed OR NOT GOBOARD_SAME_VERSION_FOUND OR GOBOARD_PREVIOUS_VARIANT <> "' + $SetupVariant + '"')) { throw 'Missing same-variant rebuild guard.' }
+    if ($SetupVariant -eq 'standard' -and $conditions -notcontains 'REMOVE = "ALL" OR GOBOARD_RUNTIME_RESULT = "0"') { throw 'Missing runtime prerequisite launch condition.' }
+    if ($properties['GOBOARD_PREVIOUS_VARIANT'] -ne 'offline') { throw 'Legacy MSI packages must be recognized as Offline.' }
     $view = $db.OpenView('SELECT `Action`, `Sequence` FROM `InstallExecuteSequence`')
     $view.Execute()
     $sequence = @{}

@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../installer/GoBoard.Installer.Actions/LaunchMode.cs" Link="Installer/LaunchMode.cs" />
+    <Compile Include="../../installer/Prerequisite/RuntimeWorkflow.cs" Link="Installer/RuntimeWorkflow.cs" />
     <ProjectReference Include="../../src/GoBoard.Core/GoBoard.Core.csproj" />
     <ProjectReference Include="../../src/GoBoard.Platform.Windows/GoBoard.Platform.Windows.csproj" />
     <ProjectReference Include="../../src/GoBoard.OpenVR/GoBoard.OpenVR.csproj" />

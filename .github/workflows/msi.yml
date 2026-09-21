@@ -1,4 +1,4 @@
-name: Windows MSI
+name: Windows setup
 
 on:
   pull_request:
@@ -105,15 +105,23 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
-      - name: Build and check MSI
+      - name: Build and check Standard and Offline setup
         env:
           MSI_VERSION: ${{ matrix.version }}
         run: ./build-msi.ps1 -Version $env:MSI_VERSION
-      - name: Upload MSI, checksum, and provenance
+      - name: Check isolated variant and channel switching
+        run: |
+          $offline = Get-ChildItem artifacts/msi/*-offline.msi | Select-Object -First 1
+          $standard = Get-ChildItem artifacts/msi/build-*/installer/bin/*-standard.msi | Select-Object -First 1
+          $setup = Get-ChildItem artifacts/msi/*-standard.exe | Select-Object -First 1
+          ./installer/Test-SetupSwitching.ps1 -OfflineMsi $offline.FullName -StandardMsi $standard.FullName -StandardSetup $setup.FullName
+      - name: Verify pinned Microsoft runtime download without installing
+        run: ./installer/Test-RuntimeDownload.ps1
+      - name: Upload setup files, checksums, and provenance
         uses: actions/upload-artifact@v6
         with:
           name: GoBoard-${{ matrix.channel }}-msi
-          path: artifacts/msi/${{ matrix.artifact_base }}.*
+          path: artifacts/msi/${{ matrix.artifact_base }}-*
           if-no-files-found: error
 
   release:
@@ -141,14 +149,16 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $assets = @(Get-ChildItem release-assets -File | ForEach-Object FullName)
-          if ($assets.Count -ne 3) { throw 'Expected MSI, SHA-256 checksum, and release metadata.' }
+          if ($assets.Count -ne 6) { throw 'Expected Standard EXE and Offline MSI, each with SHA-256 checksum and release metadata.' }
           $notes = @(
             "Channel: $env:RELEASE_CHANNEL",
             "Version: $env:RELEASE_VERSION",
             "Source: https://github.com/$env:GH_REPO/commit/$env:GITHUB_SHA",
             '',
-            'Install this MSI to replace your existing GoBoard installation, including the other release channel. Settings are retained.',
-            'The MSI is unsigned. VR mode requires SteamVR.'
+            'Standard setup is the small EXE. It offers to download Microsoft .NET 10 Desktop Runtime if needed; an administrator prompt may appear for the runtime.',
+            'Offline setup is the self-contained MSI. It needs no internet or administrator access.',
+            'Either replaces your existing GoBoard installation, including the other release channel or setup variant. Settings are retained.',
+            'Installers are unsigned. VR mode requires SteamVR.'
           )
           $notes | Set-Content release-notes.md
           $options = @('--target', $env:GITHUB_SHA, '--title', "GoBoard $env:RELEASE_CHANNEL $env:RELEASE_VERSION", '--notes-file', 'release-notes.md', '--draft', '--verify-tag')

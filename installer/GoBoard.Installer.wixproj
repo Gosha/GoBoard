@@ -1,20 +1,26 @@
 <Project Sdk="WixToolset.Sdk/5.0.2">
   <PropertyGroup>
     <InstallerPlatform>x64</InstallerPlatform>
-    <OutputName>GoBoard-$(ReleaseVersion)-win-x64</OutputName>
+    <OutputName>GoBoard-$(ReleaseVersion)-win-x64-$(SetupVariant)</OutputName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\artifacts\msi\publish\</PublishDir>
-    <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir);ReleaseChannel=$(ReleaseChannel);ReleaseVersion=$(ReleaseVersion);LifecycleActions=$(LifecycleActions);AppIcon=$(MSBuildThisFileDirectory)..\assets\branding\goboard.ico</DefineConstants>
+    <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir);ReleaseChannel=$(ReleaseChannel);ReleaseVersion=$(ReleaseVersion);LifecycleActions=$(LifecycleActions);SetupVariant=$(SetupVariant);AppIcon=$(MSBuildThisFileDirectory)..\assets\branding\goboard.ico</DefineConstants>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- ICE91 warns that profile files cannot support ALLUSERS. This package
          is deliberately per-user only and rejects ALLUSERS at launch. -->
-    <SuppressIces>ICE91</SuppressIces>
+    <!-- ICE61: equal-version replacement is intentional across payload variants; the launch condition blocks same-variant rebuilds. -->
+    <SuppressIces>ICE91;ICE61</SuppressIces>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Package.wxs" />
     <Compile Include="$(PayloadFragment)" Condition="'$(PayloadFragment)' != ''" />
     <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Netfx.wixext" Version="5.0.2" />
   </ItemGroup>
   <Target Name="CheckPublishedApp" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(SetupVariant)' != 'standard' and '$(SetupVariant)' != 'offline'" Text="SetupVariant must be standard or offline." />
     <Error Condition="!Exists('$(PayloadFragment)')" Text="Run build-msi.ps1 to generate the per-user payload fragment." />
     <Error Condition="!Exists('$(LifecycleActions)')" Text="Run build-msi.ps1 to build the installer lifecycle actions." />
     <Error Condition="'$(ReleaseChannel)' != 'stable' and '$(ReleaseChannel)' != 'beta'" Text="ReleaseChannel must be stable or beta." />
