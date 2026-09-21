@@ -1,0 +1,2 @@
+steam-flat: median 9,90 ms, p95 11,88 ms (100 frames, 2550x846)
+steam-soft: median 13,05 ms, p95 15,05 ms (100 frames, 2550x846)

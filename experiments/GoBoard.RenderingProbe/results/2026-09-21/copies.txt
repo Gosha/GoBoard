@@ -1,0 +1,2 @@
+FromBitmap immutable=False: median=1.7713 ms p95=2.6129 ms
+FromBitmap immutable=True: median=0.0001 ms p95=0.0005 ms

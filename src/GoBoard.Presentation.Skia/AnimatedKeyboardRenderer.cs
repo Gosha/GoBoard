@@ -25,6 +25,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
     private (bool Shift, bool AltGr, bool Caps)? legends;
     private int visualRevision = -1, cancellationRevision = -1;
     private bool wasAnimating;
+    private GRContext cacheContext;
 
     // Null means the host can keep its existing texture/frame, with no upload.
     public SKBitmap Render(KeyboardState keyboard, bool shift, string status, bool altGr, bool caps,
@@ -32,13 +33,37 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
     {
         var output = outputInfo ?? new SKImageInfo(keyboard.Width * Panel.RasterScale, keyboard.Height * Panel.RasterScale,
             SKColorType.Rgba8888, SKAlphaType.Unpremul);
+        SKBitmap result = null;
+        SKCanvas canvas = null;
+        try
+        {
+            DrawFrame(() => canvas = new SKCanvas(result = new SKBitmap(output)), null,
+                keyboard, shift, status, altGr, caps, scroll, theme, options, now, output, contentBounds);
+            return result;
+        }
+        catch { canvas?.Dispose(); canvas = null; result?.Dispose(); throw; }
+        finally { canvas?.Dispose(); }
+    }
+
+    // A false return leaves the existing submitted texture untouched. The host
+    // retains canvas/context ownership, including flush and presentation timing.
+    public bool Draw(SKCanvas canvas, GRContext context, KeyboardState keyboard, bool shift, string status,
+        bool altGr, bool caps, bool scroll, string theme, EffectSettings options, double now,
+        SKImageInfo output, SKRect? contentBounds = null) =>
+        DrawFrame(() => canvas, context, keyboard, shift, status, altGr, caps, scroll, theme, options, now, output, contentBounds);
+
+    private bool DrawFrame(Func<SKCanvas> acquireCanvas, GRContext context, KeyboardState keyboard,
+        bool shift, string status, bool altGr, bool caps, bool scroll, string theme, EffectSettings options,
+        double now, SKImageInfo output, SKRect? contentBounds)
+    {
         var bounds = contentBounds ?? new SKRect(0, 0, output.Width, output.Height);
         var presentation = (output, bounds);
         var reset = bound != keyboard || layout != keyboard.Layout || this.theme != theme || this.options != options ||
-            cancellationRevision != keyboard.CancellationRevision;
+            cancellationRevision != keyboard.CancellationRevision || cacheContext != context;
         if (reset)
         {
             Reset();
+            cacheContext = context;
             bound = keyboard; layout = keyboard.Layout; this.theme = theme; this.options = options;
             cancellationRevision = keyboard.CancellationRevision;
             style = KeyboardTheme.Resolve(theme);
@@ -51,7 +76,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
         var dirty = drawn != signature;
         var labels = (shift, altGr, caps);
         if (legends != labels && options.Transition != CharacterTransition.None && options.TransitionMs > 0)
-            transitions.Update(layout, shift, altGr, caps, style, options, now, legends == null, keys);
+            transitions.Update(layout, shift, altGr, caps, style, options, now, legends == null, keys, context);
         legends = labels;
 
         var motion = visualRevision != keyboard.VisualRevision;
@@ -77,21 +102,22 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
         var repaint = dirty || reset || drawnOutput != presentation || animating || wasAnimating || motion && options.PointerEnabled && (options.Spotlight || options.Edges);
         visualRevision = keyboard.VisualRevision;
         wasAnimating = animating;
-        if (!repaint) return null;
+        if (!repaint) return false;
         var content = (options.PointerEnabled ? keyboard.ContentRevision : keyboard.Revision, shift, altGr, caps, scroll, status);
         if (cached != content || baseline == null)
         {
             BaselineBuildCount++;
             cachedOutput = null;
-            using var bitmap = Panel.Render(keyboard, shift, status, altGr, caps, scroll, theme,
-                suppressHover: options.PointerEnabled, suppressPressed: options.PressFlash);
-            baseline?.Dispose(); baseline = SKImage.FromBitmap(bitmap);
+            var info = new SKImageInfo(keyboard.Width * Panel.RasterScale, keyboard.Height * Panel.RasterScale,
+                SKColorType.Rgba8888, SKAlphaType.Unpremul);
+            var next = RenderImage.Create(info, context, canvas => Panel.Draw(canvas, keyboard, shift, status, altGr, caps, scroll, theme,
+                suppressHover: options.PointerEnabled, suppressPressed: options.PressFlash));
+            baseline?.Dispose(); baseline = next;
             surfaces?.Dispose(); surfaces = null;
             if (transitions.Animating(now))
             {
-                using var faces = Panel.Render(keyboard, shift, status, altGr, caps, scroll, theme,
-                    omitPrintableLegends: true, suppressHover: options.PointerEnabled, suppressPressed: options.PressFlash);
-                surfaces = SKImage.FromBitmap(faces);
+                surfaces = RenderImage.Create(info, context, canvas => Panel.Draw(canvas, keyboard, shift, status, altGr, caps, scroll, theme,
+                    omitPrintableLegends: true, suppressHover: options.PointerEnabled, suppressPressed: options.PressFlash));
             }
             cached = content;
         }
@@ -103,16 +129,16 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
             if (output.Width != baseline.Width || output.Height != baseline.Height || output.ColorType != baseline.ColorType || output.AlphaType != baseline.AlphaType ||
                 bounds != new SKRect(0, 0, output.Width, output.Height))
             {
-                using var pixels = new SKBitmap(output);
-                using var target = new SKCanvas(pixels);
-                target.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Background : SKColors.Transparent);
-                target.DrawImage(baseline, bounds, new SKSamplingOptions(SKFilterMode.Linear));
-                outputBaseline = SKImage.FromBitmap(pixels);
+                outputBaseline = RenderImage.Create(output, context, target =>
+                {
+                    target.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Background : SKColors.Transparent);
+                    target.DrawImage(baseline, bounds, new SKSamplingOptions(SKFilterMode.Linear));
+                });
             }
             cachedOutput = presentation;
         }
-        var result = new SKBitmap(output);
-        using var canvas = new SKCanvas(result);
+        var canvas = acquireCanvas();
+        using var restore = new SKAutoCanvasRestore(canvas, true);
         canvas.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Background : SKColors.Transparent);
         canvas.DrawImage(outputBaseline ?? baseline, new SKRect(0, 0, output.Width, output.Height), new SKSamplingOptions(SKFilterMode.Nearest));
         canvas.ClipRect(bounds);
@@ -123,7 +149,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
             foreach (var p in pointers.Values) DrawPointer(canvas, keyboard, p.Effects, options, now);
         drawn = signature;
         drawnOutput = presentation;
-        return result;
+        return true;
     }
 
     public void Reset()
@@ -132,6 +158,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
         foreach (var path in paths.Values) path.Dispose(); paths.Clear();
         baseline?.Dispose(); baseline = null; surfaces?.Dispose(); surfaces = null;
         outputBaseline?.Dispose(); outputBaseline = null; cachedOutput = null;
+        cacheContext = null;
         bound = null; layout = null; drawn = null; cached = null; drawnOutput = null; legends = null; visualRevision = -1; wasAnimating = false;
     }
     public void Dispose() => Reset();

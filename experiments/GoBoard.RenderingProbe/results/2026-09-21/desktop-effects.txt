@@ -1,0 +1,24 @@
+RGBA to BGRA: median 10.432 ms, p95 12.171 ms
+Bitmap clone: median 5.070 ms, p95 6.820 ms
+GDI scaled paint: median 5.155 ms, p95 6.275 ms
+Direct BGRA wrap + unscaled paint: median 0.346 ms, p95 0.696 ms
+CPU rendering, 1275 x 423; 30 warmup + 120 measured frames. Includes desktop bitmap wrapping and GDI paint; excludes compositor.
+Theme,Scenario,MedianMs,P95Ms,Frames
+steam-soft,Off,21.426,24.362,40
+steam-soft,Afterglow,1.178,21.323,120
+steam-soft,Spotlight,3.186,36.263,120
+steam-soft,Edges,3.193,35.525,120
+steam-soft,Ripple,1.696,29.276,120
+steam-soft,Flash,1.444,28.114,115
+steam-soft,Crossfade,15.194,78.758,120
+steam-soft,Lift,13.688,83.993,120
+steam-soft,Combined,15.275,75.153,120
+steam-flat,Off,25.417,30.995,40
+steam-flat,Afterglow,1.598,23.750,120
+steam-flat,Spotlight,2.245,22.947,120
+steam-flat,Edges,2.134,19.842,120
+steam-flat,Ripple,1.192,18.678,120
+steam-flat,Flash,1.033,17.998,115
+steam-flat,Crossfade,12.666,54.053,120
+steam-flat,Lift,13.444,65.942,120
+steam-flat,Combined,14.154,62.054,120

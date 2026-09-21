@@ -1,0 +1,21 @@
+Output alpha: Unpremul; fixed live main texture dimensions, base keyboard content scaled to fill (not padded). Diagnostic only.
+CPU rendering, 3138 x 846; 30 warmup + 120 measured frames. Excludes presentation/upload.
+Theme,Scenario,MedianMs,P95Ms,Frames
+steam-soft,Off,57.843,66.206,40
+steam-soft,Afterglow,14.816,58.249,120
+steam-soft,Spotlight,17.996,62.603,120
+steam-soft,Edges,22.689,80.141,120
+steam-soft,Ripple,21.386,84.172,120
+steam-soft,Flash,20.052,78.989,115
+steam-soft,Crossfade,54.072,112.977,120
+steam-soft,Lift,50.955,113.078,120
+steam-soft,Combined,55.425,115.565,120
+steam-flat,Off,50.428,52.202,40
+steam-flat,Afterglow,14.048,51.467,120
+steam-flat,Spotlight,16.281,53.077,120
+steam-flat,Edges,15.835,55.533,120
+steam-flat,Ripple,16.062,61.282,120
+steam-flat,Flash,14.139,54.523,115
+steam-flat,Crossfade,87.618,186.033,120
+steam-flat,Lift,80.618,163.375,120
+steam-flat,Combined,90.619,156.871,120

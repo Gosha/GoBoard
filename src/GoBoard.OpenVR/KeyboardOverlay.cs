@@ -163,6 +163,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         var type = (EVREventType)e.eventType;
         if (type is not (EVREventType.VREvent_FocusEnter or EVREventType.VREvent_FocusLeave or
             EVREventType.VREvent_MouseMove or EVREventType.VREvent_MouseButtonDown or EVREventType.VREvent_MouseButtonUp)) return;
+        graphics.Timings.Add("input.event-age", e.eventAgeSeconds * 1000.0);
         var focusEvent = type is EVREventType.VREvent_FocusEnter or EVREventType.VREvent_FocusLeave;
         if (focusEvent) device ??= FocusDevice(e.data.overlay.devicePath);
         var slot = focusEvent ? e.data.overlay.cursorIndex : e.data.mouse.cursorIndex;
@@ -232,15 +233,28 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         var caps = WindowsKeyboard.CapsLock;
         var scrollLock = WindowsKeyboard.ScrollLock;
         State.SetNumLock(WindowsKeyboard.NumLock);
-        if (State.SetShortcutStatus(status, Now))
+        var now = Now;
+        if (State.SetShortcutStatus(status, now))
         {
             audio.Cancel();
-            acceptAfter = Now;
+            acceptAfter = now;
             ApplyGeometry();
         }
-        using var bitmap = renderer.Render(State, shift, status, altGr, caps, scrollLock, theme, effects, Now,
+        if (graphics.TryDraw(overlay, handle, TextureInfo, (canvas, context) =>
+        {
+            var started = graphics.Timings.Start();
+            var builds = renderer.BaselineBuildCount;
+            var changed = renderer.Draw(canvas, context, State, shift, status, altGr, caps, scrollLock, theme, effects, now,
+                TextureInfo.WithAlphaType(SKAlphaType.Premul), shortcutsOnly ? null : MainContentBounds(State));
+            if (changed) graphics.Timings.End(builds == renderer.BaselineBuildCount ? "gpu.animation" : "gpu.baseline", started);
+            return changed;
+        })) return;
+        var rasterStart = graphics.Timings.Start();
+        var rasterBuilds = renderer.BaselineBuildCount;
+        using var bitmap = renderer.Render(State, shift, status, altGr, caps, scrollLock, theme, effects, now,
             TextureInfo, shortcutsOnly ? null : MainContentBounds(State));
         if (bitmap == null) return;
+        graphics.Timings.End(rasterBuilds == renderer.BaselineBuildCount ? "cpu.animation" : "cpu.baseline", rasterStart);
         graphics.Upload(overlay, handle, bitmap);
     }
 

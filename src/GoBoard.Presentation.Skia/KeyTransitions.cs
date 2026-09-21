@@ -13,35 +13,47 @@ internal sealed class KeyTransitions : IDisposable
     public bool Contains(string id) => tracks.Keys.Any(k => k.Key == id);
     internal bool Contains(string id, int slot) => tracks.ContainsKey((id, slot));
 
-    public void Update(WindowsLayout layout, bool shift, bool altGr, bool caps, KeyboardTheme style, EffectSettings options, double now, bool layoutChanged, IReadOnlyList<KeyboardKey> keys = null)
+    public void Update(WindowsLayout layout, bool shift, bool altGr, bool caps, KeyboardTheme style, EffectSettings options, double now, bool layoutChanged, IReadOnlyList<KeyboardKey> keys = null, GRContext context = null)
     {
-        var next = CharacterLayers.Capture(layout, shift, altGr, caps, style, keys);
+        var next = CharacterLayers.Capture(layout, shift, altGr, caps, style, keys, context);
         if (!layoutChanged && current != null && current.Keys.All(p =>
                 p.Value.Layers.Select(l => l.Label).SequenceEqual(next.Keys[p.Key].Layers.Select(l => l.Label))))
         {
             next.Dispose(); return; // Ctrl/locking Shift doesn't restart letters.
         }
         var nextTracks = new Dictionary<(string Key, int Slot), Track>();
-        if (!layoutChanged && current != null && options.Transition != CharacterTransition.None && options.TransitionMs > 0)
-            foreach (var key in next.Keys.Values)
-            {
-                var b = key.Key.Bounds;
-                for (var slot = 0; slot < key.Layers.Length; slot++)
+        try
+        {
+            if (!layoutChanged && current != null && options.Transition != CharacterTransition.None && options.TransitionMs > 0)
+                foreach (var key in next.Keys.Values)
                 {
-                    var id = (key.Key.Id, slot);
-                    var old = current.Keys[key.Key.Id].Layers[slot];
-                    tracks.TryGetValue(id, out var oldTrack);
-                    var moving = oldTrack != null && now < oldTrack.Start + oldTrack.Duration;
-                    if (!moving && old.Label == key.Layers[slot].Label) continue;
-                    // Capture just this label's visible frame on interruption.
-                    using var bitmap = new SKBitmap((int)(b.Width * OverlayGeometry.RasterScale), (int)(b.Height * OverlayGeometry.RasterScale), SKColorType.Rgba8888, SKAlphaType.Premul);
-                    using var canvas = new SKCanvas(bitmap); canvas.Clear(SKColors.Transparent); canvas.Scale(OverlayGeometry.RasterScale);
-                    var rect = new SKRect(0, 0, b.Width, b.Height);
-                    if (moving) DrawTrack(canvas, oldTrack, old.Image, rect, now);
-                    else Stamp(canvas, old.Image, rect);
-                    nextTracks[id] = new(SKImage.FromBitmap(bitmap), now, options.TransitionMs / 1000.0, options.Transition, options.Travel);
+                    var b = key.Key.Bounds;
+                    for (var slot = 0; slot < key.Layers.Length; slot++)
+                    {
+                        var id = (key.Key.Id, slot);
+                        var old = current.Keys[key.Key.Id].Layers[slot];
+                        tracks.TryGetValue(id, out var oldTrack);
+                        var moving = oldTrack != null && now < oldTrack.Start + oldTrack.Duration;
+                        if (!moving && old.Label == key.Layers[slot].Label) continue;
+                        // Capture just this label's visible frame on interruption.
+                        var image = RenderImage.Create(new SKImageInfo((int)(b.Width * OverlayGeometry.RasterScale),
+                            (int)(b.Height * OverlayGeometry.RasterScale), SKColorType.Rgba8888, SKAlphaType.Premul), context, canvas =>
+                        {
+                            canvas.Clear(SKColors.Transparent); canvas.Scale(OverlayGeometry.RasterScale);
+                            var rect = new SKRect(0, 0, b.Width, b.Height);
+                            if (moving) DrawTrack(canvas, oldTrack, old.Image, rect, now);
+                            else Stamp(canvas, old.Image, rect);
+                        });
+                        nextTracks[id] = new(image, now, options.TransitionMs / 1000.0, options.Transition, options.Travel);
+                    }
                 }
-            }
+        }
+        catch
+        {
+            next.Dispose();
+            foreach (var track in nextTracks.Values) track.From?.Dispose();
+            throw;
+        }
         Reset(); current?.Dispose(); current = next;
         foreach (var pair in nextTracks) tracks.Add(pair.Key, pair.Value);
     }
