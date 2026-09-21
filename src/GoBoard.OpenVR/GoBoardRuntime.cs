@@ -219,6 +219,8 @@ public static int Run(string[] args)
                 settingsError = settings.Error;
             }
             settingsOverlay.Update();
+            // Exit before any further input or resize commits; normal disposal releases owned keys.
+            if (settingsOverlay.CloseRequested) break;
             if (appliedSettings != settings.Current)
             {
                 var resetPosition = appliedSettings.PositionResetId != settings.Current.PositionResetId;

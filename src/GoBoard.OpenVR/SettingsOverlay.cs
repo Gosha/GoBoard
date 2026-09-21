@@ -26,6 +26,8 @@ internal sealed class SettingsOverlay : IDisposable
     private readonly ulong left = InputPath("/user/hand/left"), right = InputPath("/user/hand/right");
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
 
+    public bool CloseRequested { get; private set; }
+
     public SettingsOverlay(CVRSystem system, CVROverlay overlay, OverlayGraphics graphics, SettingsStore store, Action<BoardSettings> audition)
     {
         this.system = system; this.overlay = overlay; this.graphics = graphics; this.audition = audition;
@@ -38,6 +40,7 @@ internal sealed class SettingsOverlay : IDisposable
             Check(overlay.SetOverlayMouseScale(handle, ref scale), "Set settings pointer scale");
             Check(overlay.SetOverlayInputMethod(handle, VROverlayInputMethod.Mouse), "Enable settings input");
             Check(overlay.SetOverlayFlag(handle, VROverlayFlags.MultiCursor, true), "Enable both settings pointers");
+            Check(overlay.SetOverlayFlag(handle, VROverlayFlags.EnableControlBarClose, true), "Enable dashboard Close action");
             using var icon = SettingsPanel.Icon();
             graphics.Upload(overlay, thumbnail, icon);
             Draw();
@@ -59,8 +62,10 @@ internal sealed class SettingsOverlay : IDisposable
         if (active) autostart.Update(Now);
         while (overlay.PollNextOverlayEvent(handle, ref e, (uint)Marshal.SizeOf<VREvent_t>()))
         {
-            if (!active) continue;
             var type = (EVREventType)e.eventType;
+            // The dashboard hover action also works while another tab is selected.
+            if (type == EVREventType.VREvent_OverlayClosed) { CloseRequested = true; return; }
+            if (!active) continue;
             var focus = type is EVREventType.VREvent_FocusEnter or EVREventType.VREvent_FocusLeave;
             if (!focus && type is not (EVREventType.VREvent_MouseMove or EVREventType.VREvent_MouseButtonDown or EVREventType.VREvent_MouseButtonUp)) continue;
             var now = Now;
@@ -86,7 +91,10 @@ internal sealed class SettingsOverlay : IDisposable
             else if (effect == SettingsEditorEffect.AuditionSound) audition(editor.Current);
         }
         // Thumbnail events must be drained too, even though the shell activates the tab.
-        while (overlay.PollNextOverlayEvent(thumbnail, ref e, (uint)Marshal.SizeOf<VREvent_t>())) { }
+        while (overlay.PollNextOverlayEvent(thumbnail, ref e, (uint)Marshal.SizeOf<VREvent_t>()))
+        {
+            if ((EVREventType)e.eventType == EVREventType.VREvent_OverlayClosed) { CloseRequested = true; return; }
+        }
         if (active) Draw();
     }
 
