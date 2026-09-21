@@ -108,6 +108,27 @@ function Install($Package, [string]$Variant, [int]$Expected = 0, [string]$Bundle
     if ((Get-ItemProperty "HKCU:\Software\GoBoard.SetupTest\$id").SetupVariant -ne $Variant) { throw 'Variant registry marker disagrees with payload.' }
     Write-Output "PASS: $([IO.Path]::GetFileName($Package.Path)) => $Expected, one $Variant installation."
 }
+function Uninstall($Package) {
+    $log = $Package.Path + '.uninstall.log'
+    $process = Start-Process msiexec.exe -ArgumentList @('/x', $Package.Code, '/qn', '/norestart', '/L*v', ('"' + $log + '"')) -WindowStyle Hidden -Wait -PassThru
+    if ($process.ExitCode -ne 0) { throw "Fixture uninstall failed: $($Package.Code). See $log" }
+    Assert-Removed
+    Write-Output "PASS: $([IO.Path]::GetFileName($Package.Path)) uninstall removed its registration, payload, shortcuts and registry markers."
+}
+function Assert-Removed {
+    # Exit code zero alone can hide leftover advertised registrations or shared
+    # component clients. Verify the actual resources as well as product states.
+    foreach ($code in $products) {
+        if ($engine.ProductState($code) -ne -1) { throw "Uninstall left product $code registered. See $root" }
+    }
+    if ((Test-Path -LiteralPath $install) -and @(Get-ChildItem -LiteralPath $install -Recurse -File).Count) { throw 'Uninstall left payload files.' }
+    $menu = Join-Path ([Environment]::GetFolderPath('Programs')) "GoBoard.SetupTest.$id"
+    if (Test-Path -LiteralPath $menu) { throw 'Uninstall left the fixture Start menu folder.' }
+    $marker = Get-ItemProperty "HKCU:\Software\GoBoard.SetupTest\$id" -ErrorAction SilentlyContinue
+    if ($marker -and ($marker.PSObject.Properties.Name -contains 'InstallFolder' -or
+                     $marker.PSObject.Properties.Name -contains 'Shortcuts' -or
+                     $marker.PSObject.Properties.Name -contains 'SetupVariant')) { throw 'Uninstall left fixture registry markers.' }
+}
 try {
     $offline = Clone $OfflineMsi 'offline'
     $standard = Clone $StandardMsi 'standard'
@@ -116,6 +137,12 @@ try {
     $newer = Clone $StandardMsi 'newer-standard' '254.0.1'
     $other = Clone $OfflineMsi 'other-channel-offline' '0.0.1' $true
     [GC]::Collect(); [GC]::WaitForPendingFinalizers()
+    # Exercise removal of each variant directly, not just the final destination
+    # of the switching chain. Both must remove shortcuts as well as files.
+    Install $offline offline
+    Uninstall $offline
+    Install $standard standard
+    Uninstall $standard
     Install $offline offline
     $bundlePath = ''
     if ($StandardSetup) {
@@ -152,12 +179,12 @@ try {
     Install $standard standard
 } finally {
     foreach ($code in $products) {
-        if ($engine.ProductState($code) -eq 5) {
-            $process = Start-Process msiexec.exe -ArgumentList @('/x', $code, '/qn', '/norestart', '/L*v', ('"' + (Join-Path $root 'uninstall.log') + '"')) -WindowStyle Hidden -Wait -PassThru
+        if ($engine.ProductState($code) -ne -1) {
+            $process = Start-Process msiexec.exe -ArgumentList @('/x', $code, '/qn', '/norestart', '/L*v', ('"' + (Join-Path $root "uninstall-$code.log") + '"')) -WindowStyle Hidden -Wait -PassThru
             if ($process.ExitCode -ne 0) { Write-Error "Fixture uninstall failed: $code. See $root" }
         }
     }
+    Assert-Removed
     [Runtime.InteropServices.Marshal]::FinalReleaseComObject($engine) | Out-Null
 }
-if ((Test-Path $install) -and @(Get-ChildItem $install -Recurse -File).Count) { throw 'Uninstall left payload files.' }
 Write-Output "Isolated switching checks passed. Logs: $root. Production GoBoard and shared .NET were not modified."
