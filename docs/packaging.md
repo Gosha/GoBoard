@@ -118,10 +118,6 @@ The installer accepts Windows 10 21H2 or later; use a Windows version supported 
 
 Older all-users installations must be uninstalled from Windows Installed apps before installing this per-user package. That one-time removal may require administrator approval; it retains `%LOCALAPPDATA%\GoBoard\settings.json`. The installer detects the old machine install-location key and blocks installation with these instructions. Windows Installer [major upgrades cannot change installation context](https://learn.microsoft.com/en-us/windows/win32/msi/major-upgrades). Channel replacement applies within the new per-user context; it cannot silently remove another user's or an all-users installation. `ALLUSERS` overrides are rejected.
 
-## Package size
-
-See [installer size measurements and remaining options](installer-size.md). The runtime embeds a 256-pixel dashboard thumbnail; the MSI uses the branding ICO directly for its shortcut and Installed apps icon.
-
 ## Dependencies and validation
 
 Normal dependency locks remain separate from `packages.win-x64.lock.json` used for packaging. After intentionally changing dependencies, refresh packaging locks and review the diff:
