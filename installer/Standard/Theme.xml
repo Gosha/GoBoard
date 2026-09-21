@@ -1,0 +1,29 @@
+<Theme xmlns="http://wixtoolset.org/schemas/v4/thmutil">
+  <Font Id="0" Height="-12" Weight="500" Foreground="windowtext" Background="window">Segoe UI</Font>
+  <Font Id="1" Height="-22" Weight="500" Foreground="windowtext">Segoe UI</Font>
+  <Window Width="510" Height="320" HexStyle="100a0000" FontId="0" Caption="GoBoard Standard setup">
+    <Label X="20" Y="20" Width="-20" Height="60" FontId="1" Visible="yes" DisablePrefix="yes">[WixBundleName]</Label>
+    <Page Name="Loading">
+      <Label X="20" Y="95" Width="-20" Height="40" FontId="0">Checking setup…</Label>
+    </Page>
+    <Page Name="Install">
+      <Label X="20" Y="95" Width="-20" Height="105" FontId="0" DisablePrefix="yes">Setup will install GoBoard for your Windows account. If Microsoft .NET 10 Desktop Runtime is missing, setup will ask before downloading it. An administrator prompt may appear for the runtime.</Label>
+      <Button Name="InstallButton" X="-110" Y="-20" Width="100" Height="30" TabStop="yes" FontId="0">Continue</Button>
+      <Button Name="InstallCancelButton" X="-20" Y="-20" Width="80" Height="30" TabStop="yes" FontId="0"><Text>Cancel</Text><CloseWindowAction /></Button>
+    </Page>
+    <Page Name="Progress">
+      <Label Name="OverallProgressPackageText" X="20" Y="95" Width="-20" Height="45" FontId="0" DisablePrefix="yes">Preparing…</Label>
+      <Progressbar Name="OverallCalculatedProgressbar" X="20" Y="150" Width="-20" Height="16" />
+      <Button Name="ProgressCancelButton" X="-20" Y="-20" Width="80" Height="30" TabStop="yes" FontId="0">Cancel</Button>
+    </Page>
+    <Page Name="Success">
+      <Label X="20" Y="95" Width="-20" Height="100" FontId="0" DisablePrefix="yes">Setup completed. Open GoBoard from the Start menu. Use Windows Installed apps to remove GoBoard; the shared Microsoft runtime is retained.</Label>
+      <Button Name="SuccessCloseButton" X="-20" Y="-20" Width="80" Height="30" TabStop="yes" FontId="0"><Text>Close</Text><CloseWindowAction /></Button>
+    </Page>
+    <Page Name="Failure">
+      <Hypertext Name="FailureLogFileLink" X="20" Y="95" Width="-20" Height="90" FontId="0" TabStop="yes" HideWhenDisabled="yes">#(loc.FailureHyperlinkLogText)</Hypertext>
+      <Hypertext Name="FailureMessageText" X="20" Y="195" Width="-20" Height="65" FontId="0" TabStop="yes" HideWhenDisabled="yes" />
+      <Button Name="FailureCloseButton" X="-20" Y="-20" Width="80" Height="30" TabStop="yes" FontId="0"><Text>Close</Text><CloseWindowAction /></Button>
+    </Page>
+  </Window>
+</Theme>

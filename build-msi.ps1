@@ -1,8 +1,17 @@
-param([Parameter(Mandatory)][string]$Version)
+param(
+    [Parameter(Mandatory)][string]$Version,
+    [ValidateSet('both', 'standard', 'offline')][string]$SetupVariant = 'both'
+)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-$release = & (Join-Path $PSScriptRoot 'installer\Get-ReleaseInfo.ps1') @PSBoundParameters
+if ($SetupVariant -eq 'both') {
+    & $PSCommandPath -Version $Version -SetupVariant offline
+    & $PSCommandPath -Version $Version -SetupVariant standard
+    return
+}
+$release = & (Join-Path $PSScriptRoot 'installer\Get-ReleaseInfo.ps1') -Version $Version
+$selfContained = if ($SetupVariant -eq 'offline') { 'true' } else { 'false' }
 $Version = $release.Version
 $Channel = $release.Channel
 
@@ -27,10 +36,10 @@ try {
     $informationalVersion += "+$revision"
     if ($dirty) { $informationalVersion += '.dirty' }
 
-    dotnet restore $app --runtime win-x64 --artifacts-path $dotnetArtifacts --locked-mode '-p:NuGetLockFilePath=packages.win-x64.lock.json' '-p:SelfContained=true'
+    dotnet restore $app --runtime win-x64 --artifacts-path $dotnetArtifacts --locked-mode '-p:NuGetLockFilePath=packages.win-x64.lock.json' "-p:SelfContained=$selfContained"
     if ($LASTEXITCODE -ne 0) { throw 'Application restore failed.' }
 
-    dotnet publish $app -c Release --runtime win-x64 --self-contained true --no-restore --artifacts-path $dotnetArtifacts --output $publishDir "-p:Version=$Version" "-p:AssemblyVersion=$($release.MsiVersion).0" "-p:FileVersion=$($release.MsiVersion).0" "-p:InformationalVersion=$informationalVersion" '-p:IncludeSourceRevisionInInformationalVersion=false' '-p:NuGetLockFilePath=packages.win-x64.lock.json' '-p:EnableDesktopDebug=false' '-p:PublishSingleFile=false' '-p:PublishTrimmed=false' '-p:DebugType=None' '-p:DebugSymbols=false'
+    dotnet publish $app -c Release --runtime win-x64 --self-contained $selfContained --no-restore --artifacts-path $dotnetArtifacts --output $publishDir "-p:Version=$Version" "-p:AssemblyVersion=$($release.MsiVersion).0" "-p:FileVersion=$($release.MsiVersion).0" "-p:InformationalVersion=$informationalVersion" '-p:IncludeSourceRevisionInInformationalVersion=false' '-p:NuGetLockFilePath=packages.win-x64.lock.json' '-p:EnableDesktopDebug=false' '-p:PublishSingleFile=false' '-p:PublishTrimmed=false' '-p:DebugType=None' '-p:DebugSymbols=false' '-p:RollForward=Minor'
     if ($LASTEXITCODE -ne 0) { throw 'Application publish failed.' }
 
     # Ship provenance with the app as well as alongside the downloadable MSI.
@@ -42,6 +51,8 @@ try {
         sourceRevision = $revision
         sourceDirty = $dirty
         releaseTag = $release.ReleaseTag
+        setupVariant = $SetupVariant
+        selfContained = ($SetupVariant -eq 'offline')
     }
     $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $publishDir 'release.json') -Encoding utf8
 
@@ -55,21 +66,29 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Installer lifecycle action build failed.' }
     $lifecycleActions = Join-Path $buildRoot 'actions\bin\GoBoard.Installer.Actions.CA.dll'
     $installerProperties = @("-p:BaseIntermediateOutputPath=$installerArtifacts\obj\", "-p:OutputPath=$installerArtifacts\bin\", "-p:PublishDir=$publishDir\", "-p:PayloadFragment=$payloadFragment", "-p:ProductVersion=$($release.MsiVersion)", "-p:ReleaseVersion=$Version", "-p:ReleaseChannel=$Channel", "-p:LifecycleActions=$lifecycleActions")
+    $installerProperties += "-p:SetupVariant=$SetupVariant"
     dotnet restore $installer --locked-mode @installerProperties
     if ($LASTEXITCODE -ne 0) { throw 'Installer restore failed.' }
     dotnet build $installer -c Release --no-restore @installerProperties
     if ($LASTEXITCODE -ne 0) { throw 'Installer build failed.' }
 
-    $msiName = $release.ArtifactBase + '.msi'
+    $artifactBase = $release.ArtifactBase + '-' + $SetupVariant
+    $msiName = $artifactBase + '.msi'
     $builtMsi = Join-Path $installerArtifacts "bin\$msiName"
     if (!(Test-Path -LiteralPath $builtMsi)) { throw "Installer output missing: $builtMsi" }
-    & (Join-Path $PSScriptRoot 'installer\Test-Msi.ps1') -MsiPath $builtMsi -PublishDir $publishDir -Channel $Channel
+    & (Join-Path $PSScriptRoot 'installer\Test-Msi.ps1') -MsiPath $builtMsi -PublishDir $publishDir -Channel $Channel -SetupVariant $SetupVariant
+    if ($SetupVariant -eq 'standard') {
+        $builtMsi = & (Join-Path $PSScriptRoot 'installer\Build-Standard.ps1') -MsiPath $builtMsi -PublishDir $publishDir -BuildRoot $buildRoot -Version $Version -ProductVersion $release.MsiVersion
+        $msiName = $artifactBase + '.exe'
+        [xml]$runtime = Get-Content (Join-Path $PSScriptRoot 'installer\runtime.xml')
+        $metadata.runtimeDownload = [ordered]@{ version = $runtime.Runtime.Version; url = $runtime.Runtime.Url; sha512 = $runtime.Runtime.Sha512 }
+    }
     $msi = Join-Path $outputDir $msiName
     Copy-Item -LiteralPath $builtMsi -Destination $msi -Force
-    Copy-Item -LiteralPath (Join-Path $publishDir 'release.json') -Destination (Join-Path $outputDir ($release.ArtifactBase + '.release.json')) -Force
+    $metadata | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $outputDir ($artifactBase + '.release.json')) -Encoding utf8
     $hash = (Get-FileHash -LiteralPath $msi -Algorithm SHA256).Hash.ToLowerInvariant()
     "$hash  $msiName" | Set-Content -LiteralPath "$msi.sha256" -Encoding ascii
-    Write-Output "Built $Channel MSI: $msi"
+    Write-Output "Built $Channel $SetupVariant setup: $msi ($([Math]::Round((Get-Item $msi).Length / 1MB, 2)) MiB)"
     Write-Output "SHA256: $hash"
 }
 finally {

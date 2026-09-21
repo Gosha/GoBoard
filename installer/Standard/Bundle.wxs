@@ -1,0 +1,33 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal">
+  <Bundle Name="GoBoard $(var.ReleaseVersion) — Standard setup" Manufacturer="GoBoard"
+          Version="$(var.ProductVersion)" UpgradeCode="07257B87-EEA1-4E41-9B2B-7CA60B2B455F"
+          DisableModify="yes" DisableRemove="yes">
+    <BootstrapperApplication>
+      <bal:WixStandardBootstrapperApplication Theme="hyperlinkLicense" LicenseUrl=""
+          SuppressOptionsUI="yes" LocalizationFile="Standard.wxl" ThemeFile="Theme.xml" />
+    </BootstrapperApplication>
+    <Variable Name="AcceptRuntimeDownload" Type="numeric" Value="0" bal:Overridable="yes" />
+    <!-- All packages are permanent from Burn's perspective, so WiX 5 removes
+         its own registration/cache at completion. MSI alone owns maintenance.
+         PerMachine=no is intentional: Microsoft's EXE elevates itself only
+         when needed; the MSI always executes for the original Windows user. -->
+    <Chain>
+      <ExePackage Id="RuntimePrerequisite" SourceFile="$(var.PrerequisiteDir)Prerequisite.exe"
+                  PerMachine="no" Permanent="yes" Cache="remove" Vital="yes"
+                  DetectCondition="0" DisplayName="Microsoft .NET runtime compatibility"
+                  InstallArguments="/ui:[WixBundleUILevel] /accept:[AcceptRuntimeDownload]"
+                  RepairArguments="/ui:[WixBundleUILevel] /accept:[AcceptRuntimeDownload]">
+        <Payload SourceFile="$(var.PrerequisiteDir)Prerequisite.exe.config" />
+        <Payload SourceFile="$(var.PrerequisiteDir)probe\RuntimeProbe.exe" Name="probe\RuntimeProbe.exe" />
+        <Payload SourceFile="$(var.PrerequisiteDir)probe\RuntimeProbe.dll" Name="probe\RuntimeProbe.dll" />
+        <Payload SourceFile="$(var.PrerequisiteDir)probe\RuntimeProbe.deps.json" Name="probe\RuntimeProbe.deps.json" />
+        <Payload SourceFile="$(var.PrerequisiteDir)probe\RuntimeProbe.runtimeconfig.json" Name="probe\RuntimeProbe.runtimeconfig.json" />
+        <ExitCode Value="0" Behavior="success" />
+        <ExitCode Behavior="error" />
+      </ExePackage>
+      <MsiPackage Id="GoBoard" SourceFile="$(var.StandardMsi)" Visible="yes"
+                  Permanent="yes" Cache="remove" Vital="yes" />
+    </Chain>
+  </Bundle>
+</Wix>

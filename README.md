@@ -10,7 +10,10 @@ A VR keyboard for SteamVR, inspired by [YuuBoard](https://yuuzami.itch.io/yuuboa
 
 ## Install
 
-[Download the latest release](https://github.com/Gosha/GoBoard/releases/latest) and run the MSI. Requires Windows x64, SteamVR, and a connected headset; .NET is included. Installation needs no administrator access.
+[Download the latest release](https://github.com/Gosha/GoBoard/releases/latest). Requires Windows x64, SteamVR, and a connected headset. Choose:
+
+- **Standard setup (.exe):** Small download. Uses Microsoft .NET 10 Desktop Runtime if installed, or offers to download it. Installing the runtime may require administrator approval.
+- **Offline setup (.msi):** Includes .NET; needs no internet or administrator access.
 
 The installer is unsigned, so you may need to accept a Windows security warning to continue.
 

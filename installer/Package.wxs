@@ -1,5 +1,6 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
-     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:netfx="http://wixtoolset.org/schemas/v4/wxs/netfx">
   <!-- Channel-specific upgrade families share files, shortcuts, and settings.
        Always remove the other channel, regardless of its numeric version. -->
   <?if $(var.ReleaseChannel) = beta ?>
@@ -15,7 +16,7 @@
            UpgradeCode="$(var.UpgradeCode)" Scope="perUser"
            Language="1033">
     <MajorUpgrade DowngradeErrorMessage="A newer version of $(var.ProductName) is already installed."
-                  Schedule="afterInstallInitialize" />
+                  Schedule="afterInstallInitialize" AllowSameVersionUpgrades="yes" />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
     <!-- VR has no Windows message pump for Restart Manager; older releases
          never registered for restart. Coordinate through their existing stop
@@ -49,8 +50,22 @@
                       IncludeMinimum="yes" IncludeMaximum="yes" OnlyDetect="yes"
                       Property="GOBOARD_SAME_VERSION_FOUND" />
     </Upgrade>
-    <Launch Condition="Installed OR NOT GOBOARD_SAME_VERSION_FOUND"
-            Message="This version of $(var.ProductName) is already installed. Use the original MSI to repair it, or install a newer version." />
+    <!-- Legacy packages are Offline. Equal versions may replace only the other
+         payload variant; separately rebuilt same-variant packages stay blocked. -->
+    <Property Id="GOBOARD_PREVIOUS_VARIANT" Value="offline">
+      <RegistrySearch Id="PreviousVariant" Root="HKCU" Key="Software\GoBoard"
+                      Name="SetupVariant" Type="raw" Bitness="always64" />
+    </Property>
+    <Launch Condition="Installed OR NOT GOBOARD_SAME_VERSION_FOUND OR GOBOARD_PREVIOUS_VARIANT &lt;&gt; &quot;$(var.SetupVariant)&quot;"
+            Message="This setup variant of $(var.ProductName) is already installed. Use the original MSI to repair it, switch setup variants, or install a newer version." />
+    <?if $(var.SetupVariant) = standard ?>
+    <!-- Runs again after prerequisites and before stopping/removing an old app.
+         Keep removal possible even if the shared runtime has been removed. -->
+    <netfx:DotNetCompatibilityCheck Id="DesktopRuntime" Property="GOBOARD_RUNTIME_RESULT"
+                                  Platform="x64" RuntimeType="desktop" Version="10.0.0" RollForward="minor" />
+    <Launch Condition="REMOVE = &quot;ALL&quot; OR GOBOARD_RUNTIME_RESULT = &quot;0&quot;"
+            Message="GoBoard requires a compatible x64 Microsoft .NET 10 Desktop Runtime. Run Standard setup to install it, or choose Offline setup. If .NET requested a restart, restart Windows and retry." />
+    <?endif?>
     <Launch Condition="Installed OR (VersionNT64 AND GOBOARD_WINDOWS_BUILD &gt;= 19044)"
             Message="GoBoard requires Windows 10 21H2 or later (x64)." />
     <Launch Condition="NOT ALLUSERS" Message="GoBoard installs for the current user only. Run this installer without ALLUSERS." />
@@ -62,7 +77,8 @@
     <Launch Condition="Installed OR NOT GOBOARD_MACHINE_INSTALL"
             Message="An all-users GoBoard installation already exists. Uninstall it from Windows Installed apps first (this may require administrator approval), then run this per-user installer. Your settings will be kept." />
 
-    <Icon Id="GoBoard.exe" SourceFile="$(var.PublishDir)GoBoard.exe" />
+    <!-- Icon streams store the entire source file; use the ICO instead of duplicating the apphost. -->
+    <Icon Id="GoBoard.exe" SourceFile="$(var.AppIcon)" />
     <Property Id="ARPPRODUCTICON" Value="GoBoard.exe" />
     <Property Id="ARPHELPLINK" Value="https://github.com/Gosha/GoBoard" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Open GoBoard VR from the Start menu. GoBoard requires SteamVR and a connected headset." />
@@ -84,6 +100,8 @@
       <Component Directory="INSTALLFOLDER" Id="InstallationLocation" Guid="*">
         <RegistryValue Root="HKCU" Key="Software\GoBoard" Name="InstallFolder"
                        Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+        <RegistryValue Root="HKCU" Key="Software\GoBoard" Name="SetupVariant"
+                       Type="string" Value="$(var.SetupVariant)" />
         <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
         <RemoveFolder Id="RemoveEmptyUserPrograms" Directory="UserProgramsFolder" On="uninstall" />
       </Component>
