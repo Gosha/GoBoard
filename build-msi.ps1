@@ -29,6 +29,9 @@ Push-Location $PSScriptRoot
 try {
     $revision = git rev-parse HEAD
     if ($LASTEXITCODE -ne 0) { throw 'Could not determine the source commit.' }
+    if ($Channel -eq 'development' -and !$revision.StartsWith($release.Commit)) {
+        throw 'Development version commit must match the checked-out source.'
+    }
     $changes = git status --porcelain
     if ($LASTEXITCODE -ne 0) { throw 'Could not determine whether the source is clean.' }
     $dirty = [bool]$changes
@@ -54,6 +57,11 @@ try {
         setupVariant = $SetupVariant
         selfContained = ($SetupVariant -eq 'offline')
     }
+    if ($Channel -eq 'development') {
+        $metadata.pullRequest = $release.PullRequest
+        $metadata.runNumber = $release.RunNumber
+        $metadata.runAttempt = $release.RunAttempt
+    }
     $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $publishDir 'release.json') -Encoding utf8
 
     $payloadFragment = Join-Path $buildRoot 'Payload.wxs'
@@ -67,6 +75,7 @@ try {
     $lifecycleActions = Join-Path $buildRoot 'actions\bin\GoBoard.Installer.Actions.CA.dll'
     $installerProperties = @("-p:BaseIntermediateOutputPath=$installerArtifacts\obj\", "-p:OutputPath=$installerArtifacts\bin\", "-p:PublishDir=$publishDir\", "-p:PayloadFragment=$payloadFragment", "-p:ProductVersion=$($release.MsiVersion)", "-p:ReleaseVersion=$Version", "-p:ReleaseChannel=$Channel", "-p:LifecycleActions=$lifecycleActions")
     $installerProperties += "-p:SetupVariant=$SetupVariant"
+    $installerProperties += "-p:ProductName=$($release.ProductName)"
     dotnet restore $installer --locked-mode @installerProperties
     if ($LASTEXITCODE -ne 0) { throw 'Installer restore failed.' }
     dotnet build $installer -c Release --no-restore @installerProperties
@@ -78,7 +87,7 @@ try {
     if (!(Test-Path -LiteralPath $builtMsi)) { throw "Installer output missing: $builtMsi" }
     & (Join-Path $PSScriptRoot 'installer\Test-Msi.ps1') -MsiPath $builtMsi -PublishDir $publishDir -Channel $Channel -SetupVariant $SetupVariant
     if ($SetupVariant -eq 'standard') {
-        $builtMsi = & (Join-Path $PSScriptRoot 'installer\Build-Standard.ps1') -MsiPath $builtMsi -PublishDir $publishDir -BuildRoot $buildRoot -Version $Version -ProductVersion $release.MsiVersion
+        $builtMsi = & (Join-Path $PSScriptRoot 'installer\Build-Standard.ps1') -MsiPath $builtMsi -PublishDir $publishDir -BuildRoot $buildRoot -Version $Version -ProductVersion $release.MsiVersion -ProductName $release.ProductName
         $msiName = $artifactBase + '.exe'
         [xml]$runtime = Get-Content (Join-Path $PSScriptRoot 'installer\runtime.xml')
         $metadata.runtimeDownload = [ordered]@{ version = $runtime.Runtime.Version; url = $runtime.Runtime.Url; sha512 = $runtime.Runtime.Sha512 }

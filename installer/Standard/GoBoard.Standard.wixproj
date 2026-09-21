@@ -6,7 +6,8 @@
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <DefineConstants>ProductVersion=$(ProductVersion);ReleaseVersion=$(ReleaseVersion);StandardMsi=$(StandardMsi);PrerequisiteDir=$(PrerequisiteDir)</DefineConstants>
+    <ProductName Condition="'$(ProductName)' == ''">GoBoard $(ReleaseVersion)</ProductName>
+    <DefineConstants>ProductName=$(ProductName);ProductVersion=$(ProductVersion);ReleaseVersion=$(ReleaseVersion);StandardMsi=$(StandardMsi);PrerequisiteDir=$(PrerequisiteDir)</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="WixToolset.Bal.wixext" Version="5.0.2" />

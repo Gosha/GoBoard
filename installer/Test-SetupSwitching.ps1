@@ -1,5 +1,5 @@
 param([Parameter(Mandatory)][string]$OfflineMsi, [Parameter(Mandatory)][string]$StandardMsi,
-      [string]$StandardSetup)
+      [string]$StandardSetup, [string]$PublishedStableMsi, [string]$PublishedBetaMsi)
 # Real Windows Installer transactions, but with disposable identities, keys,
 # components and shortcuts. Disable lifecycle actions so the live app is untouched.
 $ErrorActionPreference = 'Stop'
@@ -97,7 +97,8 @@ function Install($Package, [string]$Variant, [int]$Expected = 0, [string]$Bundle
     if ($present.Count -ne 1) { throw 'Switch must leave exactly one installed test product.' }
     if ($Expected -eq 0 -and $present[0] -ne $Package.Code) { throw 'Replacement did not install the destination product.' }
     $metadata = Get-Content (Join-Path $install 'release.json') -Raw | ConvertFrom-Json
-    if ($metadata.setupVariant -ne $Variant) { throw 'Wrong payload after replacement.' }
+    $payloadVariant = if ($metadata.PSObject.Properties.Name -contains 'setupVariant') { $metadata.setupVariant } else { 'offline' }
+    if ($payloadVariant -ne $Variant) { throw 'Wrong payload after replacement.' }
     if ((Test-Path (Join-Path $install 'coreclr.dll')) -ne ($Variant -eq 'offline')) { throw 'Bundled runtime was lost or orphaned during the switch.' }
     if ($Expected -eq 0) {
         $db = $engine.OpenDatabase($Package.Path, 0)
@@ -105,7 +106,9 @@ function Install($Package, [string]$Variant, [int]$Expected = 0, [string]$Bundle
         finally { [Runtime.InteropServices.Marshal]::FinalReleaseComObject($db) | Out-Null }
         if (@(Get-ChildItem $install -Recurse -File).Count -ne $expectedFiles) { throw 'Switch left missing or orphaned payload files.' }
     }
-    if ((Get-ItemProperty "HKCU:\Software\GoBoard.SetupTest\$id").SetupVariant -ne $Variant) { throw 'Variant registry marker disagrees with payload.' }
+    $marker = Get-ItemProperty "HKCU:\Software\GoBoard.SetupTest\$id"
+    $markerVariant = if ($marker.PSObject.Properties.Name -contains 'SetupVariant') { $marker.SetupVariant } else { 'offline' }
+    if ($markerVariant -ne $Variant) { throw 'Variant registry marker disagrees with payload.' }
     Write-Output "PASS: $([IO.Path]::GetFileName($Package.Path)) => $Expected, one $Variant installation."
 }
 function Uninstall($Package) {
@@ -130,12 +133,22 @@ function Assert-Removed {
                      $marker.PSObject.Properties.Name -contains 'SetupVariant')) { throw 'Uninstall left fixture registry markers.' }
 }
 try {
+    $db = $engine.OpenDatabase((Resolve-Path $OfflineMsi).Path, 0)
+    try { $development = @(Rows $db 'Upgrade' '`ActionProperty`' | Where-Object { $_[0] -eq 'GOBOARD_BETA_CHANNEL_FOUND' }).Count -gt 0 }
+    finally { [Runtime.InteropServices.Marshal]::FinalReleaseComObject($db) | Out-Null }
+    if ($development -and (!$PublishedStableMsi -or !$PublishedBetaMsi)) { throw 'Development switching checks require published Stable and Beta MSI baselines.' }
     $offline = Clone $OfflineMsi 'offline'
     $standard = Clone $StandardMsi 'standard'
     $rebuilt = Clone $OfflineMsi 'offline-rebuild'
     # Deliberately use fixture-only high/low versions without changing source tags.
-    $newer = Clone $StandardMsi 'newer-standard' '254.0.1'
-    $other = Clone $OfflineMsi 'other-channel-offline' '0.0.1' $true
+    $newerVersion = if ($development) { '0.255.65535' } else { '254.0.1' }
+    $newer = Clone $StandardMsi 'newer-standard' $newerVersion
+    if ($development) {
+        $stable = Clone $PublishedStableMsi 'published-stable'
+        $beta = Clone $PublishedBetaMsi 'published-beta'
+    } else {
+        $other = Clone $OfflineMsi 'other-channel-offline' '0.0.1' $true
+    }
     [GC]::Collect(); [GC]::WaitForPendingFinalizers()
     # Exercise removal of each variant directly, not just the final destination
     # of the switching chain. Both must remove shortcuts as well as files.
@@ -175,8 +188,24 @@ try {
     Install $rebuilt offline 1603
     Install $newer standard
     Install $standard standard 1603
-    Install $other offline
-    Install $standard standard
+    if ($development) {
+        # Preserve the published version and Upgrade/LaunchCondition tables.
+        # Both directions must leave one registration and a complete payload.
+        Install $stable offline
+        Install $standard standard
+        Install $beta offline
+        Install $offline offline
+        Install $stable offline
+        Install $offline offline
+        Install $beta offline
+        Install $standard standard
+        Install $newer standard
+        Install $beta offline
+        Write-Output 'PASS: Development upgrades/downgrade rejection, and both setup variants switching to/from published Stable and Beta.'
+    } else {
+        Install $other offline
+        Install $standard standard
+    }
 } finally {
     foreach ($code in $products) {
         if ($engine.ProductState($code) -ne -1) {

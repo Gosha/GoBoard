@@ -53,8 +53,9 @@ jobs:
         id: release
         env:
           INPUT_VERSION: ${{ inputs.version }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          $release = ./installer/Get-CiReleaseInfo.ps1 -EventName $env:GITHUB_EVENT_NAME -RefType $env:GITHUB_REF_TYPE -RefName $env:GITHUB_REF_NAME -Version $env:INPUT_VERSION
+          $release = ./installer/Get-CiReleaseInfo.ps1 -EventName $env:GITHUB_EVENT_NAME -RefType $env:GITHUB_REF_TYPE -RefName $env:GITHUB_REF_NAME -Version $env:INPUT_VERSION -PullRequest $env:PR_NUMBER -RunNumber $env:GITHUB_RUN_NUMBER -RunAttempt $env:GITHUB_RUN_ATTEMPT -SourceRevision $env:GITHUB_SHA
           "channel=$($release.Channel)" >> $env:GITHUB_OUTPUT
           "tag=$($release.ReleaseTag)" >> $env:GITHUB_OUTPUT
           "version=$($release.Version)" >> $env:GITHUB_OUTPUT
@@ -106,22 +107,38 @@ jobs:
         with:
           global-json-file: global.json
       - name: Build and check Standard and Offline setup
+        # A failed-jobs-only rerun can reuse an older versions-job matrix.
+        # Resolve inside this job so the package gets the current attempt.
+        id: build
         env:
-          MSI_VERSION: ${{ matrix.version }}
-        run: ./build-msi.ps1 -Version $env:MSI_VERSION
+          INPUT_VERSION: ${{ matrix.version }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          $release = ./installer/Get-CiReleaseInfo.ps1 -EventName $env:GITHUB_EVENT_NAME -RefType $env:GITHUB_REF_TYPE -RefName $env:GITHUB_REF_NAME -Version $env:INPUT_VERSION -PullRequest $env:PR_NUMBER -RunNumber $env:GITHUB_RUN_NUMBER -RunAttempt $env:GITHUB_RUN_ATTEMPT -SourceRevision $env:GITHUB_SHA
+          $package = $release.Matrix.include[0]
+          "artifact_base=$($package.artifact_base)" >> $env:GITHUB_OUTPUT
+          "artifact=$($package.artifact)" >> $env:GITHUB_OUTPUT
+          ./build-msi.ps1 -Version $package.version
       - name: Check isolated variant and channel switching
+        env:
+          SETUP_CHANNEL: ${{ matrix.channel }}
         run: |
           $offline = Get-ChildItem artifacts/msi/*-offline.msi | Select-Object -First 1
           $standard = Get-ChildItem artifacts/msi/build-*/installer/bin/*-standard.msi | Select-Object -First 1
           $setup = Get-ChildItem artifacts/msi/*-standard.exe | Select-Object -First 1
-          ./installer/Test-SetupSwitching.ps1 -OfflineMsi $offline.FullName -StandardMsi $standard.FullName -StandardSetup $setup.FullName
+          $baselines = @{}
+          if ($env:SETUP_CHANNEL -eq 'development') {
+            $published = ./installer/Get-PublishedSetupFixtures.ps1
+            $baselines = @{ PublishedStableMsi = $published.Stable; PublishedBetaMsi = $published.Beta }
+          }
+          ./installer/Test-SetupSwitching.ps1 -OfflineMsi $offline.FullName -StandardMsi $standard.FullName -StandardSetup $setup.FullName @baselines
       - name: Verify pinned Microsoft runtime download without installing
         run: ./installer/Test-RuntimeDownload.ps1
       - name: Upload setup files, checksums, and provenance
         uses: actions/upload-artifact@v6
         with:
-          name: GoBoard-${{ matrix.channel }}-msi
-          path: artifacts/msi/${{ matrix.artifact_base }}-*
+          name: ${{ steps.build.outputs.artifact }}
+          path: artifacts/msi/${{ steps.build.outputs.artifact_base }}-*
           if-no-files-found: error
 
   release:

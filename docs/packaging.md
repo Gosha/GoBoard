@@ -55,7 +55,24 @@ MSI version = major.minor.(patch * 100 + slot)
 slot = beta number (1–99), or 100 for Stable
 ```
 
-Thus `1.0.0-beta.1` maps to `1.0.1`, `1.0.0` to `1.0.100`, and `1.0.1-beta.1` to `1.0.101`. Supported bounds are major/minor 0–255, patch 0–654 and beta 1–99. Stable and Beta explicitly replace the other channel regardless of numeric version; same-channel ordering is retained. See `installer/Test-ReleaseInfo.ps1` and [the versioning policy](versioning.md).
+Thus `1.0.0-beta.1` maps to `1.0.1`, `1.0.0` to `1.0.100`, and `1.0.1-beta.1` to `1.0.101`. Supported release bounds are major 1–255, minor 0–255, patch 0–654 and beta 1–99. Stable and Beta explicitly replace the other channel regardless of numeric version; same-channel ordering is retained. See `installer/Test-ReleaseInfo.ps1` and [the versioning policy](versioning.md).
+
+### PR Development installers
+
+PRs build **Development** artifacts, named `GoBoard-0.0.0-dev.pr.<PR>.build.<run>.<attempt>.g<commit>-win-x64-{standard.exe,offline.msi}`. Both setup titles and the Installed apps entry show `GoBoard Development - PR <PR> - build <run>.<attempt> - <commit>`. The `.release.json` records the full source commit, PR, run, attempt, variant and dirty state. The 12-character commit in the name identifies the checked-out PR merge commit. These builds have no release tag and cannot be published by the tagged-release path; manual Beta builds retain their explicit version input.
+
+Development MSI versions use a separate range:
+
+```text
+ordinal = (run - 1) * 100 + attempt
+MSI version = 0.floor(ordinal / 65536).(ordinal % 65536)
+```
+
+Runs 1–167771 and attempts 1–99 are supported; out-of-range values fail instead of wrapping. A retry sorts after earlier attempts of its run and before later runs. The packaging job resolves its identity again on retries, including when GitHub reuses the successful version job's matrix. Local builds must supply an identity whose commit matches HEAD; use the CI-produced packages for distribution because local callers do not allocate unique workflow run numbers.
+
+Development retains Beta's UpgradeCode so existing release installers recognize it. It replaces Stable unconditionally and Beta versions at or above `1.0.0`, but rejects newer Development versions below `1.0.0`. Released Beta packages naturally upgrade Development; Stable packages remove the other family regardless of version. Equal-version variant switching and same-variant rebuild rejection remain in force. This retains one installation, shared settings and the existing shortcuts. Reserving major 0 does not change any published GoBoard release.
+
+`Get-PublishedSetupFixtures.ps1` downloads checksum-pinned Stable 1.4.1 and Beta 2.0.0-beta.1 packages. Pass its `Stable` and `Beta` paths to `Test-SetupSwitching.ps1` as `-PublishedStableMsi` and `-PublishedBetaMsi` when checking Development. CI does this automatically. The test preserves published upgrade rules while cloning disposable identities, registry keys, folders and shortcuts, and disabling lifecycle actions. It verifies upgrades, downgrade/rebuild rejection, variant changes, switching both ways with those published releases, and removal of fixture registrations/files/shortcuts. It does not touch the live GoBoard installation.
 
 ## Existing installation and lifecycle
 

@@ -13,6 +13,21 @@ $ns = [Xml.XmlNamespaceManager]::new($manifest.NameTable)
 $ns.AddNamespace('b', 'http://wixtoolset.org/schemas/v4/2008/Burn')
 $registration = $manifest.SelectSingleNode('//b:Registration', $ns)
 if ($registration.PerMachine -ne 'no') { throw 'Bundle must stay in the original user context.' }
+$engine = New-Object -ComObject WindowsInstaller.Installer
+$db = $engine.OpenDatabase((Resolve-Path $MsiPath).Path, 0)
+try {
+    $view = $db.OpenView('SELECT `Value` FROM `Property` WHERE `Property` = ''ProductName''')
+    try {
+        $view.Execute()
+        $record = $view.Fetch()
+        try { $productName = $record.StringData(1) }
+        finally { [Runtime.InteropServices.Marshal]::FinalReleaseComObject($record) | Out-Null }
+    } finally { $view.Close(); [Runtime.InteropServices.Marshal]::FinalReleaseComObject($view) | Out-Null }
+} finally {
+    [Runtime.InteropServices.Marshal]::FinalReleaseComObject($db) | Out-Null
+    [Runtime.InteropServices.Marshal]::FinalReleaseComObject($engine) | Out-Null
+}
+if ($registration.Arp.DisplayName -cne "$productName — Standard setup") { throw 'Bundle title must preserve the MSI build identity.' }
 $packages = $manifest.SelectNodes('//b:Chain/*', $ns)
 if ($packages.Count -ne 2 -or $packages[0].Id -ne 'RuntimePrerequisite' -or $packages[1].Id -ne 'GoBoard') { throw 'Runtime verification must precede GoBoard.' }
 foreach ($package in $packages) {

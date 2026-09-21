@@ -45,3 +45,11 @@ Finalizing removes the Beta suffix without incrementing the target version. If t
 Git tags add a `v` prefix: `v1.0.0` for Stable and `v1.0.1-beta.1` for Beta. Tagged releases are distinct from temporary PR or manual-build artifacts.
 
 [MSI packaging and tagged releases](packaging.md) documents publishing commands, supported version bounds, and the numeric MSI mapping. The readable release version expresses this policy; the encoded installer version is an implementation detail and must not determine whether a change is major, minor, or patch.
+
+## Development builds
+
+PR installers belong to the **Development** channel. They do not predict the next release or consume Beta numbers. Their build identity is `0.0.0-dev.pr.<PR>.build.<run>.<attempt>.g<12-character-commit>`, for example `0.0.0-dev.pr.42.build.318.1.gabcdef0123ab`. Artifact filenames, setup titles, Installed apps names and packaged provenance identify the source. The commit is the checkout actually built (GitHub's PR merge commit), not necessarily the PR branch head.
+
+The Windows setup workflow's run number orders Development builds across PRs; the attempt orders retries of the same run. Retrying an older run does not make it newer than a later run. Re-running only failed jobs still creates a new attempt identity. Do not reset/reuse the workflow counter or use another workflow's independent counter for distributable Development packages.
+
+MSI major **0** is reserved for Development; release majors are **1–255**. This keeps Development below all published Beta versions. Development shares Beta's installer upgrade family for compatibility with already-published installers, while retaining its own visible channel and numeric range. Installing a Development build replaces Stable or Beta, and installing a release replaces Development. Only newer Development builds can replace an installed Development build (or the other setup variant at the same version). To try an older build, uninstall the current one first; settings are retained. See [packaging](packaging.md) for bounds and switching checks.

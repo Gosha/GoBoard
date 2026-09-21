@@ -1,22 +1,38 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
      xmlns:netfx="http://wixtoolset.org/schemas/v4/wxs/netfx">
-  <!-- Channel-specific upgrade families share files, shortcuts, and settings.
-       Always remove the other channel, regardless of its numeric version. -->
-  <?if $(var.ReleaseChannel) = beta ?>
-    <?define ProductName = "GoBoard $(var.ReleaseVersion)" ?>
+  <!-- Development uses the Beta family and reserved MSI major 0 so even
+       already-published releases can replace it without duplicate installs. -->
+  <?if $(var.ReleaseChannel) != stable ?>
     <?define UpgradeCode = "56804E91-13DF-4698-908A-604D44D7320A" ?>
     <?define OtherUpgradeCode = "A8D6C499-CBD9-4DD9-9700-C5A8C9E23192" ?>
   <?else?>
-    <?define ProductName = "GoBoard $(var.ReleaseVersion)" ?>
     <?define UpgradeCode = "A8D6C499-CBD9-4DD9-9700-C5A8C9E23192" ?>
     <?define OtherUpgradeCode = "56804E91-13DF-4698-908A-604D44D7320A" ?>
   <?endif?>
   <Package Name="$(var.ProductName)" Manufacturer="GoBoard" Version="$(var.ProductVersion)"
            UpgradeCode="$(var.UpgradeCode)" Scope="perUser"
            Language="1033">
-    <MajorUpgrade DowngradeErrorMessage="A newer version of $(var.ProductName) is already installed."
-                  Schedule="afterInstallInitialize" AllowSameVersionUpgrades="yes" />
+    <?if $(var.ReleaseChannel) = development ?>
+      <Upgrade Id="$(var.UpgradeCode)">
+        <UpgradeVersion Minimum="0.0.0" IncludeMinimum="yes"
+                        Maximum="$(var.ProductVersion)" IncludeMaximum="yes"
+                        Property="WIX_UPGRADE_DETECTED" MigrateFeatures="no" />
+        <UpgradeVersion Minimum="$(var.ProductVersion)" IncludeMinimum="no"
+                        Maximum="1.0.0" IncludeMaximum="no" OnlyDetect="yes"
+                        Property="WIX_DOWNGRADE_DETECTED" />
+        <UpgradeVersion Minimum="1.0.0" IncludeMinimum="yes"
+                        Property="GOBOARD_BETA_CHANNEL_FOUND" MigrateFeatures="no" />
+      </Upgrade>
+      <Launch Condition="Installed OR NOT WIX_DOWNGRADE_DETECTED"
+              Message="A newer Development build of GoBoard is already installed." />
+      <InstallExecuteSequence>
+        <RemoveExistingProducts After="InstallInitialize" />
+      </InstallExecuteSequence>
+    <?else?>
+      <MajorUpgrade DowngradeErrorMessage="A newer version of $(var.ProductName) is already installed."
+                    Schedule="afterInstallInitialize" AllowSameVersionUpgrades="yes" />
+    <?endif?>
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
     <!-- VR has no Windows message pump for Restart Manager; older releases
          never registered for restart. Coordinate through their existing stop

@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory)][string]$MsiPath,
     [Parameter(Mandatory)][string]$PublishDir,
-    [ValidateSet('stable', 'beta')][string]$Channel = 'stable',
+    [ValidateSet('stable', 'beta', 'development')][string]$Channel = 'stable',
     [ValidateSet('standard', 'offline')][string]$SetupVariant = 'offline'
 )
 $ErrorActionPreference = 'Stop'
@@ -107,6 +107,11 @@ if ($metadata.channel -ne $Channel -or $metadata.msiVersion -ne $package.GetAttr
 if ($metadata.setupVariant -ne $SetupVariant) { throw 'Incorrect payload variant provenance.' }
 $info = & (Join-Path $PSScriptRoot 'Get-ReleaseInfo.ps1') -Version $metadata.version
 if ($info.MsiVersion -ne $metadata.msiVersion -or $info.Channel -ne $Channel) { throw 'Release version mapping or channel does not match MSI metadata.' }
+if ($Channel -eq 'development' -and ($metadata.releaseTag -or
+    $metadata.pullRequest -ne $info.PullRequest -or $metadata.runNumber -ne $info.RunNumber -or
+    $metadata.runAttempt -ne $info.RunAttempt -or !$metadata.sourceRevision.StartsWith($info.Commit))) {
+    throw 'Development provenance differs from its visible build identity.'
+}
 if ([guid]$package.GetAttribute('UpgradeCode') -ne [guid]$info.UpgradeCode -or
     $package.GetAttribute('Name') -ne $info.ProductName) { throw 'Incorrect MSI channel identity.' }
 if ([Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $payload 'GoBoard.dll')).ProductVersion -ne $metadata.informationalVersion) {
@@ -151,9 +156,21 @@ try {
     $view.Execute()
     $crossChannelFound = $false
     $equalVersionRemoval = $false
+    $betaRemoval = $false
+    $developmentDowngradeGuard = $false
     while ($record = $view.Fetch()) {
         if ($record.StringData(6) -eq 'WIX_UPGRADE_DETECTED') {
             $equalVersionRemoval = $record.StringData(3) -eq $metadata.msiVersion -and ($record.IntegerData(4) -band 512) -ne 0 -and ($record.IntegerData(4) -band 2) -eq 0
+        }
+        if ($record.StringData(6) -eq 'GOBOARD_BETA_CHANNEL_FOUND') {
+            $betaRemoval = [guid]$record.StringData(1) -eq [guid]$info.UpgradeCode -and
+                $record.StringData(2) -eq '1.0.0' -and $record.StringData(3) -eq '' -and
+                ($record.IntegerData(4) -band 2) -eq 0 -and ($record.IntegerData(4) -band 256) -ne 0 -and $record.StringData(5) -eq ''
+        }
+        if ($record.StringData(6) -eq 'WIX_DOWNGRADE_DETECTED' -and $Channel -eq 'development') {
+            $developmentDowngradeGuard = [guid]$record.StringData(1) -eq [guid]$info.UpgradeCode -and
+                $record.StringData(2) -eq $metadata.msiVersion -and $record.StringData(3) -eq '1.0.0' -and
+                ($record.IntegerData(4) -band 2) -ne 0 -and ($record.IntegerData(4) -band 768) -eq 0
         }
         if ($record.StringData(6) -ne 'GOBOARD_OTHER_CHANNEL_FOUND') { continue }
         # OnlyDetect (2) must be absent, VersionMinInclusive (256) present;
@@ -167,12 +184,16 @@ try {
     $view.Close()
     if (!$crossChannelFound) { throw 'MSI does not replace the other release channel.' }
     if (!$equalVersionRemoval) { throw 'MSI must permit transactional equal-version replacement for variant switches.' }
+    if ($Channel -eq 'development' -and (!$betaRemoval -or !$developmentDowngradeGuard)) {
+        throw 'Development must replace released Betas while blocking Development downgrades.'
+    }
     $view = $db.OpenView('SELECT `Condition` FROM `LaunchCondition`')
     $view.Execute()
     $conditions = @()
     while ($record = $view.Fetch()) { $conditions += $record.StringData(1) }
     $view.Close()
     if ($conditions -notcontains ('Installed OR NOT GOBOARD_SAME_VERSION_FOUND OR GOBOARD_PREVIOUS_VARIANT <> "' + $SetupVariant + '"')) { throw 'Missing same-variant rebuild guard.' }
+    if ($Channel -eq 'development' -and $conditions -notcontains 'Installed OR NOT WIX_DOWNGRADE_DETECTED') { throw 'Missing Development downgrade launch condition.' }
     if ($SetupVariant -eq 'standard' -and $conditions -notcontains 'REMOVE = "ALL" OR GOBOARD_RUNTIME_RESULT = "0"') { throw 'Missing runtime prerequisite launch condition.' }
     if ($properties['GOBOARD_PREVIOUS_VARIANT'] -ne 'offline') { throw 'Legacy MSI packages must be recognized as Offline.' }
     $view = $db.OpenView('SELECT `Action`, `Sequence` FROM `InstallExecuteSequence`')

@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory)][string]$PublishDir,
     [Parameter(Mandatory)][string]$BuildRoot,
     [Parameter(Mandatory)][string]$Version,
-    [Parameter(Mandatory)][string]$ProductVersion
+    [Parameter(Mandatory)][string]$ProductVersion,
+    [Parameter(Mandatory)][string]$ProductName
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -23,6 +24,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Prerequisite helper publish failed.' }
 & (Join-Path $PSScriptRoot 'Test-Prerequisite.ps1') -HelperDir $helper | Out-Host
 $bundle = Join-Path $PSScriptRoot 'Standard\GoBoard.Standard.wixproj'
 $properties = @("-p:BaseIntermediateOutputPath=$BuildRoot\bundle\obj\", "-p:OutputPath=$BuildRoot\bundle\bin\", "-p:ReleaseVersion=$Version", "-p:ProductVersion=$ProductVersion", "-p:StandardMsi=$MsiPath", "-p:PrerequisiteDir=$helper\")
+$properties += "-p:ProductName=$ProductName"
 dotnet restore $bundle --locked-mode @properties | Out-Host
 if ($LASTEXITCODE -ne 0) { throw 'Standard setup restore failed.' }
 dotnet build $bundle -c Release --no-restore @properties | Out-Host

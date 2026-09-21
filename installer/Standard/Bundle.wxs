@@ -1,6 +1,6 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
      xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal">
-  <Bundle Name="GoBoard $(var.ReleaseVersion) — Standard setup" Manufacturer="GoBoard"
+  <Bundle Name="$(var.ProductName) — Standard setup" Manufacturer="GoBoard"
           Version="$(var.ProductVersion)" UpgradeCode="07257B87-EEA1-4E41-9B2B-7CA60B2B455F"
           DisableModify="yes" DisableRemove="yes">
     <BootstrapperApplication>
