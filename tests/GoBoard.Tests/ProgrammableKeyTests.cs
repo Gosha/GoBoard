@@ -3,6 +3,7 @@ using GoBoard.Platform.Windows;
 using GoBoard.Presentation.Skia;
 using SkiaSharp;
 using GoBoard.Vr;
+using System.Numerics;
 using Xunit;
 
 namespace GoBoard.Tests;
@@ -81,18 +82,24 @@ public sealed class ProgrammableKeyTests
                 (1 - y / state.Height) * texture.Height, state);
             return state.Hit(p.X, p.Y);
         }
-        foreach (var key in state.Keys)
+        foreach (var status in new[] { null, "Input blocked", " " })
         {
-            var b = key.Bounds;
-            foreach (var x in new[] { b.X + .1f, b.X + b.Width / 2, b.X + b.Width - .1f })
-            foreach (var y in new[] { b.Y + .1f, b.Y + b.Height / 2, b.Y + b.Height - .1f })
-                Assert.Same(key, Hit(x, y));
-            Assert.Null(Hit(b.X - .5f, b.Y + b.Height / 2));
-            Assert.Null(Hit(b.X + b.Width + .5f, b.Y + b.Height / 2));
-            Assert.Null(Hit(b.X + b.Width / 2, b.Y - .5f));
-            Assert.Null(Hit(b.X + b.Width / 2, b.Y + b.Height + .5f));
+            state.SetShortcutStatus(status, 1);
+            foreach (var key in state.Keys)
+            {
+                var b = key.Bounds;
+                foreach (var x in new[] { b.X + .1f, b.X + b.Width / 2, b.X + b.Width - .1f })
+                foreach (var y in new[] { b.Y + .1f, b.Y + b.Height / 2, b.Y + b.Height - .1f })
+                    Assert.Same(key, Hit(x, y));
+                Assert.Null(Hit(b.X - .5f, b.Y + b.Height / 2));
+                Assert.Null(Hit(b.X + b.Width + .5f, b.Y + b.Height / 2));
+                Assert.Null(Hit(b.X + b.Width / 2, b.Y - .5f));
+                Assert.Null(Hit(b.X + b.Width / 2, b.Y + b.Height + .5f));
+            }
+            Assert.Null(Hit(state.Width / 2f, state.Height - 1));
+            if (state.ShortcutFooter)
+                Assert.Null(Hit(state.Width / 2f, state.Height - ProgrammableKeys.StatusHeight / 2f));
         }
-        Assert.Null(Hit(state.Width / 2f, state.Height - ProgrammableKeys.StatusHeight / 2f));
     }
 
     [Theory]
@@ -123,7 +130,7 @@ public sealed class ProgrammableKeyTests
             var b = key.Bounds;
             Assert.Same(key, state.Hit(b.X + b.Width / 2, state.Height - b.Y - b.Height / 2));
             Assert.InRange(b.X + b.Width, 0, state.Width);
-            Assert.InRange(b.Y + b.Height, 0, state.Height - ProgrammableKeys.StatusHeight);
+            Assert.InRange(b.Y + b.Height, 0, state.Height - ProgrammableKeys.Padding);
         }
         foreach (var theme in new[] { BoardThemes.SteamSoft, BoardThemes.SteamFlat })
         {
@@ -455,6 +462,7 @@ public sealed class ProgrammableKeyTests
         var settings = new ProgrammableKeySettings { Columns = columns, Rows = rows };
         var state = new KeyboardState(new Sink(), shortcutsOnly: true, shortcutFooter: false);
         state.SetShortcuts(settings, 0);
+        Assert.False(state.SetShortcutStatus("Input blocked", 1));
         Assert.Equal(ProgrammableKeys.Padding, state.Height - state.Keys.Max(k => k.Bounds.Y + k.Bounds.Height));
         Assert.Equal(ProgrammableKeys.Height(settings) - ProgrammableKeys.StatusHeight, state.Height);
         using var renderer = new AnimatedKeyboardRenderer();
@@ -465,6 +473,77 @@ public sealed class ProgrammableKeyTests
             var b = key.Bounds;
             Assert.Same(key, state.Hit(b.X + b.Width / 2, state.Height - b.Y - b.Height / 2));
         }
+    }
+
+    [Theory]
+    [InlineData(BoardThemes.SteamSoft)]
+    [InlineData(BoardThemes.SteamFlat)]
+    public void MessageTransitionsResizeThePaletteCancelCapturesAndRestoreTheIdleFrame(string theme)
+    {
+        var sink = new Sink();
+        var state = new KeyboardState(sink, shortcutsOnly: true);
+        var compactHeight = state.Height;
+        var keys = state.Keys;
+        Assert.Equal(ProgrammableKeys.Padding, compactHeight - keys.Max(k => k.Bounds.Y + k.Bounds.Height));
+        using var renderer = new AnimatedKeyboardRenderer();
+        SKBitmap Render(string status, double now) => renderer.Render(state, false, status, false, false, false,
+            theme, new(), now, KeyboardOverlay.ShortcutTextureInfo);
+        using var idle = Render(null, 0);
+        foreach (var message in new[] { "Input blocked", null })
+        {
+            var time = message == null ? 4 : 2;
+            Assert.True(Press(state, "Shortcut1", time - .1));
+            Assert.True(state.SetShortcutStatus(message, time));
+            Assert.False(state.HasHeldKeys);
+            Assert.All(state.VisualPointers, p => Assert.False(p.Focused));
+            var strokes = sink.Events.Count;
+            Assert.False(state.Up(0, 7, time + .1));
+            Assert.False(Press(state, "Shortcut1", time - .05, 1));
+            Assert.Equal(strokes, sink.Events.Count);
+            Assert.Same(keys, state.Keys);
+            Assert.Equal(compactHeight + (message == null ? 0 : ProgrammableKeys.StatusHeight), state.Height);
+            using var frame = Render(message, time + .2);
+            using var fresh = new AnimatedKeyboardRenderer();
+            using var expected = fresh.Render(state, false, message, false, false, false, theme, new(), time + .2,
+                KeyboardOverlay.ShortcutTextureInfo);
+            Assert.Equal(KeyboardOverlay.ShortcutTextureInfo, frame.Info);
+            Assert.Equal(expected.Bytes, frame.Bytes);
+            if (message == null) Assert.Equal(idle.Bytes, frame.Bytes);
+            Assert.Null(Render(message, time + .3));
+            Assert.True(Press(state, "Shortcut1", time + .4));
+            Assert.False(state.SetShortcutStatus(message == null ? " " : "Another error", time + .5));
+            Assert.True(state.HasHeldKeys); // Text-only changes do not disturb input.
+            state.Up(0, 7, time + .6);
+        }
+        state.SetLayout(new WindowsLayout((nint)0x08090809), 6);
+        Assert.True(state.SetShortcutStatus(null, 6)); // Layout warnings use the same surface.
+        Assert.True(state.ShortcutFooter);
+        state.SetLayout(new WindowsLayout((nint)WindowsLayout.UsHandle), 7);
+        Assert.True(state.SetShortcutStatus(null, 7));
+        Assert.Equal(compactHeight, state.Height);
+    }
+
+    [Theory]
+    [InlineData(.5f)]
+    [InlineData(1f)]
+    [InlineData(1.5f)]
+    public void MessageGrowthKeepsKeysAnchoredInThePanelsLocalPlane(float scale)
+    {
+        var state = new KeyboardState(new Sink(), shortcutsOnly: true);
+        var pose = Matrix4x4.CreateFromYawPitchRoll(.3f, -.4f, .2f) * Matrix4x4.CreateTranslation(1, 2, 3);
+        var meters = ProgrammableKeys.MetersPerUnit * scale;
+        Vector3 KeyPosition(KeyboardKey key)
+        {
+            var b = key.Bounds;
+            return Vector3.Transform(new((b.X + b.Width / 2 - state.Width / 2f) * meters,
+                (state.Height / 2f - b.Y - b.Height / 2) * meters, 0), ShortcutOverlays.MessageOffset(state, scale) * pose);
+        }
+        var positions = state.Keys.Select(KeyPosition).ToArray();
+        state.SetShortcutStatus("Input blocked", 1);
+        for (var i = 0; i < positions.Length; i++)
+            Assert.InRange(Vector3.Distance(positions[i], KeyPosition(state.Keys[i])), 0, .000001f);
+        state.SetShortcutStatus(null, 2);
+        Assert.Equal(Matrix4x4.Identity, ShortcutOverlays.MessageOffset(state, scale));
     }
 
     [Fact]

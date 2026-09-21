@@ -66,26 +66,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             acceptAfter = Now;
             if (shortcutsOnly) State.SetShortcuts(settings.ProgrammableKeys, Now);
             else State.SetNumpad(settings.NumpadEnabled, Now);
-            // SteamVR applies texel aspect to ray intersection using the mouse
-            // scale's aspect too. Match the fixed raster here, then convert
-            // event coordinates to the current logical grid in Process.
-            var scale = new HmdVector2_t { v0 = TextureInfo.Width, v1 = TextureInfo.Height };
-            var bounds = shortcutsOnly ? new SKRect(0, 0, scale.v0, scale.v1) : MainContentBounds(State);
-            var mask = new VROverlayIntersectionMaskPrimitive_t
-            {
-                m_nPrimitiveType = EVROverlayIntersectionMaskPrimitiveType.OverlayIntersectionPrimitiveType_Rectangle,
-                m_Primitive = new VROverlayIntersectionMaskPrimitive_Data_t
-                { m_Rectangle = new IntersectionMaskRectangle_t
-                    { m_flTopLeftX = bounds.Left, m_flTopLeftY = bounds.Top, m_flWidth = bounds.Width, m_flHeight = bounds.Height } }
-            };
-            var error = overlay.SetOverlayMouseScale(handle, ref scale);
-            if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize pointer coordinates: {error}");
-            error = overlay.SetOverlayIntersectionMask(handle, ref mask, 1, (uint)Marshal.SizeOf<VROverlayIntersectionMaskPrimitive_t>());
-            if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize input region: {error}");
-            error = overlay.SetOverlayTexelAspect(handle,
-                shortcutsOnly ? State.Width * (float)TextureInfo.Height / (State.Height * TextureInfo.Width) : 1);
-            if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize keyboard proportions: {error}");
-            geometryApplied = true;
+            ApplyGeometry();
         }
         if (geometry != settings.Geometry)
         {
@@ -96,6 +77,30 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             if (!faulted) status = targetStatus;
         }
         audio.Apply(settings);
+    }
+
+    private void ApplyGeometry()
+    {
+        // SteamVR applies texel aspect to ray intersection using the mouse
+        // scale's aspect too. Match the fixed raster here, then convert
+        // event coordinates to the current logical grid in Process.
+        var scale = new HmdVector2_t { v0 = TextureInfo.Width, v1 = TextureInfo.Height };
+        var bounds = shortcutsOnly ? new SKRect(0, 0, scale.v0, scale.v1) : MainContentBounds(State);
+        var mask = new VROverlayIntersectionMaskPrimitive_t
+        {
+            m_nPrimitiveType = EVROverlayIntersectionMaskPrimitiveType.OverlayIntersectionPrimitiveType_Rectangle,
+            m_Primitive = new VROverlayIntersectionMaskPrimitive_Data_t
+            { m_Rectangle = new IntersectionMaskRectangle_t
+                { m_flTopLeftX = bounds.Left, m_flTopLeftY = bounds.Top, m_flWidth = bounds.Width, m_flHeight = bounds.Height } }
+        };
+        var error = overlay.SetOverlayMouseScale(handle, ref scale);
+        if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize pointer coordinates: {error}");
+        error = overlay.SetOverlayIntersectionMask(handle, ref mask, 1, (uint)Marshal.SizeOf<VROverlayIntersectionMaskPrimitive_t>());
+        if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize input region: {error}");
+        error = overlay.SetOverlayTexelAspect(handle,
+            shortcutsOnly ? State.Width * (float)TextureInfo.Height / (State.Height * TextureInfo.Width) : 1);
+        if (error != EVROverlayError.None) throw new InvalidOperationException($"Resize keyboard proportions: {error}");
+        geometryApplied = true;
     }
 
     public void PreviewSound(BoardSettings settings)
@@ -216,6 +221,12 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         var caps = WindowsKeyboard.CapsLock;
         var scrollLock = WindowsKeyboard.ScrollLock;
         State.SetNumLock(WindowsKeyboard.NumLock);
+        if (State.SetShortcutStatus(status, Now))
+        {
+            audio.Cancel();
+            acceptAfter = Now;
+            ApplyGeometry();
+        }
         using var bitmap = renderer.Render(State, shift, status, altGr, caps, scrollLock, theme, effects, Now,
             TextureInfo, shortcutsOnly ? null : MainContentBounds(State));
         if (bitmap == null) return;
