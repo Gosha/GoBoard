@@ -81,7 +81,7 @@
     <Icon Id="GoBoard.exe" SourceFile="$(var.AppIcon)" />
     <Property Id="ARPPRODUCTICON" Value="GoBoard.exe" />
     <Property Id="ARPHELPLINK" Value="https://github.com/Gosha/GoBoard" />
-    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Open GoBoard from the Start menu. VR mode requires SteamVR and a connected headset." />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Open GoBoard VR from the Start menu. GoBoard requires SteamVR and a connected headset." />
 
     <Property Id="INSTALLFOLDER" Secure="yes">
       <RegistrySearch Id="PreviousInstallFolder" Root="HKCU" Key="Software\GoBoard"
@@ -110,8 +110,6 @@
                        Type="integer" Value="1" KeyPath="yes" />
         <Shortcut Id="VrShortcut" Name="GoBoard VR" Target="[INSTALLFOLDER]GoBoard.exe"
                   WorkingDirectory="INSTALLFOLDER" Icon="GoBoard.exe" />
-        <Shortcut Id="DesktopShortcut" Name="GoBoard Desktop" Target="[INSTALLFOLDER]GoBoard.exe"
-                  Arguments="--desktop" WorkingDirectory="INSTALLFOLDER" Icon="GoBoard.exe" />
         <Shortcut Id="SettingsShortcut" Name="GoBoard Settings" Target="[INSTALLFOLDER]GoBoard.exe"
                   Arguments="--settings" WorkingDirectory="INSTALLFOLDER" Icon="GoBoard.exe" />
         <RemoveFolder Id="RemoveGoBoardMenu" On="uninstall" />

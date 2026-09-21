@@ -5,6 +5,18 @@ namespace GoBoard.Tests;
 
 public sealed class InstallerLaunchModeTests
 {
+    [Theory]
+    [InlineData(new string[] { }, "", "")]
+    [InlineData(new[] { "--desktop" }, "--desktop", "")]
+    [InlineData(new[] { "--desktop", "--seconds", "60", "--stop-file", "stop" }, "--desktop", "")]
+    [InlineData(new[] { "--settings", "--executable", "old.exe" }, "--settings", "--settings")]
+    public void CommittedUpgradeUsesVrButRecoveryRetainsOriginalMode(string[] args, string recovery, string installed)
+    {
+        var captured = LaunchMode.RestartArguments(args);
+        Assert.Equal(installed, LaunchMode.InstalledArguments(captured));
+        Assert.Equal(recovery, captured);
+    }
+
     [Fact]
     public void PreservesLiveModeWithoutOldLauncherLifetimeArguments()
     {

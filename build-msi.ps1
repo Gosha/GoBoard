@@ -39,7 +39,7 @@ try {
     dotnet restore $app --runtime win-x64 --artifacts-path $dotnetArtifacts --locked-mode '-p:NuGetLockFilePath=packages.win-x64.lock.json' "-p:SelfContained=$selfContained"
     if ($LASTEXITCODE -ne 0) { throw 'Application restore failed.' }
 
-    dotnet publish $app -c Release --runtime win-x64 --self-contained $selfContained --no-restore --artifacts-path $dotnetArtifacts --output $publishDir "-p:Version=$Version" "-p:AssemblyVersion=$($release.MsiVersion).0" "-p:FileVersion=$($release.MsiVersion).0" "-p:InformationalVersion=$informationalVersion" '-p:IncludeSourceRevisionInInformationalVersion=false' '-p:NuGetLockFilePath=packages.win-x64.lock.json' '-p:PublishSingleFile=false' '-p:PublishTrimmed=false' '-p:DebugType=None' '-p:DebugSymbols=false' '-p:RollForward=Minor'
+    dotnet publish $app -c Release --runtime win-x64 --self-contained $selfContained --no-restore --artifacts-path $dotnetArtifacts --output $publishDir "-p:Version=$Version" "-p:AssemblyVersion=$($release.MsiVersion).0" "-p:FileVersion=$($release.MsiVersion).0" "-p:InformationalVersion=$informationalVersion" '-p:IncludeSourceRevisionInInformationalVersion=false' '-p:NuGetLockFilePath=packages.win-x64.lock.json' '-p:EnableDesktopDebug=false' '-p:PublishSingleFile=false' '-p:PublishTrimmed=false' '-p:DebugType=None' '-p:DebugSymbols=false' '-p:RollForward=Minor'
     if ($LASTEXITCODE -ne 0) { throw 'Application publish failed.' }
 
     # Ship provenance with the app as well as alongside the downloadable MSI.

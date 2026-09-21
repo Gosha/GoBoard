@@ -71,7 +71,7 @@ public static class Actions
         session[Resume] = "";
         if (session["REMOVE"] == "ALL") return ActionResult.Success;
         var executable = Path.Combine(session["INSTALLFOLDER"], "GoBoard.exe");
-        foreach (var mode in previous.Select(p => p.Arguments).Distinct())
+        foreach (var mode in previous.Select(p => LaunchMode.InstalledArguments(p.Arguments)).Distinct())
         {
             try { Launch(session, executable, mode); }
             catch (Exception ex)
