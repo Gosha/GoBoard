@@ -1,0 +1,20 @@
+CPU rendering, 2550 x 846; 30 warmup + 120 measured frames. Excludes presentation/upload.
+Theme,Scenario,MedianMs,P95Ms,Frames
+steam-soft,Off,27.464,31.940,40
+steam-soft,Afterglow,11.945,26.577,120
+steam-soft,Spotlight,14.406,29.900,120
+steam-soft,Edges,13.002,29.033,120
+steam-soft,Ripple,12.403,28.634,120
+steam-soft,Flash,11.965,27.215,115
+steam-soft,Crossfade,24.754,59.415,120
+steam-soft,Lift,41.661,78.813,120
+steam-soft,Combined,44.818,81.645,120
+steam-flat,Off,25.264,31.448,40
+steam-flat,Afterglow,13.995,26.828,120
+steam-flat,Spotlight,18.430,35.038,120
+steam-flat,Edges,15.382,27.956,120
+steam-flat,Ripple,12.283,24.630,120
+steam-flat,Flash,11.994,24.404,115
+steam-flat,Crossfade,24.295,51.883,120
+steam-flat,Lift,39.200,68.550,120
+steam-flat,Combined,43.059,71.126,120

@@ -1,0 +1,8 @@
+Persistent OpenGL overlay textures: NVIDIA GeForce RTX 3090 Ti/PCIe/SSE2.
+Keyboard renderer: Skia GPU/OpenGL. GOBOARD_RENDERER=cpu forces CPU rendering.
+Windows input layout: United Kingdom, HKL 08090809.
+SteamVR numpad resize check passed: 13 updates, both themes, texture readback, physical dimensions, pointer scale, ray hitboxes and UV orientation at 50/100/150% scale. No input or user settings changed.
+Render timing gpu.baseline: n=13, sampled=13, p50=1.882 ms, p95=48.876 ms, p99=48.876 ms, max=48.876 ms
+Render timing gpu.draw-and-flush: n=13, sampled=13, p50=3.140 ms, p95=81.091 ms, p99=81.091 ms, max=81.091 ms
+Render timing texture.gpu-wait: n=13, sampled=13, p50=0.455 ms, p95=0.925 ms, p99=0.925 ms, max=0.925 ms
+Render timing texture.publish: n=13, sampled=13, p50=0.384 ms, p95=140.874 ms, p99=140.874 ms, max=140.874 ms

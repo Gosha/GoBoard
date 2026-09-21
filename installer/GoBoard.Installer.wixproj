@@ -4,7 +4,7 @@
     <OutputName>GoBoard-$(ReleaseVersion)-win-x64-$(SetupVariant)</OutputName>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\artifacts\msi\publish\</PublishDir>
-    <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir);ReleaseChannel=$(ReleaseChannel);ReleaseVersion=$(ReleaseVersion);LifecycleActions=$(LifecycleActions);SetupVariant=$(SetupVariant)</DefineConstants>
+    <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir);ReleaseChannel=$(ReleaseChannel);ReleaseVersion=$(ReleaseVersion);LifecycleActions=$(LifecycleActions);SetupVariant=$(SetupVariant);AppIcon=$(MSBuildThisFileDirectory)..\assets\branding\goboard.ico</DefineConstants>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

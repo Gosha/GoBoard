@@ -77,7 +77,8 @@
     <Launch Condition="Installed OR NOT GOBOARD_MACHINE_INSTALL"
             Message="An all-users GoBoard installation already exists. Uninstall it from Windows Installed apps first (this may require administrator approval), then run this per-user installer. Your settings will be kept." />
 
-    <Icon Id="GoBoard.exe" SourceFile="$(var.PublishDir)GoBoard.exe" />
+    <!-- Icon streams store the entire source file; use the ICO instead of duplicating the apphost. -->
+    <Icon Id="GoBoard.exe" SourceFile="$(var.AppIcon)" />
     <Property Id="ARPPRODUCTICON" Value="GoBoard.exe" />
     <Property Id="ARPHELPLINK" Value="https://github.com/Gosha/GoBoard" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Open GoBoard from the Start menu. VR mode requires SteamVR and a connected headset." />

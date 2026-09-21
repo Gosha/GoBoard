@@ -26,6 +26,8 @@ public static int Run(string[] args)
         if (args.Length == 1 && args[0] == "--self-test") { RelativePose.Verify(); GrabPose.Verify(); GrabInput.Verify(); OverlayPointers.Verify(); return 0; }
         if (args is ["--render-benchmark"]) { PanelPreview.Benchmark(); return 0; }
         if (args is ["--effects-benchmark"]) { EffectsBenchmark.Run(); return 0; }
+        if (args is ["--gpu-render-check"]) return GpuRenderCheck.Run();
+        if (args is ["--gpu-overlay-check"]) return GpuOverlayCheck.Run();
         if (args is ["--shortcut-resize-check"]) return ShortcutResizeCheck.Run();
         if (args is ["--numpad-resize-check"]) return ShortcutResizeCheck.Run(numpad: true);
         if (args.Length == 1 && args[0] == "--input-check") { KeyboardInputCheck.Run(); return 0; }
@@ -201,6 +203,7 @@ public static int Run(string[] args)
         string settingsError = null;
         while (!cancel.IsCancellationRequested && !session.StopRequested && timer.Elapsed.TotalSeconds < seconds && (stopFile == null || !File.Exists(stopFile)))
         {
+            var loopStarted = graphics.Timings.Start();
             while (system.PollNextEvent(ref vrEvent, eventSize))
             {
                 if ((EVREventType)vrEvent.eventType == EVREventType.VREvent_Quit)
@@ -253,14 +256,19 @@ public static int Run(string[] args)
             }
             if (cancel.IsCancellationRequested) break;
             keyboard.EndFrame();
+            graphics.Timings.End("loop.work", loopStarted);
             // Synchronize input/following with SteamVR instead of adding a fixed
             // sleep after each update. Held transforms are tracked by SteamVR.
             if (visible)
             {
+                var syncStarted = graphics.Timings.Start();
                 var sync = overlay.WaitFrameSync(20);
                 if (sync != EVROverlayError.None) cancel.Token.WaitHandle.WaitOne(1);
+                graphics.Timings.End("loop.frame-sync", syncStarted);
             }
             else cancel.Token.WaitHandle.WaitOne(100);
+            graphics.Timings.End("loop.total", loopStarted);
+            graphics.Timings.Report();
         }
         return 0;
     }

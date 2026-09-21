@@ -72,6 +72,38 @@ public sealed class EffectsTests
     }
 
     [Theory]
+    [InlineData(BoardThemes.SteamSoft)]
+    [InlineData(BoardThemes.SteamFlat)]
+    public void HostCanvasMatchesOwnedFramesAndKeepsCanvasAndRetainedPixelsIntact(string theme)
+    {
+        var keyboard = Keyboard();
+        var options = new EffectSettings();
+        using var owned = new AnimatedKeyboardRenderer();
+        using var hosted = new AnimatedKeyboardRenderer();
+        var info = new SKImageInfo(3138, 846, SKColorType.Rgba8888, SKAlphaType.Premul);
+        var bounds = new SKRect(294, 0, 2844, 846);
+        using var target = new SKBitmap(info);
+        using var canvas = new SKCanvas(target);
+        var matrix = canvas.TotalMatrix;
+        var saves = canvas.SaveCount;
+        foreach (var (time, shift) in new[] { (0.0, false), (1.0, true), (1.05, false), (1.1, true), (2.0, true) })
+        {
+            using var expected = owned.Render(keyboard, shift, null, false, false, false, theme, options, time, info, bounds);
+            var changed = hosted.Draw(canvas, null, keyboard, shift, null, false, false, false, theme, options, time, info, bounds);
+            Assert.Equal(expected != null, changed);
+            if (changed) Assert.Equal(expected.Bytes, target.Bytes);
+            Assert.Equal(matrix, canvas.TotalMatrix);
+            Assert.Equal(saves, canvas.SaveCount);
+        }
+        var retained = target.Bytes;
+        Assert.False(hosted.Draw(canvas, null, keyboard, true, null, false, false, false, theme, options, 3, info, bounds));
+        Move(keyboard, "a", time: 4);
+        using var independent = hosted.Render(keyboard, true, null, false, false, false, theme, options, 4, info, bounds);
+        Assert.NotNull(independent);
+        Assert.Equal(retained, target.Bytes);
+    }
+
+    [Theory]
     [InlineData(850, 282)]
     [InlineData(1275, 423)]
     public void DesktopOutputUsesRequestedSizeAndColorWithoutChangingLogicalKeyGeometry(int width, int height)

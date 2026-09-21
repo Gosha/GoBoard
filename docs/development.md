@@ -163,6 +163,8 @@ Run `dotnet run --project src/GoBoard.App -c Release -- --render-benchmark` for 
 
 ## Effects
 
+VR keyboard/shortcut rendering uses Skia GPU surfaces with CPU fallback. See [GPU rendering](gpu-rendering.md) for backend overrides, aggregate timing diagnostics, native parity/publication checks, measured results and remaining hardware acceptance. Desktop and PNG rendering remain on the shared CPU renderer.
+
 Desktop and VR use the same `AnimatedKeyboardRenderer` and saved `EffectSettings`. Defaults enable afterglow, spotlight, and ripples, with edges and press flash off: enter 80 ms, leave 160 ms, radius 120, strength 30%, ripple 560 ms, and Lift character transitions at 160 ms with travel 10. Reset effects restores these values; existing saved effect choices are preserved. The Effects settings page uses the same Skia controls and release-to-activate pointer handling in both hosts. `--settings-input-check` also exercises tab switching, effect selection, duration edits, persistence, and effect-only reset at three window aspect ratios with an isolated settings file.
 
 The renderer returns no frame when idle. During animation it reuses immutable images of the settled keyboard and its key surfaces, preserving both themes. Character transitions track primary, Shift, AltGr, and dead-key labels separately; unchanged labels are restored exactly from the settled raster. Interrupted transitions snapshot the visible label before retargeting. Pointer effects follow accepted keyboard state independently for each cursor; cancellation, layout/theme changes, and settings changes discard old animation state. These visuals do not schedule or delay input.
