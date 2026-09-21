@@ -126,7 +126,7 @@ internal sealed class DesktopKeyboardControls : IDisposable
         foreach (var b in buttons)
         {
             var showButton = show && MainKeyboardControls.Visible(b.Action, settings);
-            var bounds = MainKeyboardControls.DesktopBounds(b.Action, owner.ClientSize.Width, header, scale);
+            var bounds = MainKeyboardControls.DesktopBounds(b.Action, header, scale);
             var rectangle = new Rectangle(owner.Left + (int)Math.Round(bounds.X), owner.Top + (int)Math.Round(bounds.Y),
                 Math.Max(1, (int)Math.Round(bounds.Width)), Math.Max(1, (int)Math.Round(bounds.Height)));
             if (b.Window.Bounds != rectangle) { b.Input.Reset(Now); ReleaseCapture(b); b.Window.Bounds = rectangle; }

@@ -69,7 +69,7 @@ internal sealed class KeyboardControlOverlays : IDisposable
             {
                 var width = MainKeyboardControls.WidthInMeters(b.Action, scale);
                 if (b.Width != width) { Check(overlay.SetOverlayWidthInMeters(b.Handle, width), "Size control"); b.Width = width; }
-                Place(b, MainKeyboardControls.Offset(b.Action, settings.NumpadEnabled, scale));
+                Place(b, MainKeyboardControls.Offset(b.Action, scale));
                 Draw(b);
             }
             if (b.Visible != showButton)

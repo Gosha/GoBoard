@@ -83,14 +83,14 @@ public sealed class NumpadTests
             var recovered = OverlayGeometry.PanelFromTexture(scale) * texture;
             Assert.True(RelativePose.Near(anchor, recovered));
             var handle = OverlayGeometry.GrabFromScaledPanel(scale) * anchor;
-            var reset = MainKeyboardControls.Offset(KeyboardAction.ResetPosition, false, scale) * anchor;
+            var reset = MainKeyboardControls.Offset(KeyboardAction.ResetPosition, scale) * anchor;
             foreach (var enabled in new[] { false, true, false, true })
             {
                 state.SetNumpad(enabled, 1);
                 var bounds = KeyboardOverlay.MainContentBounds(state);
                 Assert.Equal(0, bounds.Left);
                 Assert.True(RelativePose.Near(handle, OverlayGeometry.GrabFromScaledPanel(scale) * recovered));
-                Assert.True(RelativePose.Near(reset, MainKeyboardControls.Offset(KeyboardAction.ResetPosition, enabled, scale) * recovered));
+                Assert.True(RelativePose.Near(reset, MainKeyboardControls.Offset(KeyboardAction.ResetPosition, scale) * recovered));
                 foreach (var key in original)
                 {
                     var b = key.Bounds;
@@ -108,8 +108,6 @@ public sealed class NumpadTests
             var expansion = KeyboardLayout.NumpadExtraWidth * ProgrammableKeys.MetersPerUnit * scale;
             Assert.Equal(expansion, OverlayGeometry.ResizeFromScaledPanel(scale, true).M41 -
                 OverlayGeometry.ResizeFromScaledPanel(scale, false).M41, 5);
-            Assert.Equal(expansion, MainKeyboardControls.Offset(KeyboardAction.ToggleNumpad, true, scale).M41 -
-                MainKeyboardControls.Offset(KeyboardAction.ToggleNumpad, false, scale).M41, 5);
         }
     }
     [Fact]

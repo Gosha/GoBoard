@@ -25,11 +25,12 @@ internal static class KeyboardLayout
     public static readonly IReadOnlyList<KeyboardKey> JapaneseKeys = Create(false, japanese: true);
     public static IReadOnlyList<KeyboardKey> SwedishKeys => IsoKeys;
     private const int NumpadGroupGap = 14;
+    public const int NumpadLeft = OverlayGeometry.PanelWidth - OverlayGeometry.PanelPadding + NumpadGroupGap;
     public const int NumpadExtraWidth = 4 * RowPitch + NumpadGroupGap - KeyGap;
     public static IReadOnlyList<KeyboardKey> WithNumpad(IReadOnlyList<KeyboardKey> keys) => keys.Concat(
         ProgrammableKeys.NumpadKeys.Select(key => key with
         {
-            Bounds = new(OverlayGeometry.PanelWidth - OverlayGeometry.PanelPadding + NumpadGroupGap + key.Bounds.X / 44 * RowPitch,
+            Bounds = new(NumpadLeft + key.Bounds.X / 44 * RowPitch,
                 OverlayGeometry.PanelPadding + RowPitch + key.Bounds.Y / 44 * RowPitch,
                 (key.Bounds.Width + KeyGap) / 44 * RowPitch - KeyGap,
                 (key.Bounds.Height + KeyGap) / 44 * RowPitch - KeyGap),

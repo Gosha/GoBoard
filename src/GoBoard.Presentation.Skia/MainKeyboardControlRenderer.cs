@@ -16,7 +16,8 @@ internal static class MainKeyboardControlRenderer
         using var paint = new SKPaint { IsAntialias = true };
         if (action == KeyboardAction.ToggleNumpad)
         {
-            Panel.DrawKeySurface(canvas, new("Numpad", "", 0, new(2, 2, size - 4, size - 4)), style, hovered, pressed, enabled);
+            var inset = enabled ? 0 : 2;
+            Panel.DrawKeySurface(canvas, new("Numpad", "", 0, new(inset, inset, size - 2 * inset, size - 2 * inset)), style, hovered, pressed, enabled);
             paint.Color = pressed ? style.Ink : enabled ? style.Accent : style.Text;
             for (var row = 0; row < 3; row++)
             for (var col = 0; col < 3; col++)
@@ -46,7 +47,7 @@ internal static class MainKeyboardControlRenderer
         var height = OverlayGeometry.PanelHeight;
         KeyBounds Bounds(KeyboardAction action)
         {
-            var offset = MainKeyboardControls.Offset(action, numpad, 1);
+            var offset = MainKeyboardControls.Offset(action, 1);
             var size = MainKeyboardControls.WidthInMeters(action, 1) / units;
             return new(OverlayGeometry.PanelWidth / 2f + offset.M41 / units - size / 2, height / 2f - offset.M42 / units - size / 2, size, size);
         }
@@ -55,7 +56,7 @@ internal static class MainKeyboardControlRenderer
         var gripWidth = OverlayGeometry.GrabWidthInMeters / units;
         var gripHeight = .06f / units;
         var grip = new KeyBounds((OverlayGeometry.PanelWidth - gripWidth) / 2, height + .0075f / units, gripWidth, gripHeight);
-        var result = new SKBitmap((int)Math.Ceiling(toggle.X + toggle.Width + 4) * Panel.RasterScale,
+        var result = new SKBitmap((int)Math.Ceiling(Math.Max(keyboard.Width / (float)Panel.RasterScale, toggle.X + toggle.Width) + 4) * Panel.RasterScale,
             (int)Math.Ceiling(Math.Max(grip.Y + grip.Height, reset.Y + reset.Height) + 4) * Panel.RasterScale,
             SKColorType.Rgba8888, SKAlphaType.Unpremul);
         using var canvas = new SKCanvas(result);
