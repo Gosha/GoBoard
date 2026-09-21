@@ -48,6 +48,8 @@ Application dependency locks stay separate from `packages.win-x64.lock.json` use
 
 Explicit `vMAJOR.MINOR.PATCH` tags publish Stable releases; `vMAJOR.MINOR.PATCH-beta.N` tags publish Beta prereleases without changing Latest. Merging to main does not publish a release. Relevant PRs and manual beta runs build validation artifacts only. CI uploads both installers/checksums/provenance to a draft before publication and refuses to overwrite an existing release. Release tagging is a separate explicit action.
 
+Before tagging, commit [version-specific release notes](releases/README.md) in `docs/releases/<version>.md`. Include changes since the appropriate previous release, a short technical summary, and compact download/install instructions for readers landing directly on the release page. CI requires that exact file and uses it as the release body without appending boilerplate or a generated PR list.
+
 Windows Installer compares three numeric version fields:
 
 ```text

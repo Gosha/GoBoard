@@ -83,6 +83,8 @@ Keep `README.md` short and focused on getting the app installed and running.
 
 Follow [the versioning policy](docs/versioning.md) when preparing releases. Choose the highest required major/minor/patch bump based on user-visible behavior and compatibility. Do not bump versions or create release tags automatically for each change.
 
+Before tagging, write and commit `docs/releases/<version>.md` following [the release notes guide](docs/releases/README.md). Include user-visible changes since the stated previous release, a short technical summary, and compact download/install instructions so each release page works on its own. Link to detailed installation documentation and avoid lengthy repeated setup prose or PR-title dumps.
+
 ## References
 
 - [Development](docs/development.md): detailed workflows, feature implementation, benchmarks, and acceptance gaps.
