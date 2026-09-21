@@ -3,7 +3,7 @@
     <InstallerPlatform>x64</InstallerPlatform>
     <OutputName>GoBoard-$(ReleaseVersion)-win-x64</OutputName>
     <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\artifacts\msi\publish\</PublishDir>
-    <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir);ReleaseChannel=$(ReleaseChannel);ReleaseVersion=$(ReleaseVersion);LifecycleActions=$(LifecycleActions)</DefineConstants>
+    <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir);ReleaseChannel=$(ReleaseChannel);ReleaseVersion=$(ReleaseVersion);LifecycleActions=$(LifecycleActions);AppIcon=$(MSBuildThisFileDirectory)..\assets\branding\goboard.ico</DefineConstants>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- ICE91 warns that profile files cannot support ALLUSERS. This package
