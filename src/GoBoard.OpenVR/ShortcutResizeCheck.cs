@@ -39,7 +39,7 @@ internal static class ShortcutResizeCheck
             // Include default settings before enablement, every size in both
             // directions, and returns to previously submitted sizes.
             var settings = new BoardSettings { SoundEnabled = false };
-            (string Theme, int Columns, int Rows)? lastIdentity = null;
+            (string Theme, int Columns, int Rows, int Height)? lastIdentity = null;
             string lastFingerprint = null;
             var updates = 0;
             Verify(settings);
@@ -49,20 +49,25 @@ internal static class ShortcutResizeCheck
                         Verify(settings with { Theme = theme, NumpadEnabled = enabled });
                 else
                     foreach (var grid in grids.Concat(grids.Reverse()))
-                        Verify(settings with { Theme = theme, ProgrammableKeys = new() { Enabled = true, Columns = grid.Columns, Rows = grid.Rows } });
+                    foreach (var message in new[] { null, "Input blocked", null })
+                        Verify(settings with { Theme = theme, ProgrammableKeys = new() { Enabled = true, Columns = grid.Columns, Rows = grid.Rows } }, message);
             Console.WriteLine($"SteamVR {(numpad ? "numpad" : "shortcut")} resize check passed: {updates} updates, both themes, texture readback, physical dimensions, pointer scale, ray hitboxes and UV orientation at 50/100/150% scale. No input or user settings changed.");
             return 0;
 
-            void Verify(BoardSettings next)
+            void Verify(BoardSettings next, string message = null)
             {
                 keyboard.ApplySettings(next, resized: true);
                 var state = keyboard.State;
                 var meters = ProgrammableKeys.MetersPerUnit * (++updates % 3 + 1) / 2f;
                 var expectedWidth = (numpad ? OverlayGeometry.Width(true) : state.Width) * meters;
-                var expectedHeight = state.Height * meters;
                 Check(overlay.SetOverlayWidthInMeters(handle, expectedWidth));
                 keyboard.BeginFrame(true);
+                if (!numpad) keyboard.ReportError(message);
                 keyboard.EndFrame();
+                var expectedHeight = state.Height * meters;
+                if (!numpad)
+                    Require(state.ShortcutFooter == !string.IsNullOrWhiteSpace(message ?? state.Layout.Notice),
+                        "Message visibility did not update panel geometry");
                 Require(GL.GetError() == ErrorCode.NoError, "OpenGL publication error");
                 var texture = numpad ? KeyboardOverlay.MainTextureInfo : KeyboardOverlay.ShortcutTextureInfo;
                 uint width = 0, height = 0;
@@ -147,7 +152,8 @@ internal static class ShortcutResizeCheck
                             "Narrow keyboard left stale pixels in the raster padding");
                 }
                 var fingerprint = Convert.ToHexString(SHA256.HashData(pixels.Bytes));
-                var identity = (next.Theme, Columns: numpad ? state.Width : next.ProgrammableKeys.Columns, Rows: numpad ? state.Height : next.ProgrammableKeys.Rows);
+                var identity = (next.Theme, Columns: numpad ? state.Width : next.ProgrammableKeys.Columns,
+                    Rows: numpad ? state.Height : next.ProgrammableKeys.Rows, state.Height);
                 if (lastIdentity.HasValue && lastIdentity != identity)
                     Require(lastFingerprint != fingerprint, "Panel image did not update");
                 lastIdentity = identity; lastFingerprint = fingerprint;

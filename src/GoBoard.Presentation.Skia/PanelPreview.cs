@@ -70,14 +70,15 @@ internal static class PanelPreview
             case "altgr": Press("AltGr"); break;
             case "unsupported": keyboard.SetLayout(new WindowsLayout((nint)0x08090809), time); break;
         }
-        var result = Panel.Render(keyboard, keyboard.Shift,
-            visualState == "error" ? "Input could not be sent. Focus a text field and try again." : null,
+        var status = visualState == "error" ? "Input could not be sent. Focus a text field and try again." : null;
+        var result = Panel.Render(keyboard, keyboard.Shift, status,
             keyboard.AltGr, visualState == "caps", visualState == "scrolllock", theme, cacheSurfaces);
         if (!shortcuts) return result;
         using var main = result;
         var palette = new KeyboardState(new PreviewSink(), shortcutsOnly: true);
-        palette.SetLayout(layout, 0);
-        using var keys = Panel.Render(palette, theme: theme);
+        palette.SetLayout(keyboard.Layout, 0);
+        palette.SetShortcutStatus(status, 0);
+        using var keys = Panel.Render(palette, status: status, theme: theme);
         using var button = ShortcutLauncherRenderer.Render(true, false, theme);
         const int gap = 14 * Panel.RasterScale;
         var bitmap = new SKBitmap(keys.Width + button.Width + main.Width + gap * 2, Math.Max(keys.Height, main.Height), SKColorType.Rgba8888, SKAlphaType.Unpremul);

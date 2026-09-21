@@ -35,6 +35,10 @@ internal sealed class ShortcutOverlays : IDisposable
     private float PanelWidth => keyboard.State.Width * ProgrammableKeys.MetersPerUnit * scale;
     private float PanelHeight => keyboard.State.Height * ProgrammableKeys.MetersPerUnit * scale;
     private Matrix4x4 GripOffset => OverlayGeometry.GrabFromPanelHeight(PanelHeight);
+    // Store/grab the compact panel's pose. A message grows downward in its
+    // local plane without moving the buttons, including while controller-held.
+    internal static Matrix4x4 MessageOffset(KeyboardState state, float scale) => Matrix4x4.CreateTranslation(0,
+        -(state.Height - ProgrammableKeys.Height(state.Shortcuts, footer: false)) * ProgrammableKeys.MetersPerUnit * scale / 2, 0);
 
     public ShortcutOverlays(CVRSystem system, CVROverlay overlay, OverlayGraphics graphics, ulong main, WindowsKeyboard output)
     {
@@ -101,7 +105,7 @@ internal sealed class ShortcutOverlays : IDisposable
         if (!placed)
         {
             panelPlacement.SetLocal(Matrix4x4.CreateTranslation(buttonOffset.M41 - buttonSize / 2 - PanelWidth / 2 - .012f * scale,
-                mainHeight / 2 - PanelHeight / 2, .002f * scale), scale);
+                mainHeight / 2 - ProgrammableKeys.Height(keyboard.State.Shortcuts, footer: false) * ProgrammableKeys.MetersPerUnit * scale / 2, .002f * scale), scale);
             placed = true;
         }
         var panelOffset = panelPlacement.AtScale(scale);
@@ -125,21 +129,6 @@ internal sealed class ShortcutOverlays : IDisposable
             panelOffset = moved.Value * inverse;
             panelPlacement.SetLocal(panelOffset, scale);
         }
-        if (grab.ActiveGrab is { } capture)
-        {
-            var pose = OpenVrPose.ToOpenVr(capture.ControllerOffset);
-            Check(overlay.SetOverlayTransformTrackedDeviceRelative(panel, grab.Controller, ref pose), "Attach shortcut palette");
-            pose = OpenVrPose.ToOpenVr(GripOffset * capture.ControllerOffset);
-            Check(overlay.SetOverlayTransformTrackedDeviceRelative(grip, grab.Controller, ref pose), "Attach shortcut grip");
-            transforms.Remove(panel); transforms.Remove(grip);
-            wasGrabbed = true;
-        }
-        else
-        {
-            Relative(panel, main, panelOffset);
-            Relative(grip, panel, GripOffset);
-            if (wasGrabbed) { toggle.Reset(Now); wasGrabbed = false; }
-        }
         keyboard.BeginFrame(expanded && poseValid, GrabOwner ?? mainGrab, resizing);
         var e = new VREvent_t();
         while (overlay.PollNextOverlayEvent(panel, ref e, (uint)Marshal.SizeOf<VREvent_t>()))
@@ -148,6 +137,22 @@ internal sealed class ShortcutOverlays : IDisposable
             keyboard.Process(e);
         }
         keyboard.EndFrame();
+        var messageOffset = MessageOffset(keyboard.State, scale);
+        if (grab.ActiveGrab is { } capture)
+        {
+            var pose = OpenVrPose.ToOpenVr(messageOffset * capture.ControllerOffset);
+            Check(overlay.SetOverlayTransformTrackedDeviceRelative(panel, grab.Controller, ref pose), "Attach shortcut palette");
+            pose = OpenVrPose.ToOpenVr(GripOffset * messageOffset * capture.ControllerOffset);
+            Check(overlay.SetOverlayTransformTrackedDeviceRelative(grip, grab.Controller, ref pose), "Attach shortcut grip");
+            transforms.Remove(panel); transforms.Remove(grip);
+            wasGrabbed = true;
+        }
+        else
+        {
+            Relative(panel, main, messageOffset * panelOffset);
+            Relative(grip, panel, GripOffset);
+            if (wasGrabbed) { toggle.Reset(Now); wasGrabbed = false; }
+        }
         if (drawnToggle != toggle.Revision && show)
         {
             using var bitmap = ShortcutLauncherRenderer.Render(toggle.Expanded, toggle.Hovered, settings.Theme);
