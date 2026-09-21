@@ -1,0 +1,4 @@
+Persistent OpenGL overlay textures: NVIDIA GeForce RTX 3090 Ti/PCIe/SSE2.
+Keyboard renderer: Skia GPU/OpenGL. GOBOARD_RENDERER=cpu forces CPU rendering.
+Skia GPU rendering unavailable (InvalidOperationException); falling back to CPU/upload.
+GPU overlay check passed: real texture publication, alpha flags, alternating textures, injected failure, CPU fallback readback and UV bounds. No input or settings changed.

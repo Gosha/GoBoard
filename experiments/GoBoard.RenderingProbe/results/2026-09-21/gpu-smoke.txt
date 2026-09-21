@@ -1,0 +1,2 @@
+GPU: NVIDIA GeForce RTX 3090 Ti/PCIe/SSE2; GL: 3.3.0 NVIDIA 610.47
+SkiaSharp 4.152.1 GPU surface and drawing/readback check passed. No SteamVR submission or GPU performance measurement.

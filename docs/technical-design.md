@@ -14,9 +14,13 @@ GoBoard is a Windows desktop keyboard and SteamVR overlay sharing the same keybo
 
 ## Rendering and presentation
 
+See [GPU rendering](gpu-rendering.md) for backend selection, diagnostics and validation, and the [initial investigation](rendering-performance-investigation.md) for the earlier CPU measurements and backend comparison.
+
 Rendering and hit testing use the same logical key geometry. OpenVR mouse coordinates have a bottom-left origin; Skia uses top-left. The shared geometry converts between them independently of texture resolution and physical size.
 
-The VR host uses persistent, double-buffered OpenGL textures. OpenTK owns a hidden context; Skia draws CPU pixels, the back texture receives the upload, and `GL.Finish` completes it before `SetOverlayTexture` publishes it. Textures remain alive through overlay destruction and OpenVR shutdown. Texture bounds are U 0→1 and V 1→0.
+The VR host uses persistent, double-buffered OpenGL textures. OpenTK owns a hidden context; the main keyboard and shortcut palette draw through Skia GPU surfaces wrapping the back texture. Baseline images, character layers, interrupted transitions and effect compositing stay on the GPU. Small reusable soft-key backgrounds still originate in the shared raster cache. `GL.Finish` completes drawing before `SetOverlayTexture` publishes it; textures, framebuffers and the Skia context remain alive through overlay destruction and OpenVR shutdown. Texture bounds remain U 0→1 and V 1→0, with a top-left Skia surface origin matching the existing CPU-upload row convention. GPU textures use OpenVR's premultiplied-alpha flag.
+
+Skia GPU initialization or drawing failure disables that backend for the session and falls back to CPU rendering plus texture upload, provided the underlying GL context remains usable. Pending Skia work is abandoned before CPU upload and renderer caches reset when the context changes. `GOBOARD_RENDERER=cpu` forces the previous path. Settings, handles, desktop and PNG previews retain CPU rendering. The shared renderer accepts a host canvas as well as returning owned raster frames; immutable CPU caches avoid unnecessary image copies.
 
 The keyboard is an independent overlay with `VisibleInDashboard`, an explicit mouse scale, and an intersection mask matching its geometry. Settings use a separate dashboard tab. Custom grab and resize handles have their own overlays. The keyboard and grab handle enable SteamVR's native backside surface without changing global SteamVR settings.
 

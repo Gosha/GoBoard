@@ -12,6 +12,24 @@ internal static class Panel
 
     public static SKBitmap Render(KeyboardState keyboard = null, bool shift = false, string status = null, bool altGr = false, bool caps = false, bool scrollLock = false, string theme = BoardThemes.Default, bool cacheSurfaces = true, bool omitPrintableLegends = false, bool suppressHover = false, bool suppressPressed = false)
     {
+        var bitmap = new SKBitmap(new SKImageInfo((keyboard?.Width ?? LayoutWidth) * RasterScale,
+            (keyboard?.Height ?? LayoutHeight) * RasterScale, SKColorType.Rgba8888, SKAlphaType.Unpremul));
+        try
+        {
+            using var canvas = new SKCanvas(bitmap);
+            Draw(canvas, keyboard, shift, status, altGr, caps, scrollLock, theme, cacheSurfaces,
+                omitPrintableLegends, suppressHover, suppressPressed);
+            return bitmap;
+        }
+        catch { bitmap.Dispose(); throw; }
+    }
+
+    // The host chooses raster or GPU storage. Drawing and hit geometry stay shared.
+    internal static void Draw(SKCanvas canvas, KeyboardState keyboard = null, bool shift = false, string status = null,
+        bool altGr = false, bool caps = false, bool scrollLock = false, string theme = BoardThemes.Default,
+        bool cacheSurfaces = true, bool omitPrintableLegends = false, bool suppressHover = false, bool suppressPressed = false)
+    {
+        using var restore = new SKAutoCanvasRestore(canvas, true);
         var style = KeyboardTheme.Resolve(theme);
         var Accent = style.Accent;
         var Ink = style.Ink;
@@ -19,9 +37,6 @@ internal static class Panel
         var width = keyboard?.Width ?? LayoutWidth;
         var height = keyboard?.Height ?? LayoutHeight;
         var keys = keyboard?.Keys ?? layout.Keys;
-        // OpenVR consumes straight RGBA, including coverage at the rounded edge.
-        var bitmap = new SKBitmap(new SKImageInfo(width * RasterScale, height * RasterScale, SKColorType.Rgba8888, SKAlphaType.Unpremul));
-        using var canvas = new SKCanvas(bitmap);
         canvas.Scale(RasterScale);
         using var paint = new SKPaint { IsAntialias = true };
         using var face = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Normal);
@@ -197,8 +212,6 @@ internal static class Panel
             paint.Color = style.Notice;
             DrawNotice(canvas, message, area, notice, paint);
         }
-        canvas.Flush();
-        return bitmap;
     }
 
     private static void Center(SKCanvas canvas, string text, float x, float y, SKFont font, SKPaint paint)

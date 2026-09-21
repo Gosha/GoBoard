@@ -40,6 +40,7 @@ internal static class KeySurfaceCache
                 var local = key with { Bounds = b with { X = Padding, Y = Padding } };
                 Panel.DrawKeySurface(target, local, theme, id.Hover, id.Filled, id.Armed);
                 target.Flush();
+                bitmap.SetImmutable();
                 image = SKImage.FromBitmap(bitmap);
                 Images.Add(id, image);
             }

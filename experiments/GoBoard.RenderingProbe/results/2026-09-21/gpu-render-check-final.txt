@@ -1,0 +1,11 @@
+GPU renderer check: NVIDIA GeForce RTX 3090 Ti/PCIe/SSE2
+CPU draw vs GPU draw+flush+completion; no SteamVR, upload or display latency. Default effects, 20 warmup + 60 measured frames.
+steam-soft/us 3138x846: CPU p50=29.957 p95=70.905 ms; GPU p50=2.548 p95=8.555 ms; image mean<=0.092, large<=0.000 %
+steam-soft/sv 3138x846: CPU p50=29.517 p95=69.690 ms; GPU p50=2.438 p95=8.500 ms; image mean<=0.094, large<=0.001 %
+steam-soft/numpad 3138x846: CPU p50=29.973 p95=78.311 ms; GPU p50=2.268 p95=8.312 ms; image mean<=0.093, large<=0.000 %
+steam-soft/shortcuts 1074x930: CPU p50=8.103 p95=18.385 ms; GPU p50=0.891 p95=2.670 ms; image mean<=0.504, large<=0.001 %
+steam-flat/us 3138x846: CPU p50=28.824 p95=59.988 ms; GPU p50=2.404 p95=6.528 ms; image mean<=0.107, large<=0.001 %
+steam-flat/sv 3138x846: CPU p50=28.290 p95=63.096 ms; GPU p50=2.279 p95=7.939 ms; image mean<=0.109, large<=0.001 %
+steam-flat/numpad 3138x846: CPU p50=28.325 p95=63.640 ms; GPU p50=2.287 p95=5.906 ms; image mean<=0.110, large<=0.001 %
+steam-flat/shortcuts 1074x930: CPU p50=7.918 p95=18.174 ms; GPU p50=1.075 p95=2.575 ms; image mean<=0.521, large<=0.001 %
+GPU rendering check passed; previews: C:\Users\gosha\.codex\worktrees\gpu-rendering\GoBoard\.runtime\gpu-check
