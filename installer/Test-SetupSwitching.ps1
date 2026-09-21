@@ -192,13 +192,13 @@ try {
         # Preserve the published version and Upgrade/LaunchCondition tables.
         # Both directions must leave one registration and a complete payload.
         Install $stable offline
-        Install $standard standard
+        Install $standard standard 0 $bundlePath
         Install $beta offline
         Install $offline offline
         Install $stable offline
         Install $offline offline
         Install $beta offline
-        Install $standard standard
+        Install $standard standard 0 $bundlePath
         Install $newer standard
         Install $beta offline
         Write-Output 'PASS: Development upgrades/downgrade rejection, and both setup variants switching to/from published Stable and Beta.'
