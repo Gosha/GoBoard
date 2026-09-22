@@ -22,9 +22,9 @@ internal static class ResizeHandleRenderer
             StrokeWidth = state == 0 ? 4 : 4.5f,
             Color = state switch
             {
-                2 => InteractionColors.DashboardBlue,
-                1 => SKColors.White,
-                _ => new SKColor(112, 122, 134)
+                2 => UiColors.Current.ResizeHandleActive,
+                1 => UiColors.Current.ResizeHandleHover,
+                _ => UiColors.Current.ResizeHandleIdle
             }
         };
         // A single rounded bottom-right bracket, matching the dashboard grip.

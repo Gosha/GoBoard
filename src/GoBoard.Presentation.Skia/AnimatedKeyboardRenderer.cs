@@ -11,7 +11,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
     private readonly Dictionary<uint, (PointerEffects Effects, long Press)> pointers = new();
     private readonly Dictionary<string, SKPath> paths = new();
     private IReadOnlyList<KeyboardKey> keys;
-    private KeyboardTheme style;
+    private KeyboardStyle style;
     private SKImage baseline, surfaces, outputBaseline;
     private (SKImageInfo Info, SKRect Bounds)? cachedOutput;
     private KeyboardState bound;
@@ -66,7 +66,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
             cacheContext = context;
             bound = keyboard; layout = keyboard.Layout; this.theme = theme; this.options = options;
             cancellationRevision = keyboard.CancellationRevision;
-            style = KeyboardTheme.Resolve(theme);
+            style = KeyboardStyle.Resolve(theme);
             keys = keyboard.Keys;
             foreach (var key in keys) paths[key.Id] = KeyPath(key);
             // Never replay clicks from before a layout/settings change or cancel.
@@ -131,7 +131,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
             {
                 outputBaseline = RenderImage.Create(output, context, target =>
                 {
-                    target.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Background : SKColors.Transparent);
+                    target.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Colors.PanelBackground : SKColors.Transparent);
                     target.DrawImage(baseline, bounds, new SKSamplingOptions(SKFilterMode.Linear));
                 });
             }
@@ -139,7 +139,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
         }
         var canvas = acquireCanvas();
         using var restore = new SKAutoCanvasRestore(canvas, true);
-        canvas.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Background : SKColors.Transparent);
+        canvas.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Colors.PanelBackground : SKColors.Transparent);
         canvas.DrawImage(outputBaseline ?? baseline, new SKRect(0, 0, output.Width, output.Height), new SKSamplingOptions(SKFilterMode.Nearest));
         canvas.ClipRect(bounds);
         canvas.Translate(bounds.Left, bounds.Top);

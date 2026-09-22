@@ -13,7 +13,7 @@ internal sealed class KeyTransitions : IDisposable
     public bool Contains(string id) => tracks.Keys.Any(k => k.Key == id);
     internal bool Contains(string id, int slot) => tracks.ContainsKey((id, slot));
 
-    public void Update(WindowsLayout layout, bool shift, bool altGr, bool caps, KeyboardTheme style, EffectSettings options, double now, bool layoutChanged, IReadOnlyList<KeyboardKey> keys = null, GRContext context = null)
+    public void Update(WindowsLayout layout, bool shift, bool altGr, bool caps, KeyboardStyle style, EffectSettings options, double now, bool layoutChanged, IReadOnlyList<KeyboardKey> keys = null, GRContext context = null)
     {
         var next = CharacterLayers.Capture(layout, shift, altGr, caps, style, keys, context);
         if (!layoutChanged && current != null && current.Keys.All(p =>
@@ -82,7 +82,7 @@ internal sealed class KeyTransitions : IDisposable
         Stamp(canvas, track.From, oldRect, 1 - t); Stamp(canvas, target, newRect, t);
     }
 
-    public void Draw(SKCanvas canvas, SKImage target, SKImage surfaces, KeyboardState keyboard, KeyboardTheme style, double now, bool filledPress)
+    public void Draw(SKCanvas canvas, SKImage target, SKImage surfaces, KeyboardState keyboard, KeyboardStyle style, double now, bool filledPress)
     {
         if (!Animating(now)) return;
         foreach (var key in current.Keys.Values)
@@ -100,7 +100,7 @@ internal sealed class KeyTransitions : IDisposable
             canvas.DrawImage(surfaces, surfaceCrop, rect, new SKSamplingOptions(SKFilterMode.Linear));
             // A one-shot modifier can be consumed while this key is held. Keep
             // its animated legends legible on the filled, pressed surface.
-            using var filter = filledPress && keyboard.Pressed(key.Key) ? SKColorFilter.CreateBlendMode(style.Ink, SKBlendMode.SrcIn) : null;
+            using var filter = filledPress && keyboard.Pressed(key.Key) ? SKColorFilter.CreateBlendMode(style.Colors.KeyLabelOnAccent, SKBlendMode.SrcIn) : null;
             using var tint = filter != null ? new SKPaint { ColorFilter = filter } : null;
             if (tint != null) canvas.SaveLayer(rect, tint);
             for (var slot = 0; slot < key.Layers.Length; slot++)

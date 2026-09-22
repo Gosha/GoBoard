@@ -83,7 +83,7 @@ internal static class PanelPreview
         const int gap = 14 * Panel.RasterScale;
         var bitmap = new SKBitmap(keys.Width + button.Width + main.Width + gap * 2, Math.Max(keys.Height, main.Height), SKColorType.Rgba8888, SKAlphaType.Unpremul);
         using var canvas = new SKCanvas(bitmap);
-        canvas.Clear(new SKColor(7, 16, 24));
+        canvas.Clear(UiColors.Current.PreviewBackground);
         canvas.DrawBitmap(keys, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest));
         canvas.DrawBitmap(button, keys.Width + gap, 0, new SKSamplingOptions(SKFilterMode.Nearest));
         canvas.DrawBitmap(main, keys.Width + gap * 2 + button.Width, 0, new SKSamplingOptions(SKFilterMode.Nearest));

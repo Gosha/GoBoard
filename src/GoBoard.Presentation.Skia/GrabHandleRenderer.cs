@@ -17,9 +17,9 @@ internal static class GrabHandleRenderer
         using var paint = new SKPaint { IsAntialias = true };
         paint.Color = state switch
         {
-            2 => InteractionColors.DashboardBlue,
-            1 => new SKColor(241, 246, 252),
-            _ => new SKColor(112, 122, 134)
+            2 => UiColors.Current.GrabHandleActive,
+            1 => UiColors.Current.GrabHandleHover,
+            _ => UiColors.Current.GrabHandleIdle
         };
         var lineWidth = state == 0 ? layoutWidth * 5f / 6 : layoutWidth;
         var lineHeight = state == 0 ? 4 : 6;

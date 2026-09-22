@@ -63,8 +63,8 @@ internal sealed class DesktopKeyboardForm : Form
         DoubleBuffered = true;
         SetStyle(ControlStyles.Selectable, false);
         SetStyle(ControlStyles.UserMouse, true);
-        BackColor = Color.FromArgb(12, 21, 30);
-        ForeColor = Color.FromArgb(241, 246, 252);
+        BackColor = UiColors.Current.WindowBackground.ToDrawingColor();
+        ForeColor = UiColors.Current.Text.ToDrawingColor();
         Font = new Font("Segoe UI", 10);
         if (previewOnly) Opacity = 0;
         applied = fixedPreview ? new BoardSettings { NumpadEnabled = previewNumpad, ProgrammableKeys = new() { Enabled = previewShortcuts } } : settings.Current;
@@ -313,7 +313,7 @@ internal sealed class DesktopKeyboardForm : Form
         var title = previewOnly ? "GoBoard · Desktop · Drag to move" : "GoBoard · " + WindowsKeyboard.TargetName(output.Target);
         TextRenderer.DrawText(e.Graphics, title, Font, new Rectangle(12, 0, Math.Max(0, SettingsButton.Left - 16), HeaderHeight), ForeColor,
             TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
-        using var background = new SolidBrush(Color.FromArgb(27, 44, 57));
+        using var background = new SolidBrush(UiColors.Current.DesktopHeader.ToDrawingColor());
         e.Graphics.FillRectangle(background, SettingsButton);
         TextRenderer.DrawText(e.Graphics, "Settings", Font, SettingsButton, ForeColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         TextRenderer.DrawText(e.Graphics, "×", Font, CloseButton, ForeColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);

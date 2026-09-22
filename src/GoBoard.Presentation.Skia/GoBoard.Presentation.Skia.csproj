@@ -12,6 +12,7 @@
     <PackageReference Include="SkiaSharp" Version="4.152.1" />
     <InternalsVisibleTo Include="GoBoard.OpenVR" />
     <InternalsVisibleTo Include="GoBoard.Tests" />
+    <InternalsVisibleTo Include="GoBoard.Branding" />
     <InternalsVisibleTo Include="GoBoard" />
   </ItemGroup>
 </Project>

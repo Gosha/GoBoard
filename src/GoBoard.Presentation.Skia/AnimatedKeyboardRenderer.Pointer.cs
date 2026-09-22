@@ -29,7 +29,7 @@ internal sealed partial class AnimatedKeyboardRenderer
     private void DrawPointer(SKCanvas canvas, KeyboardState keyboard, PointerEffects effects, EffectSettings options, double now, bool caps, bool scrollLock)
     {
         using var paint = new SKPaint { IsAntialias = true };
-        var accent = style.Accent;
+        var accent = style.Colors.PointerEffect;
         var strength = options.Strength / 100f;
         var presence = effects.Presence.Value(now);
         // The light is shared by every key. Build each shader once per view,
@@ -101,7 +101,7 @@ internal sealed partial class AnimatedKeyboardRenderer
                     {
                         // Face lighting reaches the inner half of the border;
                         // keep the persistent selection outline above that tint.
-                        paint.Color = style.SelectedOutline;
+                        paint.Color = style.Colors.KeySelectedOutline;
                         paint.Style = SKPaintStyle.Stroke; paint.StrokeWidth = 1.2f;
                         canvas.DrawPath(path, paint); paint.Style = SKPaintStyle.Fill;
                     }
@@ -115,7 +115,7 @@ internal sealed partial class AnimatedKeyboardRenderer
             }
             if (hover > .001 && !selected)
             {
-                paint.Color = style.HoverOutline.WithAlpha((byte)(230 * hover)); paint.Style = SKPaintStyle.Stroke; paint.StrokeWidth = 1.2f;
+                paint.Color = style.Colors.KeyHoverOutline.WithAlpha((byte)(230 * hover)); paint.Style = SKPaintStyle.Stroke; paint.StrokeWidth = 1.2f;
                 canvas.DrawPath(path, paint); paint.Style = SKPaintStyle.Fill;
             }
         }

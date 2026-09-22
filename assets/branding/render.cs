@@ -1,15 +1,19 @@
 #:property TargetFramework=net10.0-windows
+#:property AssemblyName=GoBoard.Branding
 #:project ../../src/GoBoard.Presentation.Skia/GoBoard.Presentation.Skia.csproj
 
 using System.Globalization;
 using System.Xml.Linq;
 using SkiaSharp;
+using GoBoard.Presentation.Skia;
 
 // Run from the repository root: dotnet run --file assets/branding/render.cs --no-cache
 // This logo deliberately uses only flat, filled or stroked SVG rectangles. Read their
 // geometry from the SVG so it remains the single source for every export.
 var directory = Path.GetFullPath("assets/branding");
-var svg = XDocument.Load(Path.Combine(directory, "goboard-logo.svg")).Root!;
+var svgPath = Path.Combine(directory, "goboard-logo.svg");
+var document = XDocument.Load(svgPath, LoadOptions.PreserveWhitespace);
+var svg = document.Root!;
 XNamespace ns = "http://www.w3.org/2000/svg";
 if (svg.Name != ns + "svg" || (string?)svg.Attribute("viewBox") != "0 0 1254 1254")
     throw new InvalidDataException("Expected the logo's 1254-square SVG viewBox.");
@@ -18,6 +22,20 @@ string[] attributes = ["id", "x", "y", "width", "height", "rx", "fill", "stroke"
 foreach (var shape in shapes)
     if (shape.Name != ns + "rect" || shape.Attributes().Any(a => !attributes.Contains(a.Name.ToString())))
         throw new InvalidDataException("The branding exporter supports only rectangles with id/x/y/width/height/rx/fill/stroke/stroke-width.");
+
+// Geometry is edited in the SVG; colors come from the same theme mapping as
+// the app. Keep the checked-in SVG usable directly by README/browser consumers.
+var colors = UiColors.Current;
+static string Hex(SKColor color) => $"#{color.Red:X2}{color.Green:X2}{color.Blue:X2}";
+svg.SetAttributeValue("fill", Hex(colors.Logo));
+foreach (var shape in shapes)
+{
+    if ((string?)shape.Attribute("id") == "background")
+        shape.SetAttributeValue("fill", Hex(colors.LogoBackground));
+    if (shape.Attribute("stroke") != null)
+        shape.SetAttributeValue("stroke", Hex(colors.Logo));
+}
+File.WriteAllText(svgPath, document.ToString(SaveOptions.DisableFormatting).Replace("\r\n", "\n"));
 
 byte[] Render(int size, bool transparent = false)
 {
