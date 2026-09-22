@@ -150,9 +150,9 @@ To add a color preset, define another `ColorTheme` and resolve it through `UiCol
 
 Steam Soft follows `artifacts/keyboard-mockups/06-spacing-experiment-2u-v13.svg`: a plain #101820 background, three-stop key and edge gradients, subtle shadows, muted Shift legends, cyan AltGr and interaction accents. The existing cropped 4-unit margin and 2-unit key spacing are retained. The mockup's illustrated modifier states are live states, not part of the theme. Both Ctrl aliases reflect the same state in production.
 
-SteamVR Dashboard blue (`#1A9FFF`) is reserved for active grab/resize handles, desktop shortcut drag strips, and outlines on selected keyboard keys (armed/locked modifiers and enabled Caps/Num/Scroll Lock). The selected outline stays dark blue while hovered. Hover outlines and trails on other keys, labels, button fills, modifier indicators, and other effects use light cyan (`#66C0F4`).
+SteamVR Dashboard blue (`#1A9FFF`) is used for the logo, active grab/resize handles, desktop shortcut drag strips, and persistent selected-key outlines (locked modifiers and enabled Caps/Num/Scroll Lock). Steam Flat also uses it for one-shot modifiers. Those outlines stay dark blue while hovered. Steam Soft one-shot modifiers instead use the original thin, muted `KeyArmedOutline` (`#315B73`), with a light cyan hover outline and normal pointer lighting. The selected Steam Soft preview in Settings uses that same one-shot surface. Hover outlines and trails, labels, button fills, modifier indicators, and other effects use light cyan (`#66C0F4`).
 
-`BoardThemes` defines persisted IDs and labels; `KeyboardTheme` holds Skia visual tokens. Themes do not own key layouts, hit targets, or input behavior. To add a preset, add its stable ID, visual tokens, and shared settings action/control. No extra assets or packages are needed at runtime.
+`BoardThemes` defines persisted style IDs and labels; `KeyboardStyle` holds shading and typography choices, with purpose colors supplied by `UiColors`. Styles do not own key layouts, hit targets, or input behavior. To add a style preset, add its stable ID, visual tokens, and shared settings action/control. No extra assets or packages are needed at runtime.
 
 Render a theme without changing saved settings or sending input:
 

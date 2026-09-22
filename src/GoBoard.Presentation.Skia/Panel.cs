@@ -74,9 +74,9 @@ internal static class Panel
             var toggleOn = ToggleOn(key, keyboard, caps, scrollLock);
             var selected = mode != ModifierMode.Idle || toggleOn;
             if (cacheSurfaces && style.ShadowBlur > 0)
-                KeySurfaceCache.Draw(canvas, key, style, hover, filled, selected);
+                KeySurfaceCache.Draw(canvas, key, style, hover, filled, selected, armed);
             else
-                DrawKeySurface(canvas, key, style, hover, filled, selected);
+                DrawKeySurface(canvas, key, style, hover, filled, selected, armed);
             var foreground = filled ? Ink : armed || toggleOn ? Accent : style.Colors.KeyLabel;
             paint.Color = foreground;
             if (omitPrintableLegends && key.Printable) continue;
@@ -226,7 +226,7 @@ internal static class Panel
         ToggleOn(key, keyboard, caps, scrollLock);
 
     // Also used by the uncached rendering path to verify cache fidelity.
-    internal static void DrawKeySurface(SKCanvas canvas, KeyboardKey key, KeyboardStyle style, bool hover, bool filled, bool selected)
+    internal static void DrawKeySurface(SKCanvas canvas, KeyboardKey key, KeyboardStyle style, bool hover, bool filled, bool selected, bool armed = false)
     {
         var b = key.Bounds;
         using var paint = new SKPaint { IsAntialias = true };
@@ -247,11 +247,13 @@ internal static class Panel
         paint.Shader = null;
         if (style.KeyEdges || selected || hover && !filled)
         {
+            var subtleArmed = armed && style.SubtleArmedOutline && !filled;
             using var edge = SKShader.CreateLinearGradient(new SKPoint(0, b.Y), new SKPoint(0, b.Y + b.Height),
                 style.Colors.EdgeStops, style.EdgePositions, SKShaderTileMode.Clamp);
             paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = selected || (hover && !filled) || !style.KeyEdges ? 1.2f : .6f;
-            paint.Color = selected ? style.Colors.KeySelectedOutline : hover && !filled ? style.Colors.KeyHoverOutline : SKColors.White;
+            paint.StrokeWidth = subtleArmed && !hover ? .6f : selected || (hover && !filled) || !style.KeyEdges ? 1.2f : .6f;
+            paint.Color = subtleArmed ? hover ? style.Colors.KeyHoverOutline : style.Colors.KeyArmedOutline :
+                selected ? style.Colors.KeySelectedOutline : hover && !filled ? style.Colors.KeyHoverOutline : SKColors.White;
             paint.Shader = selected || (hover && !filled) ? null : edge;
             DrawKey(canvas, key, paint);
         }

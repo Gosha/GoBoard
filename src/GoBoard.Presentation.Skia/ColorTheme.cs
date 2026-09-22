@@ -30,6 +30,7 @@ internal sealed record ColorTheme
     public required SKColor Neutral475 { get; init; }
     public required SKColor Neutral500 { get; init; }
     public required SKColor Neutral525 { get; init; }
+    public required SKColor Neutral537 { get; init; }
     public required SKColor Neutral550 { get; init; }
     public required SKColor Neutral575 { get; init; }
     public required SKColor Neutral600 { get; init; }
@@ -78,6 +79,7 @@ internal static class ColorThemes
         Neutral475 = SKColor.Parse("#1D3545"),
         Neutral500 = SKColor.Parse("#354754"),
         Neutral525 = SKColor.Parse("#344B5C"),
+        Neutral537 = SKColor.Parse("#315B73"),
         Neutral550 = SKColor.Parse("#667882"),
         Neutral575 = SKColor.Parse("#707A86"),
         Neutral600 = SKColor.Parse("#81909E"),
@@ -98,4 +100,3 @@ internal static class ColorThemes
         Cream = SKColor.Parse("#F1D9B8"),
     };
 }
-

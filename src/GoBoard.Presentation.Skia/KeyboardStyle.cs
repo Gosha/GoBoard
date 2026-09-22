@@ -11,6 +11,7 @@ internal sealed record KeyboardStyle
     public float[] EdgePositions { get; init; } = [0, .35f, 1];
     public bool PanelFrame { get; init; }
     public bool KeyEdges { get; init; } = true;
+    public bool SubtleArmedOutline { get; init; } = true;
     public float ShadowBlur { get; init; } = .9f;
     public float ShadowOffset { get; init; } = 1.3f;
     public float SpecialSize { get; init; } = 11.5f;
@@ -19,7 +20,7 @@ internal sealed record KeyboardStyle
     public static KeyboardStyle Flat { get; } = new()
     {
         Colors = UiColors.Current.FlatKeyboard, FacePositions = [0, 1],
-        PanelFrame = true, KeyEdges = false,
+        PanelFrame = true, KeyEdges = false, SubtleArmedOutline = false,
         ShadowBlur = 0, ShadowOffset = 0, SpecialSize = 12
     };
 

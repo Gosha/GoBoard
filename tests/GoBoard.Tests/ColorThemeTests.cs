@@ -39,15 +39,35 @@ public sealed class ColorThemeTests
             Assert.InRange(Math.Abs(actual[i] - expected[i]), 0, 2);
     }
 
-    private static SKBitmap Render(KeyboardStyle style, bool selected, bool cached)
+    [Theory]
+    [InlineData(BoardThemes.SteamSoft, false)]
+    [InlineData(BoardThemes.SteamSoft, true)]
+    [InlineData(BoardThemes.SteamFlat, false)]
+    [InlineData(BoardThemes.SteamFlat, true)]
+    public void OneShotAndPersistentSelectionUseDistinctSoftSurfaces(string styleId, bool hovered)
+    {
+        var style = KeyboardStyle.Resolve(styleId);
+        using var selected = Render(style, true, cached: true, hover: hovered);
+        using var armed = Render(style, true, cached: true, armed: true, hover: hovered);
+        using var direct = Render(style, true, cached: false, armed: true, hover: hovered);
+        using var selectedAgain = Render(style, true, cached: true, hover: hovered);
+        Assert.Equal(selected.Bytes, selectedAgain.Bytes);
+        Assert.Equal(styleId == BoardThemes.SteamFlat, selected.Bytes.SequenceEqual(armed.Bytes));
+        var expected = direct.Bytes;
+        var actual = armed.Bytes;
+        for (var i = 0; i < actual.Length; i++)
+            Assert.InRange(Math.Abs(actual[i] - expected[i]), 0, 2);
+    }
+
+    private static SKBitmap Render(KeyboardStyle style, bool selected, bool cached, bool armed = false, bool hover = true)
     {
         var bitmap = new SKBitmap(252, 192, SKColorType.Rgba8888, SKAlphaType.Premul);
         using var canvas = new SKCanvas(bitmap);
         canvas.Clear(SKColors.Transparent);
         canvas.Scale(Panel.RasterScale);
         var key = new KeyboardKey("Test", "", 0, new(12, 12, 60, 40));
-        if (cached) KeySurfaceCache.Draw(canvas, key, style, hover: true, filled: false, selected: selected);
-        else Panel.DrawKeySurface(canvas, key, style, hover: true, filled: false, selected: selected);
+        if (cached) KeySurfaceCache.Draw(canvas, key, style, hover: hover, filled: false, selected: selected, armed: armed);
+        else Panel.DrawKeySurface(canvas, key, style, hover: hover, filled: false, selected: selected, armed: armed);
         canvas.Flush();
         return bitmap;
     }

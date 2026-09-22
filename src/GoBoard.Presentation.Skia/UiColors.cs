@@ -40,6 +40,7 @@ internal sealed class UiColors(ColorTheme theme)
         KeyActiveFill = theme.AccentLight,
         KeyHoverOutline = theme.AccentLight,
         KeySelectedOutline = theme.AccentStrong,
+        KeyArmedOutline = theme.Neutral537,
         ModifierIndicator = theme.AccentLight,
         PointerEffect = theme.AccentLight,
         Notice = theme.Amber,
@@ -61,6 +62,7 @@ internal sealed class UiColors(ColorTheme theme)
         KeyActiveFill = theme.AccentLight,
         KeyHoverOutline = theme.AccentLight,
         KeySelectedOutline = theme.AccentStrong,
+        KeyArmedOutline = theme.AccentStrong,
         ModifierIndicator = theme.AccentLight,
         PointerEffect = theme.AccentLight,
         Notice = theme.Amber,
@@ -84,6 +86,7 @@ internal sealed record KeyboardColors
     public required SKColor KeyActiveFill { get; init; }
     public required SKColor KeyHoverOutline { get; init; }
     public required SKColor KeySelectedOutline { get; init; }
+    public required SKColor KeyArmedOutline { get; init; }
     public required SKColor ModifierIndicator { get; init; }
     public required SKColor PointerEffect { get; init; }
     public required SKColor Notice { get; init; }

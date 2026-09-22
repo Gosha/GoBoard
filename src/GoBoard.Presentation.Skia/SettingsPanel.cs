@@ -162,7 +162,7 @@ internal static class SettingsPanel
                 canvas.Scale(2);
                 Panel.DrawKeySurface(canvas, new KeyboardKey("ThemePreview", "", 0,
                     new(b.X / 2, b.Y / 2, b.Width / 2, b.Height / 2)),
-                    KeyboardStyle.Soft, hovered, filled: false, selected: selected);
+                    KeyboardStyle.Soft, hovered, filled: false, selected: selected, armed: selected);
                 canvas.Restore();
                 if (selected)
                 {
