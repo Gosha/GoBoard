@@ -132,7 +132,12 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
                 outputBaseline = RenderImage.Create(output, context, target =>
                 {
                     target.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Colors.PanelBackground : SKColors.Transparent);
-                    target.DrawImage(baseline, bounds, new SKSamplingOptions(SKFilterMode.Linear));
+                    // Average source detail when reducing the VR-sized image to
+                    // desktop pixels; bilinear sampling alone drops thin glyph strokes.
+                    var sampling = bounds.Width < baseline.Width || bounds.Height < baseline.Height
+                        ? new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)
+                        : new SKSamplingOptions(SKFilterMode.Linear);
+                    target.DrawImage(baseline, bounds, sampling);
                 });
             }
             cachedOutput = presentation;

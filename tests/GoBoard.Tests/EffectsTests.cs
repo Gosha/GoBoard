@@ -117,7 +117,7 @@ public sealed class EffectsTests
         using (var image = SKImage.FromBitmap(source))
         {
             canvas.Clear(KeyboardStyle.Soft.Colors.PanelBackground);
-            canvas.DrawImage(image, new SKRect(0, 0, width, height), new SKSamplingOptions(SKFilterMode.Linear));
+            canvas.DrawImage(image, new SKRect(0, 0, width, height), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
         }
         Assert.Equal(output, actual.Info);
         Assert.Equal(expected.Bytes, actual.Bytes);

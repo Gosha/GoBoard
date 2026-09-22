@@ -44,8 +44,35 @@ public sealed class SelectedSurfaceTests
         using var numpad = MainKeyboardControlRenderer.Render(KeyboardAction.ToggleNumpad,
             enabled: true, hovered: hover, pressed: false, BoardThemes.SteamSoft);
         using var shortcuts = ShortcutLauncherRenderer.Render(true, hover, BoardThemes.SteamSoft);
-        AssertArmedBorder(numpad, new(0, 0, MainKeyboardControls.Size, MainKeyboardControls.Size), hover);
+        AssertArmedBorder(numpad, new(2, 2, MainKeyboardControls.Size - 4, MainKeyboardControls.Size - 4), hover);
         AssertArmedBorder(shortcuts, new(2, 2, ProgrammableKeys.ToggleSize - 4, ProgrammableKeys.ToggleSize - 4), hover);
+    }
+
+    [Theory]
+    [InlineData(BoardThemes.SteamSoft)]
+    [InlineData(BoardThemes.SteamFlat)]
+    public void NumpadButtonKeepsItsSizeAndBorderMarginAcrossStates(string theme)
+    {
+        using var idle = MainKeyboardControlRenderer.Render(KeyboardAction.ToggleNumpad, false, false, false, theme);
+        var idleEdges = Edges(idle);
+        foreach (var enabled in new[] { false, true })
+        foreach (var hovered in new[] { false, true })
+        foreach (var pressed in new[] { false, true })
+        {
+            using var button = MainKeyboardControlRenderer.Render(KeyboardAction.ToggleNumpad, enabled, hovered, pressed, theme);
+            var edges = Edges(button);
+            // Border widths vary by state, but the tile must not grow or clip.
+            Assert.InRange(Math.Abs(edges.Left - idleEdges.Left), 0, 2);
+            Assert.InRange(Math.Abs(edges.Right - idleEdges.Right), 0, 2);
+            Assert.True(edges.Left >= 3 && edges.Right < button.Width - 3);
+        }
+
+        static (int Left, int Right) Edges(SKBitmap bitmap)
+        {
+            var row = Enumerable.Range(0, bitmap.Width)
+                .Where(x => bitmap.GetPixel(x, bitmap.Height / 2).Alpha >= 200).ToArray();
+            return (row.First(), row.Last());
+        }
     }
 
     private static void AssertArmedBorder(SKBitmap actual, KeyBounds bounds, bool hover)
