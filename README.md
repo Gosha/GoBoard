@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/branding/goboard-logo.png" alt="GoBoard logo" width="160">
+  <img src="assets/branding/goboard-logo.svg" alt="GoBoard logo" width="160">
 </p>
 
 # GoBoard

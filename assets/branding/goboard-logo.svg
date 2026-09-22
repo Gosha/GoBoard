@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1254" height="1254" viewBox="0 0 1254 1254" fill="#1A9FFF" role="img" aria-labelledby="title description">
+  <title id="title">GoBoard</title>
+  <desc id="description">A keyboard in SteamVR Dashboard blue on a dark background.</desc>
+  <rect width="1254" height="1254" fill="#0C171F" />
+  <rect x="82" y="376" width="1090" height="501" rx="80" />
+  <rect x="130" y="424" width="994" height="405" rx="32" fill="#0C171F" />
+  <rect x="162" y="457" width="138" height="106" rx="20" />
+  <rect x="320" y="457" width="138" height="106" rx="20" />
+  <rect x="479" y="457" width="138" height="106" rx="20" />
+  <rect x="637" y="457" width="138" height="106" rx="20" />
+  <rect x="796" y="457" width="138" height="106" rx="20" />
+  <rect x="954" y="457" width="138" height="106" rx="20" />
+  <rect x="182" y="585" width="134" height="104" rx="20" />
+  <rect x="333" y="585" width="134" height="104" rx="20" />
+  <rect x="484" y="585" width="134" height="104" rx="20" />
+  <rect x="636" y="585" width="134" height="104" rx="20" />
+  <rect x="787" y="585" width="134" height="104" rx="20" />
+  <rect x="938" y="585" width="134" height="104" rx="20" />
+  <rect x="162" y="711" width="106" height="88" rx="20" />
+  <rect x="289" y="711" width="676" height="88" rx="20" />
+  <rect x="986" y="711" width="106" height="88" rx="20" />
+</svg>
