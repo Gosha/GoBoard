@@ -53,7 +53,6 @@ byte[] Render(int size, bool transparent = false)
     return png.ToArray();
 }
 
-File.WriteAllBytes(Path.Combine(directory, "goboard-logo.png"), Render(1254));
 int[] sizes = [16, 20, 24, 32, 40, 48, 64, 128, 256];
 var frames = sizes.Select(size => Render(size)).ToArray();
 File.WriteAllBytes(Path.Combine(directory, "goboard-dashboard.png"), Render(256, transparent: true));
@@ -71,4 +70,4 @@ for (int i = 0; i < sizes.Length; i++)
     offset += frames[i].Length;
 }
 foreach (var frame in frames) writer.Write(frame);
-Console.WriteLine("Exported logo PNG, dashboard PNG, and nine Windows ICO frames from goboard-logo.svg.");
+Console.WriteLine("Exported dashboard PNG and nine Windows ICO frames from goboard-logo.svg.");
