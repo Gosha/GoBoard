@@ -74,9 +74,9 @@ internal static class Panel
             var toggleOn = ToggleOn(key, keyboard, caps, scrollLock);
             var selected = mode != ModifierMode.Idle || toggleOn;
             if (cacheSurfaces && style.ShadowBlur > 0)
-                KeySurfaceCache.Draw(canvas, key, style, hover, filled, selected, armed);
+                KeySurfaceCache.Draw(canvas, key, style, hover, filled, selected, armed || toggleOn);
             else
-                DrawKeySurface(canvas, key, style, hover, filled, selected, armed);
+                DrawKeySurface(canvas, key, style, hover, filled, selected, armed || toggleOn);
             var foreground = filled ? Ink : armed || toggleOn ? Accent : style.Colors.KeyLabel;
             paint.Color = foreground;
             if (omitPrintableLegends && key.Printable) continue;
@@ -223,6 +223,10 @@ internal static class Panel
 
     internal static bool IsSelected(KeyboardKey key, KeyboardState keyboard, bool caps, bool scrollLock) =>
         (key.IsModifier && (keyboard?.Mode(key.Scan) ?? ModifierMode.Idle) != ModifierMode.Idle) ||
+        ToggleOn(key, keyboard, caps, scrollLock);
+
+    internal static bool IsArmedSelection(KeyboardKey key, KeyboardState keyboard, bool caps, bool scrollLock) =>
+        (key.IsModifier && keyboard?.Mode(key.Scan) == ModifierMode.OneShot) ||
         ToggleOn(key, keyboard, caps, scrollLock);
 
     // Also used by the uncached rendering path to verify cache fidelity.

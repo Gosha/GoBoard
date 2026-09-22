@@ -17,7 +17,7 @@ internal static class MainKeyboardControlRenderer
         if (action == KeyboardAction.ToggleNumpad)
         {
             var inset = enabled ? 0 : 2;
-            Panel.DrawKeySurface(canvas, new("Numpad", "", 0, new(inset, inset, size - 2 * inset, size - 2 * inset)), style, hovered, pressed, enabled);
+            Panel.DrawKeySurface(canvas, new("Numpad", "", 0, new(inset, inset, size - 2 * inset, size - 2 * inset)), style, hovered, pressed, enabled, armed: enabled);
             paint.Color = pressed ? style.Colors.KeyLabelOnAccent : enabled ? style.Colors.KeyLabelAccent : style.Colors.KeyLabel;
             for (var row = 0; row < 3; row++)
             for (var col = 0; col < 3; col++)

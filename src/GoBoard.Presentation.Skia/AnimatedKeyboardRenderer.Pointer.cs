@@ -52,9 +52,9 @@ internal sealed partial class AnimatedKeyboardRenderer
             // Persistent modifier markers remain unambiguous: blue locked fill
             // and one-shot underline/outline come from the production renderer.
             var locked = key.IsModifier && keyboard.Mode(key.Scan) == ModifierMode.Locked;
-            var subtleArmed = style.SubtleArmedOutline && key.IsModifier && keyboard.Mode(key.Scan) == ModifierMode.OneShot;
-            // Soft one-shots participate in hover/edge lighting as before;
-            // persistent selections keep their strong outline above effects.
+            var subtleArmed = style.SubtleArmedOutline && Panel.IsArmedSelection(key, keyboard, caps, scrollLock);
+            // Soft armed modifiers and enabled toggles share hover/edge lighting;
+            // locked modifiers keep their strong outline above effects.
             var selected = Panel.IsSelected(key, keyboard, caps, scrollLock) && !subtleArmed;
             if (!locked)
             {
