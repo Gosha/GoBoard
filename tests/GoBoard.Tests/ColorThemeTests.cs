@@ -8,6 +8,34 @@ namespace GoBoard.Tests;
 public sealed class ColorThemeTests
 {
     [Theory]
+    [InlineData(BoardThemes.SteamSoft)]
+    [InlineData(BoardThemes.SteamFlat)]
+    public void EightBaseColorsAreEnoughToRenderAnIndependentPalette(string styleId)
+    {
+        // Define a complete theme without copying Steam Blue. Any leftover
+        // hardcoded blue in the derived surfaces will violate this grayscale check.
+        var colors = new UiColors(new ColorTheme
+        {
+            Id = "monochrome-test", Name = "Monochrome test",
+            Background = new(16, 16, 16), Surface = new(40, 40, 40),
+            Text = SKColors.White, TextOnAccent = SKColors.Black,
+            AccentLight = new(190, 190, 190), AccentStrong = new(110, 110, 110),
+            Warning = new(210, 210, 210), Error = new(230, 230, 230)
+        });
+        var style = KeyboardStyle.Resolve(styleId, colors);
+        foreach (var armed in new[] { false, true })
+        {
+            using var bitmap = Render(style, armed, cached: true, armed: armed, hover: false);
+            Assert.All(bitmap.Pixels, pixel =>
+            {
+                Assert.Equal(pixel.Red, pixel.Green);
+                Assert.Equal(pixel.Green, pixel.Blue);
+            });
+            Assert.Contains(bitmap.Pixels, pixel => pixel.Alpha == 255 && pixel.Red > 0);
+        }
+    }
+
+    [Theory]
     [InlineData(BoardThemes.SteamSoft, false)]
     [InlineData(BoardThemes.SteamSoft, true)]
     [InlineData(BoardThemes.SteamFlat, false)]

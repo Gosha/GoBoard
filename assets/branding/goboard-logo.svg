@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1254" height="1254" viewBox="0 0 1254 1254" fill="#1A9FFF" role="img" aria-labelledby="title description">
   <title id="title">GoBoard</title>
   <desc id="description">A SteamVR Dashboard blue keyboard on a dark background.</desc>
-  <rect id="background" width="1254" height="1254" fill="#0C171F" />
+  <rect id="background" width="1254" height="1254" fill="#0C151E" />
   <rect x="106" y="400" width="1042" height="453" rx="56" fill="none" stroke="#1A9FFF" stroke-width="48" />
   <rect x="162" y="457" width="138" height="106" rx="20" />
   <rect x="320" y="457" width="138" height="106" rx="20" />
