@@ -22,7 +22,7 @@ internal static class ResizeHandleRenderer
             StrokeWidth = state == 0 ? 4 : 4.5f,
             Color = state switch
             {
-                2 => new SKColor(0x66, 0xc0, 0xf4),
+                2 => BrandColors.Accent,
                 1 => SKColors.White,
                 _ => new SKColor(112, 122, 134)
             }

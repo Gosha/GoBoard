@@ -11,7 +11,7 @@ internal sealed record KeyboardTheme
     public SKColor Border { get; init; } = SKColor.Parse("#233340");
     public SKColor Text { get; init; } = SKColor.Parse("#DAE2E8");
     public SKColor Secondary { get; init; } = SKColor.Parse("#BECBD5");
-    public SKColor Accent { get; init; } = SKColor.Parse("#66C0F4");
+    public SKColor Accent { get; init; } = BrandColors.Accent;
     public SKColor Ink { get; init; } = SKColor.Parse("#0E202C");
     public SKColor Notice { get; init; } = SKColor.Parse("#EDC694");
     public SKColor ArmedBorder { get; init; } = SKColor.Parse("#315B73");
@@ -34,7 +34,7 @@ internal sealed record KeyboardTheme
         Secondary = SKColor.Parse("#F1F6FC"), Ink = SKColor.Parse("#091923"),
         FaceStops = [SKColor.Parse("#14202A"), SKColor.Parse("#14202A")], FacePositions = [0, 1],
         ArmedStops = [SKColor.Parse("#172D3C"), SKColor.Parse("#172D3C")],
-        ArmedBorder = SKColor.Parse("#66C0F4"), PanelFrame = true, KeyEdges = false,
+        ArmedBorder = BrandColors.Accent, PanelFrame = true, KeyEdges = false,
         ShadowBlur = 0, ShadowOffset = 0, SpecialSize = 12
     };
 

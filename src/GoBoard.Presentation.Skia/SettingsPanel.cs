@@ -24,7 +24,7 @@ internal static class SettingsPanel
         using var small = new SKFont(face, 19);
         using var version = new SKFont(face, 16);
         var text = new SKColor(0xf1, 0xf6, 0xfc);
-        var accent = new SKColor(0x66, 0xc0, 0xf4);
+        var accent = BrandColors.Accent;
         void Text(string value, float x, float y, SKFont font, SKColor color)
         {
             paint.Color = color;

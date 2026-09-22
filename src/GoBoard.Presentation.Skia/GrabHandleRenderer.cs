@@ -17,7 +17,7 @@ internal static class GrabHandleRenderer
         using var paint = new SKPaint { IsAntialias = true };
         paint.Color = state switch
         {
-            2 => new SKColor(0x66, 0xc0, 0xf4),
+            2 => BrandColors.Accent,
             1 => new SKColor(241, 246, 252),
             _ => new SKColor(112, 122, 134)
         };

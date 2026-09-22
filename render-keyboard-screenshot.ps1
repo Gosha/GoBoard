@@ -38,7 +38,7 @@ try {
 
         $graphics.CompositingMode = [System.Drawing.Drawing2D.CompositingMode]::SourceOver
         $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-        $divider = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(210, 102, 192, 244), 3)
+        $divider = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(210, 26, 159, 255), 3)
         $graphics.DrawLine($divider, $topX, 0, $bottomX, $soft.Height)
         $outputPath = Join-Path $PSScriptRoot 'docs\images\goboard-keyboard.png'
         $combined.Save($outputPath, [System.Drawing.Imaging.ImageFormat]::Png)
