@@ -106,7 +106,7 @@ internal sealed partial class AnimatedKeyboardRenderer
             }
             if (hover > .001 && !locked)
             {
-                paint.Color = accent.WithAlpha((byte)(230 * hover)); paint.Style = SKPaintStyle.Stroke; paint.StrokeWidth = 1.2f;
+                paint.Color = style.HoverOutline.WithAlpha((byte)(230 * hover)); paint.Style = SKPaintStyle.Stroke; paint.StrokeWidth = 1.2f;
                 canvas.DrawPath(path, paint); paint.Style = SKPaintStyle.Fill;
             }
         }

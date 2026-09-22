@@ -243,7 +243,7 @@ internal static class Panel
                 style.EdgeStops, style.EdgePositions, SKShaderTileMode.Clamp);
             paint.Style = SKPaintStyle.Stroke;
             paint.StrokeWidth = (hover && !filled) || !style.KeyEdges ? 1.2f : .6f;
-            paint.Color = hover && !filled ? style.Accent : armed ? style.ArmedBorder : SKColors.White;
+            paint.Color = hover && !filled ? style.HoverOutline : armed ? style.ArmedBorder : SKColors.White;
             paint.Shader = (!hover && !armed) || filled ? edge : null;
             DrawKey(canvas, key, paint);
         }

@@ -178,7 +178,7 @@ public sealed class KeyAudioTests
                 foreach (var button in buttons)
                 {
                     var selected = SettingsControls.SoundFor(button.Action) == KeySounds.Canonical(sound);
-                    Assert.Equal(selected ? new SKColor(0x1a, 0x9f, 0xff) : new SKColor(0x1b, 0x2c, 0x39),
+                    Assert.Equal(selected ? new SKColor(0x66, 0xc0, 0xf4) : new SKColor(0x1b, 0x2c, 0x39),
                         bitmap.GetPixel((int)(button.Bounds.X + 12) * 2, (int)(button.Bounds.Y + 12) * 2));
                 }
                 if (output == null) continue;

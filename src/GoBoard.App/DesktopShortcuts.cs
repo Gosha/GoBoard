@@ -49,13 +49,13 @@ internal sealed class DesktopShortcuts : IDisposable
             var area = DragAtBottom ? new Rectangle(0, 0, Width, Height - DragHeight) : new Rectangle(0, DragHeight, Width, Height - DragHeight);
             frame?.Draw(e.Graphics, area);
             var y = DragAtBottom ? Height - DragHeight / 2 : DragHeight / 2;
-            var color = StatusError ? Color.FromArgb(255, 176, 160) : Color.FromArgb(unchecked((int)BrandColors.AccentArgb));
+            var color = StatusError ? Color.FromArgb(255, 176, 160) : Color.FromArgb(102, 192, 244);
             if (Status != null)
                 TextRenderer.DrawText(e.Graphics, Status, Font, new Rectangle(2, y - DragHeight / 2, Width - 4, DragHeight), color,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis);
             else
             {
-                using var pen = new Pen(color, 2);
+                using var pen = new Pen(Color.FromArgb(unchecked((int)InteractionColors.DashboardBlueArgb)), 2);
                 e.Graphics.DrawLine(pen, Width / 2 - 12, y, Width / 2 + 12, y);
             }
         }

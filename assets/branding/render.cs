@@ -5,7 +5,7 @@ using System.Globalization;
 using System.Xml.Linq;
 using SkiaSharp;
 
-// Run from the repository root: dotnet run --file assets/branding/render.cs
+// Run from the repository root: dotnet run --file assets/branding/render.cs --no-cache
 // This logo deliberately uses only flat, filled SVG rectangles. Read their
 // geometry from the SVG so it remains the single source for every export.
 var directory = Path.GetFullPath("assets/branding");
