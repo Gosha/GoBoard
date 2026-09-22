@@ -9,18 +9,19 @@ namespace GoBoard.Presentation.Skia;
 internal static class KeySurfaceCache
 {
     private readonly record struct SurfaceKey(KeyboardTheme Theme, float Width, float Height,
-        float CutoutWidth, float CutoutTop, bool Hover, bool Filled, bool Armed);
+        float CutoutWidth, float CutoutTop, bool Hover, bool Filled, bool Selected);
     private const int Padding = 6; // Covers the 0.9-unit blur and 1.3-unit offset.
     private const int Capacity = 256;
     private static readonly object Gate = new();
     private static readonly Dictionary<SurfaceKey, SKImage> Images = new();
 
-    public static void Draw(SKCanvas canvas, KeyboardKey key, KeyboardTheme theme, bool hover, bool filled, bool armed)
+    public static void Draw(SKCanvas canvas, KeyboardKey key, KeyboardTheme theme, bool hover, bool filled, bool selected)
     {
         var b = key.Bounds;
-        // A filled face has the same appearance regardless of hover/armed state.
+        // Selected outlines remain visible on filled locked modifiers. Hover
+        // cannot replace their outline, so it does not need a separate cache entry.
         var id = new SurfaceKey(theme, b.Width, b.Height, key.CutoutWidth, key.CutoutTop,
-            !filled && hover, filled, !filled && armed);
+            !filled && !selected && hover, filled, selected);
         lock (Gate)
         {
             if (!Images.TryGetValue(id, out var image))
@@ -38,7 +39,7 @@ internal static class KeySurfaceCache
                 target.Clear(SKColors.Transparent);
                 target.Scale(Panel.RasterScale);
                 var local = key with { Bounds = b with { X = Padding, Y = Padding } };
-                Panel.DrawKeySurface(target, local, theme, id.Hover, id.Filled, id.Armed);
+                Panel.DrawKeySurface(target, local, theme, id.Hover, id.Filled, id.Selected);
                 target.Flush();
                 bitmap.SetImmutable();
                 image = SKImage.FromBitmap(bitmap);

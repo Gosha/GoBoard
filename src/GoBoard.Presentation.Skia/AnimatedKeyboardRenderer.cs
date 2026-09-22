@@ -146,7 +146,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
         canvas.Scale(bounds.Width / keyboard.Width, bounds.Height / keyboard.Height);
         if (surfaces != null) transitions.Draw(canvas, baseline, surfaces, keyboard, style, now, filledPress: !options.PressFlash);
         if (options.PointerEnabled)
-            foreach (var p in pointers.Values) DrawPointer(canvas, keyboard, p.Effects, options, now);
+            foreach (var p in pointers.Values) DrawPointer(canvas, keyboard, p.Effects, options, now, caps, scroll);
         drawn = signature;
         drawnOutput = presentation;
         return true;

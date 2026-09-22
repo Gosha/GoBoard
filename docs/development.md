@@ -146,7 +146,7 @@ Theme selection is shared by desktop and VR and saved as a stable `Theme` ID in 
 
 Steam Soft follows `artifacts/keyboard-mockups/06-spacing-experiment-2u-v13.svg`: a plain #101820 background, three-stop key and edge gradients, subtle shadows, muted Shift legends, cyan AltGr and interaction accents. The existing cropped 4-unit margin and 2-unit key spacing are retained. The mockup's illustrated modifier states are live states, not part of the theme. Both Ctrl aliases reflect the same state in production.
 
-SteamVR Dashboard blue (`#1A9FFF`) is reserved for active grab/resize handles, desktop shortcut drag strips, and keyboard hover outlines (including animated hover trails). Labels, button fills, modifier indicators, and other effects retain the light cyan accent (`#66C0F4`).
+SteamVR Dashboard blue (`#1A9FFF`) is reserved for active grab/resize handles, desktop shortcut drag strips, and outlines on selected keyboard keys (armed/locked modifiers and enabled Caps/Num/Scroll Lock). The selected outline stays dark blue while hovered. Hover outlines and trails on other keys, labels, button fills, modifier indicators, and other effects use light cyan (`#66C0F4`).
 
 `BoardThemes` defines persisted IDs and labels; `KeyboardTheme` holds Skia visual tokens. Themes do not own key layouts, hit targets, or input behavior. To add a preset, add its stable ID, visual tokens, and shared settings action/control. No extra assets or packages are needed at runtime.
 

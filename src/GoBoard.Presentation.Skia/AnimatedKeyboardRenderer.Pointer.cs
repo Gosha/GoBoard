@@ -26,7 +26,7 @@ internal sealed partial class AnimatedKeyboardRenderer
     }
 
 
-    private void DrawPointer(SKCanvas canvas, KeyboardState keyboard, PointerEffects effects, EffectSettings options, double now)
+    private void DrawPointer(SKCanvas canvas, KeyboardState keyboard, PointerEffects effects, EffectSettings options, double now, bool caps, bool scrollLock)
     {
         using var paint = new SKPaint { IsAntialias = true };
         var accent = style.Accent;
@@ -52,6 +52,7 @@ internal sealed partial class AnimatedKeyboardRenderer
             // Persistent modifier markers remain unambiguous: blue locked fill
             // and one-shot underline/outline come from the production renderer.
             var locked = key.IsModifier && keyboard.Mode(key.Scan) == ModifierMode.Locked;
+            var selected = Panel.IsSelected(key, keyboard, caps, scrollLock);
             if (!locked)
             {
                 var hasPulse = false;
@@ -96,15 +97,23 @@ internal sealed partial class AnimatedKeyboardRenderer
                         paint.Color = accent.WithAlpha((byte)(55 * strength)); canvas.DrawPath(path, paint);
                     }
                     canvas.Restore();
+                    if (selected)
+                    {
+                        // Face lighting reaches the inner half of the border;
+                        // keep the persistent selection outline above that tint.
+                        paint.Color = style.SelectedOutline;
+                        paint.Style = SKPaintStyle.Stroke; paint.StrokeWidth = 1.2f;
+                        canvas.DrawPath(path, paint); paint.Style = SKPaintStyle.Fill;
+                    }
                 }
-                if (edgeLight != null && nearLight)
+                if (edgeLight != null && nearLight && !selected)
                 {
                     paint.Color = SKColors.White;
                     paint.Shader = edgeLight; paint.Style = SKPaintStyle.Stroke; paint.StrokeWidth = 1;
                     canvas.DrawPath(path, paint); paint.Shader = null; paint.Style = SKPaintStyle.Fill;
                 }
             }
-            if (hover > .001 && !locked)
+            if (hover > .001 && !selected)
             {
                 paint.Color = style.HoverOutline.WithAlpha((byte)(230 * hover)); paint.Style = SKPaintStyle.Stroke; paint.StrokeWidth = 1.2f;
                 canvas.DrawPath(path, paint); paint.Style = SKPaintStyle.Fill;

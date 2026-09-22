@@ -71,12 +71,12 @@ internal static class Panel
             var mode = key.IsModifier ? keyboard?.Mode(key.Scan) ?? ModifierMode.Idle : ModifierMode.Idle;
             var filled = mode == ModifierMode.Locked || (!suppressPressed && !key.IsModifier && keyboard?.Pressed(key) == true);
             var armed = mode == ModifierMode.OneShot;
-            var toggleOn = (key.Id == "Caps" && caps) || (key.Id == "ScrollLock" && scrollLock) ||
-                (key.Id == "NumLock" && keyboard?.NumLock == true);
+            var toggleOn = ToggleOn(key, keyboard, caps, scrollLock);
+            var selected = mode != ModifierMode.Idle || toggleOn;
             if (cacheSurfaces && style.ShadowBlur > 0)
-                KeySurfaceCache.Draw(canvas, key, style, hover, filled, armed || toggleOn);
+                KeySurfaceCache.Draw(canvas, key, style, hover, filled, selected);
             else
-                DrawKeySurface(canvas, key, style, hover, filled, armed || toggleOn);
+                DrawKeySurface(canvas, key, style, hover, filled, selected);
             var foreground = filled ? Ink : armed || toggleOn ? Accent : style.Text;
             paint.Color = foreground;
             if (omitPrintableLegends && key.Printable) continue;
@@ -217,8 +217,16 @@ internal static class Panel
     private static void Center(SKCanvas canvas, string text, float x, float y, SKFont font, SKPaint paint)
         => canvas.DrawText(text, x, y - (font.Metrics.Ascent + font.Metrics.Descent) / 2, SKTextAlign.Center, font, paint);
 
+    private static bool ToggleOn(KeyboardKey key, KeyboardState keyboard, bool caps, bool scrollLock) =>
+        (key.Id == "Caps" && caps) || (key.Id == "ScrollLock" && scrollLock) ||
+        (key.Id == "NumLock" && keyboard?.NumLock == true);
+
+    internal static bool IsSelected(KeyboardKey key, KeyboardState keyboard, bool caps, bool scrollLock) =>
+        (key.IsModifier && (keyboard?.Mode(key.Scan) ?? ModifierMode.Idle) != ModifierMode.Idle) ||
+        ToggleOn(key, keyboard, caps, scrollLock);
+
     // Also used by the uncached rendering path to verify cache fidelity.
-    internal static void DrawKeySurface(SKCanvas canvas, KeyboardKey key, KeyboardTheme style, bool hover, bool filled, bool armed)
+    internal static void DrawKeySurface(SKCanvas canvas, KeyboardKey key, KeyboardTheme style, bool hover, bool filled, bool selected)
     {
         var b = key.Bounds;
         using var paint = new SKPaint { IsAntialias = true };
@@ -232,19 +240,19 @@ internal static class Panel
             paint.ImageFilter = null;
         }
         using var fill = SKShader.CreateLinearGradient(new SKPoint(0, b.Y), new SKPoint(0, b.Y + b.Height),
-            armed ? style.ArmedStops : style.FaceStops, armed ? null : style.FacePositions, SKShaderTileMode.Clamp);
+            selected ? style.ArmedStops : style.FaceStops, selected ? null : style.FacePositions, SKShaderTileMode.Clamp);
         paint.Color = filled ? style.Accent : SKColors.White;
         paint.Shader = filled ? null : fill;
         DrawKey(canvas, key, paint);
         paint.Shader = null;
-        if (style.KeyEdges || (hover || armed) && !filled)
+        if (style.KeyEdges || selected || hover && !filled)
         {
             using var edge = SKShader.CreateLinearGradient(new SKPoint(0, b.Y), new SKPoint(0, b.Y + b.Height),
                 style.EdgeStops, style.EdgePositions, SKShaderTileMode.Clamp);
             paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = (hover && !filled) || !style.KeyEdges ? 1.2f : .6f;
-            paint.Color = hover && !filled ? style.HoverOutline : armed ? style.ArmedBorder : SKColors.White;
-            paint.Shader = (!hover && !armed) || filled ? edge : null;
+            paint.StrokeWidth = selected || (hover && !filled) || !style.KeyEdges ? 1.2f : .6f;
+            paint.Color = selected ? style.SelectedOutline : hover && !filled ? style.HoverOutline : SKColors.White;
+            paint.Shader = selected || (hover && !filled) ? null : edge;
             DrawKey(canvas, key, paint);
         }
     }
