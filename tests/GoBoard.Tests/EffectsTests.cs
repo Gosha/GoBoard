@@ -116,8 +116,8 @@ public sealed class EffectsTests
         using (var canvas = new SKCanvas(expected))
         using (var image = SKImage.FromBitmap(source))
         {
-            canvas.Clear(KeyboardTheme.Soft.Background);
-            canvas.DrawImage(image, new SKRect(0, 0, width, height), new SKSamplingOptions(SKFilterMode.Linear));
+            canvas.Clear(KeyboardStyle.Soft.Colors.PanelBackground);
+            canvas.DrawImage(image, new SKRect(0, 0, width, height), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
         }
         Assert.Equal(output, actual.Info);
         Assert.Equal(expected.Bytes, actual.Bytes);
@@ -231,7 +231,7 @@ public sealed class EffectsTests
         using var start = Render(r, k, e, 1, shift: true, theme: theme);
         using var middle = Render(r, k, e, 1.15, shift: true, theme: theme);
         using var target = Panel.Render(k, shift: true, theme: theme);
-        using var layers = CharacterLayers.Capture(k.Layout, true, false, false, KeyboardTheme.Resolve(theme));
+        using var layers = CharacterLayers.Capture(k.Layout, true, false, false, KeyboardStyle.Resolve(theme));
         foreach (var id in new[] { "2", "e" })
         {
             var key = layers.Keys[id]; var area = key.Layers[2].Bounds;
@@ -323,7 +323,7 @@ public sealed class EffectsTests
         var b = k.Layout.Keys.Single(k => k.Id == "a").Bounds;
         var x = (int)(b.X + 5) * 3; var y = (int)(b.Y + 5) * 3;
         Assert.NotEqual(initial.GetPixel(x, y), held.GetPixel(x, y));
-        Assert.NotEqual(KeyboardTheme.Soft.Accent, held.GetPixel(x, y));
+        Assert.NotEqual(KeyboardStyle.Soft.Colors.KeyLabelAccent, held.GetPixel(x, y));
         Assert.NotEqual(down.GetPixel(x, y), held.GetPixel(x, y));
         // Editing an effect while a key is held keeps the held feedback.
         using var edited = Render(r, k, e with { RippleMs = 500 }, 2.1);

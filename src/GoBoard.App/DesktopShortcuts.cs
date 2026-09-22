@@ -21,7 +21,7 @@ internal sealed class DesktopShortcuts : IDisposable
         {
             Text = title; FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false;
             StartPosition = FormStartPosition.Manual; AutoScaleMode = AutoScaleMode.None;
-            DoubleBuffered = true; BackColor = Color.FromArgb(12, 21, 30);
+            DoubleBuffered = true; BackColor = UiColors.Current.WindowBackground.ToDrawingColor();
             SetStyle(ControlStyles.Selectable, false);
             if (preview) Opacity = 0;
         }
@@ -49,13 +49,13 @@ internal sealed class DesktopShortcuts : IDisposable
             var area = DragAtBottom ? new Rectangle(0, 0, Width, Height - DragHeight) : new Rectangle(0, DragHeight, Width, Height - DragHeight);
             frame?.Draw(e.Graphics, area);
             var y = DragAtBottom ? Height - DragHeight / 2 : DragHeight / 2;
-            var color = StatusError ? Color.FromArgb(255, 176, 160) : Color.FromArgb(102, 192, 244);
+            var color = StatusError ? UiColors.Current.Error.ToDrawingColor() : UiColors.Current.TextAccent.ToDrawingColor();
             if (Status != null)
                 TextRenderer.DrawText(e.Graphics, Status, Font, new Rectangle(2, y - DragHeight / 2, Width - 4, DragHeight), color,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis);
             else
             {
-                using var pen = new Pen(color, 2);
+                using var pen = new Pen(UiColors.Current.ShortcutDragHandle.ToDrawingColor(), 2);
                 e.Graphics.DrawLine(pen, Width / 2 - 12, y, Width / 2 + 12, y);
             }
         }

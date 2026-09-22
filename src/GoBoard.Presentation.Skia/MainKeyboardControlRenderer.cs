@@ -12,13 +12,13 @@ internal static class MainKeyboardControlRenderer
         using var canvas = new SKCanvas(bitmap);
         canvas.Clear(SKColors.Transparent);
         canvas.Scale(Panel.RasterScale);
-        var style = KeyboardTheme.Resolve(theme);
+        var style = KeyboardStyle.Resolve(theme);
         using var paint = new SKPaint { IsAntialias = true };
         if (action == KeyboardAction.ToggleNumpad)
         {
-            var inset = enabled ? 0 : 2;
-            Panel.DrawKeySurface(canvas, new("Numpad", "", 0, new(inset, inset, size - 2 * inset, size - 2 * inset)), style, hovered, pressed, enabled);
-            paint.Color = pressed ? style.Ink : enabled ? style.Accent : style.Text;
+            const int inset = 2;
+            Panel.DrawKeySurface(canvas, new("Numpad", "", 0, new(inset, inset, size - 2 * inset, size - 2 * inset)), style, hovered, pressed, enabled, armed: enabled);
+            paint.Color = pressed ? style.Colors.KeyLabelOnAccent : enabled ? style.Colors.KeyLabelAccent : style.Colors.KeyLabel;
             for (var row = 0; row < 3; row++)
             for (var col = 0; col < 3; col++)
                 canvas.DrawRoundRect(new SKRect(12 + col * 8, 9 + row * 8, 16 + col * 8, 13 + row * 8), 1, 1, paint);
@@ -28,7 +28,7 @@ internal static class MainKeyboardControlRenderer
         else
         {
             // Only the arrow has alpha; never paint a tile, border or hover plate.
-            paint.Color = pressed ? style.Accent : hovered ? style.Text : style.Secondary;
+            paint.Color = pressed ? style.Colors.KeyLabelAccent : hovered ? style.Colors.KeyLabel : style.Colors.KeyLabelSecondary;
             paint.Style = SKPaintStyle.Stroke; paint.StrokeWidth = hovered || pressed ? 3 : 2.5f;
             paint.StrokeCap = SKStrokeCap.Round; paint.StrokeJoin = SKStrokeJoin.Round;
             canvas.DrawLine(22, 10, 22, 33, paint);

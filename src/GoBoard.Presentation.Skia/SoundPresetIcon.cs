@@ -15,8 +15,8 @@ internal static class SoundPresetIcon
         canvas.Translate(x, y);
         using var paint = new SKPaint { IsAntialias = true, StrokeWidth = 1.8f,
             StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
-        var ink = new SKColor(0x10, 0x23, 0x30);
-        paint.Color = ink;
+        var ink = SoundIconColors.Ink;
+        paint.Color = SoundIconColors.Background;
         canvas.DrawRoundRect(new SKRect(0, 0, Size, Size), 9, 9, paint);
 
         void Line(float x1, float y1, float x2, float y2, SKColor color)
@@ -34,7 +34,7 @@ internal static class SoundPresetIcon
         switch (sound)
         {
             case KeySound.SoftLowThud:
-                var lavender = new SKColor(0xc0, 0xb6, 0xed);
+                var lavender = SoundIconColors.LowThud;
                 paint.Color = lavender;
                 canvas.DrawCircle(20, 15, 5, paint);
                 paint.Style = SKPaintStyle.Stroke;
@@ -53,10 +53,10 @@ internal static class SoundPresetIcon
             case KeySound.CherryMxClear:
             case KeySound.GateronYellowModified:
             case KeySound.GateronYellowPairs:
-                var stem = sound == KeySound.CherryMxBlue ? new SKColor(0x69, 0xb9, 0xff) :
-                    sound == KeySound.CherryMxClear ? new SKColor(0xe1, 0xed, 0xf4) : new SKColor(0xf5, 0xce, 0x62);
-                Box(new SKRect(8, 16, 32, 32), 3, new SKColor(0x34, 0x4b, 0x5c));
-                Box(new SKRect(8, 16, 32, 32), 3, new SKColor(0x8b, 0xa5, 0xb7), true);
+                var stem = sound == KeySound.CherryMxBlue ? SoundIconColors.SwitchBlue :
+                    sound == KeySound.CherryMxClear ? SoundIconColors.SwitchClear : SoundIconColors.SwitchYellow;
+                Box(new SKRect(8, 16, 32, 32), 3, SoundIconColors.SwitchBody);
+                Box(new SKRect(8, 16, 32, 32), 3, SoundIconColors.SwitchOutline, true);
                 Box(new SKRect(13, 10, 27, 23), 2, stem);
                 Line(17, 16.5f, 23, 16.5f, ink);
                 Line(20, 13.5f, 20, 19.5f, ink);
@@ -89,11 +89,11 @@ internal static class SoundPresetIcon
                 }
                 break;
             default:
-                var wood = new SKColor(0xd9, 0xa5, 0x70);
+                var wood = SoundIconColors.Wood;
                 Box(new SKRect(7, 18, 33, 32), 3, wood);
                 Line(11, 24, 20, 24, ink);
                 Line(17, 28, 29, 28, ink);
-                Box(new SKRect(7, 9, 33, 18), 4, new SKColor(0xf1, 0xd9, 0xb8));
+                Box(new SKRect(7, 9, 33, 18), 4, SoundIconColors.WoodHighlight);
                 break;
         }
         canvas.Restore();

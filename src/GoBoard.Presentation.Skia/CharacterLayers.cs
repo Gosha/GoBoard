@@ -12,7 +12,7 @@ internal sealed record CharacterKey(KeyboardKey Key, CharacterLayer[] Layers);
 internal sealed class CharacterLayers : IDisposable
 {
     public readonly Dictionary<string, CharacterKey> Keys = new();
-    public static CharacterLayers Capture(WindowsLayout layout, bool shift, bool altGr, bool caps, KeyboardTheme style, IReadOnlyList<KeyboardKey> keys = null, GRContext context = null)
+    public static CharacterLayers Capture(WindowsLayout layout, bool shift, bool altGr, bool caps, KeyboardStyle style, IReadOnlyList<KeyboardKey> keys = null, GRContext context = null)
     {
         var result = new CharacterLayers();
         using var face = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Normal);
@@ -31,14 +31,14 @@ internal sealed class CharacterLayers : IDisposable
                 var labels = new CharacterLabel[4]; // primary, Shift, AltGr, dead-key dot
                 if (active.Text.Length > 0)
                     labels[0] = isLetter
-                        ? new(active.Text, 21, b.Width / 2, b.Height / 2 - (letter.Metrics.Ascent + letter.Metrics.Descent) / 2, SKTextAlign.Center, style.Text)
-                        : new(active.Text, 18, 9, b.Height - 6, SKTextAlign.Left, style.Text);
+                        ? new(active.Text, 21, b.Width / 2, b.Height / 2 - (letter.Metrics.Ascent + letter.Metrics.Descent) / 2, SKTextAlign.Center, style.Colors.KeyLabel)
+                        : new(active.Text, 18, 9, b.Height - 6, SKTextAlign.Left, style.Colors.KeyLabel);
                 var upper = shift && !altGr ? normal.Text : shifted.Text;
                 if (!isLetter && upper.Length > 0 && upper != active.Text && upper != "—")
-                    labels[1] = new(upper, 12, 9, 16, SKTextAlign.Left, style.Secondary);
+                    labels[1] = new(upper, 12, 9, 16, SKTextAlign.Left, style.Colors.KeyLabelSecondary);
                 if (layout.HasAltGr && alternate.Text.Length > 0 && alternate.Text != "—" && alternate.Text != active.Text)
-                    labels[2] = new(alternate.Text, 12, b.Width - 6, b.Height - 6, SKTextAlign.Right, style.Accent);
-                if (active.Dead) labels[3] = new("", 0, b.Width - 5, 5, SKTextAlign.Left, style.Accent, true);
+                    labels[2] = new(alternate.Text, 12, b.Width - 6, b.Height - 6, SKTextAlign.Right, style.Colors.KeyLabelAccent);
+                if (active.Dead) labels[3] = new("", 0, b.Width - 5, 5, SKTextAlign.Left, style.Colors.KeyLabelAccent, true);
                 var layers = new CharacterLayer[labels.Length];
                 result.Keys[key.Id] = new(key, layers);
                 for (var slot = 0; slot < labels.Length; slot++) layers[slot] = Raster(labels[slot], b, face, context);

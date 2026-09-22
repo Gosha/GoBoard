@@ -62,7 +62,7 @@ internal sealed class SettingsForm : Form
         ClientSize = new Size(SettingsControls.Width, SettingsControls.Height);
         MinimumSize = new Size(560, 440);
         StartPosition = FormStartPosition.CenterScreen;
-        BackColor = Color.FromArgb(12, 21, 30);
+        BackColor = UiColors.Current.WindowBackground.ToDrawingColor();
         DoubleBuffered = true;
         if (previewOnly) { ShowInTaskbar = false; Opacity = 0; }
         refresh.Tick += (_, _) => { this.store.Reload(); this.autostart?.Update(Now); RenderFrame(); };

@@ -12,26 +12,27 @@ internal static class SettingsPanel
 
     public static SKBitmap Render(BoardSettings settings, SettingsPointerState pointers = null, string error = null, bool desktopMode = false, AutostartState autostart = null)
     {
+        var colors = UiColors.Current;
         autostart ??= AutostartState.Preview;
         var bitmap = new SKBitmap(SettingsControls.Width * 2, SettingsControls.Height * 2, SKColorType.Rgba8888, SKAlphaType.Opaque);
         using var canvas = new SKCanvas(bitmap);
         canvas.Scale(2);
-        canvas.Clear(new SKColor(0x0c, 0x15, 0x1e));
+        canvas.Clear(colors.WindowBackground);
         using var paint = new SKPaint { IsAntialias = true };
         using var face = SKTypeface.FromFamilyName("Segoe UI");
         using var heading = new SKFont(face, 38);
         using var label = new SKFont(face, 25);
         using var small = new SKFont(face, 19);
         using var version = new SKFont(face, 16);
-        var text = new SKColor(0xf1, 0xf6, 0xfc);
-        var accent = new SKColor(0x66, 0xc0, 0xf4);
+        var text = colors.Text;
+        var accent = colors.TextAccent;
         void Text(string value, float x, float y, SKFont font, SKColor color)
         {
             paint.Color = color;
             canvas.DrawText(value, x, y, SKTextAlign.Left, font, paint);
         }
         Text("GoBoard", 64, 72, heading, text);
-        Text(VersionLabel, 64, 904, version, new SKColor(0x81, 0x90, 0x9e));
+        Text(VersionLabel, 64, 904, version, colors.TextMuted);
         var effectsPage = pointers?.Page == SettingsPage.Effects;
         var shortcutsPage = pointers?.Page is SettingsPage.Shortcuts or SettingsPage.ShortcutKey or SettingsPage.ShortcutPreset;
         var choosingPreset = pointers?.Page == SettingsPage.ShortcutPreset;
@@ -68,7 +69,7 @@ internal static class SettingsPanel
         else if (shortcutsPage)
         {
             Text("Floating button", 64, 183, label, text);
-            paint.Color = new SKColor(0x1b, 0x2c, 0x39);
+            paint.Color = colors.Separator;
             canvas.DrawRect(423, 232, 1, 458, paint);
             Text("Keys", 64, 248, label, text);
             Text("Columns", 64, 295, small, text);
@@ -107,13 +108,13 @@ internal static class SettingsPanel
         Text("Arrangement", 64, 578, label, text);
         Text("Auto · ANSI · ISO", 64, 608, small, accent);
         Text("Keyboard theme", 64, 648, small, accent);
-        paint.Color = new SKColor(0x1b, 0x2c, 0x39);
+        paint.Color = colors.Separator;
         canvas.DrawLine(64, 836, 804, 836, paint);
         Text("Start with SteamVR", 64, 783, label, text);
-        Text(autostart.Status, 64, 815, small, autostart.Error == null ? accent : new SKColor(0xff, 0xb0, 0xa0));
+        Text(autostart.Status, 64, 815, small, autostart.Error == null ? accent : colors.Error);
         }
         if (error != null)
-            Text("Settings unavailable · Last working values kept", 64, choosingPreset ? 806 : choosingKey ? 834 : effectsPage || shortcutsPage ? 760 : 860, small, new SKColor(0xff, 0xb0, 0xa0));
+            Text("Settings unavailable · Last working values kept", 64, choosingPreset ? 806 : choosingKey ? 834 : effectsPage || shortcutsPage ? 760 : 860, small, colors.Error);
         foreach (var c in SettingsControls.ForPage(pointers?.Page ?? SettingsPage.General, settings, layout, slot))
         {
             var preset = SettingsControls.SoundFor(c.Action);
@@ -161,29 +162,29 @@ internal static class SettingsPanel
                 canvas.Scale(2);
                 Panel.DrawKeySurface(canvas, new KeyboardKey("ThemePreview", "", 0,
                     new(b.X / 2, b.Y / 2, b.Width / 2, b.Height / 2)),
-                    KeyboardTheme.Soft, hovered, filled: false, armed: selected);
+                    KeyboardStyle.Soft, hovered, filled: false, selected: selected, armed: selected);
                 canvas.Restore();
                 if (selected)
                 {
-                    paint.Color = KeyboardTheme.Soft.Accent;
+                    paint.Color = KeyboardStyle.Soft.Colors.ModifierIndicator;
                     canvas.DrawRoundRect(new SKRect(rect.MidX - 12, rect.Bottom - 9, rect.MidX + 12, rect.Bottom - 6), 1.5f, 1.5f, paint);
                 }
             }
             else
             {
-                paint.Color = selected ? accent : new SKColor(0x1b, 0x2c, 0x39);
+                paint.Color = selected ? colors.ButtonSelectedFill : colors.ButtonFill;
                 DrawSurface();
             }
             if (!softTheme && hovered)
             {
                 paint.Style = SKPaintStyle.Stroke;
                 paint.StrokeWidth = 3;
-                paint.Color = text;
+                paint.Color = colors.ButtonHoverOutline;
                 DrawSurface();
                 paint.Style = SKPaintStyle.Fill;
             }
-            paint.Color = !enabled ? new SKColor(0x66, 0x78, 0x82) : selected ? new SKColor(0x09, 0x19, 0x23) : text;
-            if (softTheme) paint.Color = selected ? KeyboardTheme.Soft.Accent : KeyboardTheme.Soft.Text;
+            paint.Color = !enabled ? colors.TextDisabled : selected ? colors.TextOnAccent : text;
+            if (softTheme) paint.Color = selected ? KeyboardStyle.Soft.Colors.KeyLabelAccent : KeyboardStyle.Soft.Colors.KeyLabel;
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
             if (c.Action == SettingsAction.ToggleNumpadButton) title = settings.NumpadButtonEnabled ? "Numpad button: Shown" : "Numpad button: Hidden";
             if (c.Action == SettingsAction.Autostart) title = autostart.ButtonLabel;
@@ -228,7 +229,7 @@ internal static class SettingsPanel
     public static SKBitmap Icon()
     {
         using var stream = typeof(SettingsPanel).Assembly.GetManifestResourceStream("GoBoard.Logo.png");
-        // The shipped asset is the original renderer's 256px output. Keep the
+        // The shipped asset is the transparent 256px dashboard export. Keep the
         // high-resolution branding master out of the runtime assembly.
         return SKBitmap.Decode(stream, new SKImageInfo(256, 256, SKColorType.Rgba8888, SKAlphaType.Premul));
     }

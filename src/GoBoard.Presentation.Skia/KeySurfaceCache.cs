@@ -8,19 +8,20 @@ namespace GoBoard.Presentation.Skia;
 // desktop/VR renderers without rerunning a blur on every interaction.
 internal static class KeySurfaceCache
 {
-    private readonly record struct SurfaceKey(KeyboardTheme Theme, float Width, float Height,
-        float CutoutWidth, float CutoutTop, bool Hover, bool Filled, bool Armed);
+    private readonly record struct SurfaceKey(KeyboardStyle Theme, float Width, float Height,
+        float CutoutWidth, float CutoutTop, bool Hover, bool Filled, bool Selected, bool Armed);
     private const int Padding = 6; // Covers the 0.9-unit blur and 1.3-unit offset.
     private const int Capacity = 256;
     private static readonly object Gate = new();
     private static readonly Dictionary<SurfaceKey, SKImage> Images = new();
 
-    public static void Draw(SKCanvas canvas, KeyboardKey key, KeyboardTheme theme, bool hover, bool filled, bool armed)
+    public static void Draw(SKCanvas canvas, KeyboardKey key, KeyboardStyle theme, bool hover, bool filled, bool selected, bool armed = false)
     {
         var b = key.Bounds;
-        // A filled face has the same appearance regardless of hover/armed state.
+        // Soft one-shot modifiers regain their lighter hover outline. Keep their
+        // cached surfaces separate from persistent lock/toggle selections.
         var id = new SurfaceKey(theme, b.Width, b.Height, key.CutoutWidth, key.CutoutTop,
-            !filled && hover, filled, !filled && armed);
+            !filled && (!selected || armed && theme.SubtleArmedOutline) && hover, filled, selected, armed);
         lock (Gate)
         {
             if (!Images.TryGetValue(id, out var image))
@@ -38,7 +39,7 @@ internal static class KeySurfaceCache
                 target.Clear(SKColors.Transparent);
                 target.Scale(Panel.RasterScale);
                 var local = key with { Bounds = b with { X = Padding, Y = Padding } };
-                Panel.DrawKeySurface(target, local, theme, id.Hover, id.Filled, id.Armed);
+                Panel.DrawKeySurface(target, local, theme, id.Hover, id.Filled, id.Selected, id.Armed);
                 target.Flush();
                 bitmap.SetImmutable();
                 image = SKImage.FromBitmap(bitmap);

@@ -1,21 +1,15 @@
 # Branding assets
 
-- `goboard-logo.png` is the 1254 x 1254 master. Keep it for source artwork; it is not embedded in the app.
-- `goboard-dashboard.png` is the 256 x 256 SteamVR dashboard thumbnail embedded as `GoBoard.Logo.png`. It is the lossless PNG encoding of the previous production `SettingsPanel.Icon()` output, preserving its pixels. The renderer decodes it directly without a second resampling step.
-- `goboard.ico` supplies the Windows executable, desktop window, and MSI shortcut/Installed apps icons. The MSI embeds this ICO directly rather than storing an extra copy of the executable as its icon stream.
+- `goboard-logo.svg` is the editable geometry master, using rounded rectangles on a flat dark background. The exporter applies `UiColors.Logo` and `UiColors.LogoBackground` from the Steam Blue color theme, then updates the SVG and raster assets together. The README uses this SVG directly.
+- `goboard-dashboard.png` is the transparent 256 x 256 SteamVR dashboard thumbnail embedded as `GoBoard.Logo.png`. The exporter omits the SVG's `background` rectangle, leaving the space around and between the blue shapes transparent. The renderer decodes it directly without a second resampling step.
+- `goboard.ico` supplies the Windows executable, desktop window, and MSI shortcut/Installed apps icons. It contains PNG frames at 16, 20, 24, 32, 40, 48, 64, 128, and 256 pixels. The MSI embeds this ICO directly rather than storing an extra copy of the executable as its icon stream.
 
-To regenerate the dashboard asset after changing the master, use the version of SkiaSharp locked by `GoBoard.Presentation.Skia` and the same operations used by the original renderer:
+Regenerate all raster assets from the SVG with the repository's .NET SDK and locked SkiaSharp dependency, running from the repository root:
 
-```csharp
-using SkiaSharp;
-
-using var logo = SKImage.FromEncodedData("assets/branding/goboard-logo.png");
-using var bitmap = new SKBitmap(256, 256, SKColorType.Rgba8888, SKAlphaType.Premul);
-using (var canvas = new SKCanvas(bitmap))
-    canvas.DrawImage(logo, new SKRect(0, 0, 256, 256),
-        new SKSamplingOptions(SKCubicResampler.Mitchell));
-using var png = bitmap.Encode(SKEncodedImageFormat.Png, 100);
-File.WriteAllBytes("assets/branding/goboard-dashboard.png", png.ToArray());
+```powershell
+dotnet run --file assets/branding/render.cs --no-cache
 ```
 
-Inspect the regenerated icon at its actual 256-pixel size. The initial conversion from the master reduced the encoded resource from 1,398,238 to 64,646 bytes. Both the old renderer output and the new decoded resource have identical RGBA pixels.
+The exporter reads the SVG's rectangle geometry, fills, and strokes, then rasterizes each size directly. It intentionally supports this logo's simple SVG subset and rejects unsupported shapes or rectangle attributes. If the artwork starts using paths, transforms, or gradients, extend the exporter before regenerating.
+
+Inspect the dashboard at its actual 256-pixel size against light and dark backgrounds, and the ICO at small Windows icon sizes. The Windows ICO keeps the dark background at every size. Rebuild the app after exporting to embed the updated assets.

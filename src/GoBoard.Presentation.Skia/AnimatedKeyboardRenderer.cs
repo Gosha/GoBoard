@@ -11,7 +11,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
     private readonly Dictionary<uint, (PointerEffects Effects, long Press)> pointers = new();
     private readonly Dictionary<string, SKPath> paths = new();
     private IReadOnlyList<KeyboardKey> keys;
-    private KeyboardTheme style;
+    private KeyboardStyle style;
     private SKImage baseline, surfaces, outputBaseline;
     private (SKImageInfo Info, SKRect Bounds)? cachedOutput;
     private KeyboardState bound;
@@ -66,7 +66,7 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
             cacheContext = context;
             bound = keyboard; layout = keyboard.Layout; this.theme = theme; this.options = options;
             cancellationRevision = keyboard.CancellationRevision;
-            style = KeyboardTheme.Resolve(theme);
+            style = KeyboardStyle.Resolve(theme);
             keys = keyboard.Keys;
             foreach (var key in keys) paths[key.Id] = KeyPath(key);
             // Never replay clicks from before a layout/settings change or cancel.
@@ -131,22 +131,27 @@ internal sealed partial class AnimatedKeyboardRenderer : IDisposable
             {
                 outputBaseline = RenderImage.Create(output, context, target =>
                 {
-                    target.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Background : SKColors.Transparent);
-                    target.DrawImage(baseline, bounds, new SKSamplingOptions(SKFilterMode.Linear));
+                    target.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Colors.PanelBackground : SKColors.Transparent);
+                    // Average source detail when reducing the VR-sized image to
+                    // desktop pixels; bilinear sampling alone drops thin glyph strokes.
+                    var sampling = bounds.Width < baseline.Width || bounds.Height < baseline.Height
+                        ? new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)
+                        : new SKSamplingOptions(SKFilterMode.Linear);
+                    target.DrawImage(baseline, bounds, sampling);
                 });
             }
             cachedOutput = presentation;
         }
         var canvas = acquireCanvas();
         using var restore = new SKAutoCanvasRestore(canvas, true);
-        canvas.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Background : SKColors.Transparent);
+        canvas.Clear(output.AlphaType == SKAlphaType.Opaque ? style.Colors.PanelBackground : SKColors.Transparent);
         canvas.DrawImage(outputBaseline ?? baseline, new SKRect(0, 0, output.Width, output.Height), new SKSamplingOptions(SKFilterMode.Nearest));
         canvas.ClipRect(bounds);
         canvas.Translate(bounds.Left, bounds.Top);
         canvas.Scale(bounds.Width / keyboard.Width, bounds.Height / keyboard.Height);
         if (surfaces != null) transitions.Draw(canvas, baseline, surfaces, keyboard, style, now, filledPress: !options.PressFlash);
         if (options.PointerEnabled)
-            foreach (var p in pointers.Values) DrawPointer(canvas, keyboard, p.Effects, options, now);
+            foreach (var p in pointers.Values) DrawPointer(canvas, keyboard, p.Effects, options, now, caps, scroll);
         drawn = signature;
         drawnOutput = presentation;
         return true;
