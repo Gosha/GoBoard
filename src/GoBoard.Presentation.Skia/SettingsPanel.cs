@@ -228,7 +228,7 @@ internal static class SettingsPanel
     public static SKBitmap Icon()
     {
         using var stream = typeof(SettingsPanel).Assembly.GetManifestResourceStream("GoBoard.Logo.png");
-        // The shipped asset is the original renderer's 256px output. Keep the
+        // The shipped asset is the transparent 256px dashboard export. Keep the
         // high-resolution branding master out of the runtime assembly.
         return SKBitmap.Decode(stream, new SKImageInfo(256, 256, SKColorType.Rgba8888, SKAlphaType.Premul));
     }
