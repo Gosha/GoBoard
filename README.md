@@ -31,6 +31,8 @@ Launch **GoBoard VR** or **GoBoard Settings** from the Start menu.
 <details>
 <summary>More settings screenshots</summary>
 
+![Keyboard inactivity modes and timings](docs/images/goboard-inactivity-settings.png)
+
 ![Shortcut presets and custom shortcut editor](docs/images/goboard-shortcut-settings.png)
 
 ![Shortcut preset chooser](docs/images/goboard-shortcut-presets.png)

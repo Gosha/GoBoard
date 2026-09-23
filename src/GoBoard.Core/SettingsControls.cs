@@ -1,6 +1,6 @@
 namespace GoBoard.Core;
 
-internal enum SettingsPage { General, Effects, Shortcuts, ShortcutKey, ShortcutPreset }
+internal enum SettingsPage { General, Effects, Shortcuts, ShortcutKey, ShortcutPreset, Inactivity }
 internal enum SettingsAction
 {
     Smaller, Larger, ToggleSound, Wood, Thud, Quieter, Louder, Defaults, Geometry, SteamSoft, SteamFlat,
@@ -13,7 +13,11 @@ internal enum SettingsAction
     ChooseShortcutPreset, BackToShortcut, ShortcutCtrl, ShortcutAlt, ShortcutShift, ShortcutWin, ChooseShortcutKey,
     ResetShortcuts, Slot9, Slot10, FewerColumns, MoreColumns, FewerRows, MoreRows,
     Slot11, Slot12, Slot13, Slot14, Slot15, Slot16, Slot17, Slot18, Slot19, Slot20,
-    Autostart, ToggleNumpad, ToggleNumpadButton, PresetChoiceFirst = 100, KeyChoiceFirst = 1000
+    Autostart, ToggleNumpad, ToggleNumpadButton, PresetChoiceFirst = 100,
+    InactivityTab = 500, IdleOff, IdleHide, IdleMinimize, IdleTransparent,
+    IdleSooner, IdleLater, RevealSooner, RevealLater, FadeFaster, FadeSlower,
+    IdleOpacityLess, IdleOpacityMore, IdleSizeLess, IdleSizeMore, ResetInactivity,
+    KeyChoiceFirst = 1000
 }
 internal sealed record SettingsControl(SettingsAction Action, string Label, KeyBounds Bounds,
     bool Selectable = true, float CutoutWidth = 0, float CutoutTop = 0)
@@ -63,9 +67,36 @@ internal static class SettingsControls
     ];
 
     public static readonly SettingsControl[] Tabs =
-    [new(SettingsAction.GeneralTab, "General", new(412, 32, 120, 54)),
-     new(SettingsAction.EffectsTab, "Effects", new(548, 32, 120, 54)),
-     new(SettingsAction.ShortcutsTab, "Shortcuts", new(684, 32, 120, 54))];
+    [new(SettingsAction.GeneralTab, "General", new(284, 32, 120, 54)),
+     new(SettingsAction.EffectsTab, "Effects", new(416, 32, 120, 54)),
+     new(SettingsAction.ShortcutsTab, "Shortcuts", new(548, 32, 120, 54)),
+     new(SettingsAction.InactivityTab, "Inactivity", new(680, 32, 124, 54))];
+
+    public static readonly (string Label, SettingsAction Less, SettingsAction More)[] InactivityParameters =
+    [
+        ("After pointers leave", SettingsAction.IdleSooner, SettingsAction.IdleLater),
+        ("Hover to reveal", SettingsAction.RevealSooner, SettingsAction.RevealLater),
+        ("Hide / shrink / fade duration", SettingsAction.FadeFaster, SettingsAction.FadeSlower),
+        ("Transparent mode opacity", SettingsAction.IdleOpacityLess, SettingsAction.IdleOpacityMore),
+        ("Minimized keyboard size", SettingsAction.IdleSizeLess, SettingsAction.IdleSizeMore)
+    ];
+    public static readonly SettingsControl[] Inactivity =
+    [
+        new(SettingsAction.IdleOff, "Off", new(64, 164, 173, 64)),
+        new(SettingsAction.IdleHide, "Hide", new(253, 164, 173, 64)),
+        new(SettingsAction.IdleMinimize, "Minimize", new(442, 164, 173, 64)),
+        new(SettingsAction.IdleTransparent, "Transparent", new(631, 164, 173, 64)),
+        .. InactivityParameters.SelectMany((p, i) => new[] {
+            new SettingsControl(p.Less, "−", new(516, 344 + i * 80, 64, 52)),
+            new SettingsControl(p.More, "+", new(740, 344 + i * 80, 64, 52)) }),
+        new(SettingsAction.ResetInactivity, "Reset inactivity", new(588, 812, 216, 48))
+    ];
+    public static string InactivityValue(int index, InactivitySettings s) => index switch
+    {
+        0 => $"{s.DelayMs / 1000.0:0.##} s", 1 => s.RevealMs == 0 ? "Instant" : $"{s.RevealMs} ms",
+        2 => s.TransitionMs == 0 ? "Instant" : $"{s.TransitionMs} ms",
+        3 => $"{s.OpacityPercent}%", _ => $"{s.SizePercent}%"
+    };
     public static readonly SettingsControl[] Shortcuts =
     [
         new(SettingsAction.ToggleShortcuts, "", new(588, 148, 216, 54)),
@@ -164,6 +195,7 @@ internal static class SettingsControls
     }
     public static IEnumerable<SettingsControl> ForPage(SettingsPage page, BoardSettings settings = null, WindowsLayout layout = null, int slot = 0) => Tabs.Concat(page switch
     { SettingsPage.Effects => Effects,
+      SettingsPage.Inactivity => Inactivity,
       SettingsPage.Shortcuts => ShortcutControls(settings?.ProgrammableKeys ?? new()),
       SettingsPage.ShortcutPreset => PresetChoices,
       SettingsPage.ShortcutKey => KeyChoices(layout, settings?.ProgrammableKeys.Get(slot).Shift ?? false), _ => All });
@@ -192,6 +224,7 @@ internal static class SettingsControls
     };
     public static bool Enabled(SettingsAction action, BoardSettings s) => action switch
     {
+        >= SettingsAction.IdleSooner and <= SettingsAction.IdleSizeMore => Apply(action, s) != s,
         SettingsAction.Smaller => s.SizePercent > 50,
         SettingsAction.Larger => s.SizePercent < 150,
         SettingsAction.Quieter => s.SoundEnabled && s.VolumePercent > 0,
@@ -215,6 +248,21 @@ internal static class SettingsControls
         SettingsAction.ToggleSound or SettingsAction.Quieter or SettingsAction.Louder;
     public static BoardSettings Apply(SettingsAction action, BoardSettings s, int slot = 0, WindowsLayout layout = null) => (action switch
     {
+        SettingsAction.IdleOff => s with { Inactivity = s.Inactivity with { Mode = InactivityMode.Off } },
+        SettingsAction.IdleHide => s with { Inactivity = s.Inactivity with { Mode = InactivityMode.Hide } },
+        SettingsAction.IdleMinimize => s with { Inactivity = s.Inactivity with { Mode = InactivityMode.Minimize } },
+        SettingsAction.IdleTransparent => s with { Inactivity = s.Inactivity with { Mode = InactivityMode.Transparent } },
+        SettingsAction.IdleSooner => s with { Inactivity = s.Inactivity with { DelayMs = s.Inactivity.DelayMs - 250 } },
+        SettingsAction.IdleLater => s with { Inactivity = s.Inactivity with { DelayMs = s.Inactivity.DelayMs + 250 } },
+        SettingsAction.RevealSooner => s with { Inactivity = s.Inactivity with { RevealMs = s.Inactivity.RevealMs - 50 } },
+        SettingsAction.RevealLater => s with { Inactivity = s.Inactivity with { RevealMs = s.Inactivity.RevealMs + 50 } },
+        SettingsAction.FadeFaster => s with { Inactivity = s.Inactivity with { TransitionMs = s.Inactivity.TransitionMs - 50 } },
+        SettingsAction.FadeSlower => s with { Inactivity = s.Inactivity with { TransitionMs = s.Inactivity.TransitionMs + 50 } },
+        SettingsAction.IdleOpacityLess => s with { Inactivity = s.Inactivity with { OpacityPercent = s.Inactivity.OpacityPercent - 5 } },
+        SettingsAction.IdleOpacityMore => s with { Inactivity = s.Inactivity with { OpacityPercent = s.Inactivity.OpacityPercent + 5 } },
+        SettingsAction.IdleSizeLess => s with { Inactivity = s.Inactivity with { SizePercent = s.Inactivity.SizePercent - 5 } },
+        SettingsAction.IdleSizeMore => s with { Inactivity = s.Inactivity with { SizePercent = s.Inactivity.SizePercent + 5 } },
+        SettingsAction.ResetInactivity => s with { Inactivity = new() },
         SettingsAction.ToggleNumpad => s with { NumpadEnabled = !s.NumpadEnabled },
         SettingsAction.ToggleNumpadButton => s with { NumpadButtonEnabled = !s.NumpadButtonEnabled },
         SettingsAction.ToggleShortcuts => s with { ProgrammableKeys = s.ProgrammableKeys with { Enabled = !s.ProgrammableKeys.Enabled } },
@@ -304,6 +352,7 @@ internal sealed class SettingsPointerState
     public int Revision { get; private set; }
     public bool Hovered(SettingsAction action) => pointers.Values.Any(p => p.Hover == action);
     public void Reset() { pointers.Clear(); Revision++; }
+    public void SelectPage(SettingsPage page) { Page = page; Reset(); }
     public SettingsAction? Process(uint device, float x, float y, double time, double now, bool down = false, bool up = false, bool leave = false)
     {
         if (!double.IsFinite(time) || time > now || now - time > .5) return null;
@@ -324,9 +373,10 @@ internal sealed class SettingsPointerState
             Reset();
             return null;
         }
-        if (clicked is SettingsAction.GeneralTab or SettingsAction.EffectsTab or SettingsAction.ShortcutsTab or SettingsAction.ChooseShortcutKey or SettingsAction.ChooseShortcutPreset or SettingsAction.BackToShortcut)
+        if (clicked is SettingsAction.GeneralTab or SettingsAction.EffectsTab or SettingsAction.InactivityTab or SettingsAction.ShortcutsTab or SettingsAction.ChooseShortcutKey or SettingsAction.ChooseShortcutPreset or SettingsAction.BackToShortcut)
         {
             Page = clicked switch { SettingsAction.GeneralTab => SettingsPage.General, SettingsAction.EffectsTab => SettingsPage.Effects,
+                SettingsAction.InactivityTab => SettingsPage.Inactivity,
                 SettingsAction.ChooseShortcutKey => SettingsPage.ShortcutKey, SettingsAction.ChooseShortcutPreset => SettingsPage.ShortcutPreset, _ => SettingsPage.Shortcuts };
             Reset(); // Both hands lose captures from the old page.
             return null;

@@ -8,7 +8,7 @@ internal static class GrabHandleRenderer
     public const int PixelWidth = OverlayGeometry.GrabWidth * OverlayGeometry.RasterScale;
     public const int PixelHeight = OverlayGeometry.GrabHeight * OverlayGeometry.RasterScale;
 
-    public static SKBitmap Render(int state, int layoutWidth = OverlayGeometry.GrabWidth)
+    public static SKBitmap Render(int state, int layoutWidth = OverlayGeometry.GrabWidth, bool dormant = false)
     {
         var bitmap = new SKBitmap(new SKImageInfo(layoutWidth * OverlayGeometry.RasterScale, PixelHeight, SKColorType.Rgba8888, SKAlphaType.Unpremul));
         using var canvas = new SKCanvas(bitmap);
@@ -31,6 +31,12 @@ internal static class GrabHandleRenderer
             lineCenterY - lineHeight / 2f,
             (layoutWidth + lineWidth) / 2f,
             lineCenterY + lineHeight / 2f), lineHeight / 2f, lineHeight / 2f, paint);
+        if (dormant)
+        {
+            using var face = SKTypeface.FromFamilyName("Segoe UI");
+            using var font = new SKFont(face, 16);
+            canvas.DrawText("Show keyboard", layoutWidth / 2f, 43, SKTextAlign.Center, font, paint);
+        }
         canvas.Flush();
         return bitmap;
     }

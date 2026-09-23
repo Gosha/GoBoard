@@ -18,6 +18,7 @@ internal sealed record BoardSettings
     public bool NumpadButtonEnabled { get; init; } = true;
     public string Theme { get; init; } = BoardThemes.Default;
     public EffectSettings Effects { get; init; } = new();
+    public InactivitySettings Inactivity { get; init; } = new();
     public ProgrammableKeySettings ProgrammableKeys { get; init; } = new();
     // A new request is observed once by each running host through the shared settings file.
     public Guid PositionResetId { get; init; }
@@ -31,6 +32,7 @@ internal sealed record BoardSettings
         Geometry = Enum.IsDefined(Geometry) ? Geometry : KeyboardGeometry.Auto,
         Theme = BoardThemes.Normalize(Theme),
         Effects = (Effects ?? new()).Normalize(),
+        Inactivity = (Inactivity ?? new()).Normalize(),
         ProgrammableKeys = (ProgrammableKeys ?? new()).Normalize()
     };
 
@@ -44,7 +46,7 @@ internal sealed class SettingsStore
     private static readonly JsonSerializerOptions Json = new()
     {
         WriteIndented = true,
-        Converters = { new JsonStringEnumConverter<KeySound>(), new JsonStringEnumConverter<KeyboardGeometry>(), new JsonStringEnumConverter<CharacterTransition>() },
+        Converters = { new JsonStringEnumConverter<KeySound>(), new JsonStringEnumConverter<KeyboardGeometry>(), new JsonStringEnumConverter<CharacterTransition>(), new JsonStringEnumConverter<InactivityMode>() },
         IgnoreReadOnlyProperties = true
     };
     public static string DefaultPath => Path.Combine(

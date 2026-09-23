@@ -34,11 +34,12 @@ internal static class Program
         if (args is ["--desktop-input-check"]) return DesktopInputCheck.Run();
         if (args is ["--desktop-shell-check"]) return DesktopInputCheck.Run(shell: true);
         if (args is ["--desktop-launch-check"]) return DesktopInputCheck.RunLaunch();
+        if (args is ["--desktop-inactivity-check"]) return DesktopInactivityCheck.Run();
         if (args is ["--settings-input-check"]) return SettingsInputCheck.Run();
 #else
         if (args.Length > 0 && args[0] is ("--desktop" or "--render-desktop" or
             "--desktop-effects-benchmark" or "--desktop-input-check" or "--desktop-shell-check" or
-            "--desktop-launch-check" or "--settings-input-check"))
+            "--desktop-launch-check" or "--desktop-inactivity-check" or "--settings-input-check"))
             throw new ArgumentException("Desktop keyboard debugging is available only in source builds. Installed GoBoard is a VR app.");
 #endif
         if (args is ["--settings"] || args is ["--settings", "--executable", _])
@@ -47,10 +48,13 @@ internal static class Program
             Application.Run(new SettingsForm(autostartExecutable: args.Length == 3 ? args[2] : null));
             return 0;
         }
-        if (args is ["--render-desktop-settings", var path])
+        if (args.Length is 2 or 4 && args[0] == "--render-desktop-settings")
         {
+            if (args.Length == 4 && args[2] != "--settings-page") throw new ArgumentException("Expected --settings-page.");
+            var page = args.Length == 4 ? Enum.Parse<GoBoard.Core.SettingsPage>(args[3], ignoreCase: true) : GoBoard.Core.SettingsPage.General;
+            var path = args[1];
             ApplicationConfiguration.Initialize();
-            using var form = new SettingsForm(previewOnly: true);
+            using var form = new SettingsForm(previewOnly: true, previewPage: page);
             form.Show();
             Application.DoEvents();
             using var bitmap = new Bitmap(form.Width, form.Height);

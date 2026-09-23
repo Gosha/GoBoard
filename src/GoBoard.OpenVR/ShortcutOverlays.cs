@@ -31,6 +31,8 @@ internal sealed class ShortcutOverlays : IDisposable
     private readonly Dictionary<ulong, (uint Device, ETrackingUniverseOrigin Origin, Matrix4x4 Pose)> transforms = new();
     private readonly Dictionary<ulong, float> widths = new();
     public uint? GrabOwner => grab?.ActiveGrab != null ? grab.Controller : null;
+    public bool Engaged => visible && (toggle.Hovered || toggle.CapturedDevice.HasValue ||
+        panelVisible && (keyboard.Engaged || grab.Hovered || GrabOwner.HasValue));
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     private float PanelWidth => keyboard.State.Width * ProgrammableKeys.MetersPerUnit * scale;
     private float PanelHeight => keyboard.State.Height * ProgrammableKeys.MetersPerUnit * scale;
@@ -163,7 +165,7 @@ internal sealed class ShortcutOverlays : IDisposable
     {
         if (!interactive) toggle.Reset(Now);
         if (interactive) system.GetDeviceToAbsoluteTrackingPose(ETrackingUniverseOrigin.TrackingUniverseStanding, 0, devices);
-        if (toggle.CapturedDevice is { } captured && (!devices[captured].bDeviceIsConnected || !devices[captured].bPoseIsValid)) toggle.Reset(Now);
+        toggle.RemoveUntracked(device => device < devices.Length && devices[device].bDeviceIsConnected && devices[device].bPoseIsValid, Now);
         var e = new VREvent_t();
         while (overlay.PollNextOverlayEvent(button, ref e, (uint)Marshal.SizeOf<VREvent_t>()))
         {
@@ -184,6 +186,7 @@ internal sealed class ShortcutOverlays : IDisposable
             }
             var pointer = pointers.Resolve(focus ? e.data.overlay.cursorIndex : e.data.mouse.cursorIndex, device, type == EVREventType.VREvent_FocusEnter);
             if (!pointer.HasValue || type == EVREventType.VREvent_FocusEnter) continue;
+            if (pointer.Value >= devices.Length || !devices[pointer.Value].bDeviceIsConnected || !devices[pointer.Value].bPoseIsValid) continue;
             var down = type == EVREventType.VREvent_MouseButtonDown; var up = type == EVREventType.VREvent_MouseButtonUp;
             if ((down || up) && e.data.mouse.button != (uint)EVRMouseButton.Left) continue;
             var now = Now;

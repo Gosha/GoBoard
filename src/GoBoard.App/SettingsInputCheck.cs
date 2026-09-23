@@ -125,6 +125,21 @@ internal static class SettingsInputCheck
                 desktop.RefreshSettings();
                 Require(desktop.Location == moved, "Position reset is consumed once");
                 var general = store.Current;
+                Click(SettingsAction.InactivityTab);
+                foreach (var (action, mode) in new[] { (SettingsAction.IdleHide, InactivityMode.Hide),
+                    (SettingsAction.IdleMinimize, InactivityMode.Minimize), (SettingsAction.IdleTransparent, InactivityMode.Transparent) })
+                {
+                    Click(action);
+                    Require(store.Current.Inactivity.Mode == mode, "Inactivity mode selection");
+                }
+                Click(SettingsAction.IdleLater); Click(SettingsAction.RevealLater); Click(SettingsAction.FadeFaster);
+                Click(SettingsAction.IdleOpacityMore); Click(SettingsAction.IdleSizeMore);
+                Require(store.Current.Inactivity == new InactivitySettings { Mode = InactivityMode.Transparent,
+                    DelayMs = 1250, RevealMs = 250, TransitionMs = 150, OpacityPercent = 20, SizePercent = 25 },
+                    "Inactivity timing, opacity and size controls");
+                Require(new SettingsStore(path).Current == store.Current, "Saved inactivity controls");
+                Click(SettingsAction.ResetInactivity);
+                Require(store.Current == general, "Inactivity reset preserves other preferences");
                 Click(SettingsAction.EffectsTab);
                 Click(SettingsAction.Spotlight);
                 Click(SettingsAction.Lift);

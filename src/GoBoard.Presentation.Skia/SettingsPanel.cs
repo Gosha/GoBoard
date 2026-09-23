@@ -34,6 +34,7 @@ internal static class SettingsPanel
         Text("GoBoard", 64, 72, heading, text);
         Text(VersionLabel, 64, 904, version, colors.TextMuted);
         var effectsPage = pointers?.Page == SettingsPage.Effects;
+        var inactivityPage = pointers?.Page == SettingsPage.Inactivity;
         var shortcutsPage = pointers?.Page is SettingsPage.Shortcuts or SettingsPage.ShortcutKey or SettingsPage.ShortcutPreset;
         var choosingPreset = pointers?.Page == SettingsPage.ShortcutPreset;
         var choosingKey = pointers?.Page == SettingsPage.ShortcutKey;
@@ -41,8 +42,29 @@ internal static class SettingsPanel
         var shortcut = settings.ProgrammableKeys.Get(slot);
         var keyNumber = settings.ProgrammableKeys.NumberFor(slot);
         var layout = pointers?.Layout ?? new WindowsLayout((nint)WindowsLayout.UsHandle);
-        Text(shortcutsPage ? "Shortcuts" : effectsPage ? "Effects" : "Settings", 64, 110, small, accent);
-        if (choosingPreset)
+        Text(inactivityPage ? "Inactivity" : shortcutsPage ? "Shortcuts" : effectsPage ? "Effects" : "Settings", 64, 110, small, accent);
+        if (inactivityPage)
+        {
+            Text("When the keyboard is idle", 64, 149, small, accent);
+            Text(settings.Inactivity.Mode switch
+            {
+                InactivityMode.Hide => "Hide the keyboard; keep the hover tab.",
+                InactivityMode.Minimize => "Shrink the keyboard above the hover tab.",
+                InactivityMode.Transparent => "Fade the keyboard; point through it to other overlays.",
+                _ => "Keep the keyboard open."
+            }, 64, 267, small, text);
+            Text("Hover the tab below the keyboard to restore it.", 64, 300, small, accent);
+            for (var i = 0; i < SettingsControls.InactivityParameters.Length; i++)
+            {
+                var y = 344 + i * 80;
+                Text(SettingsControls.InactivityParameters[i].Label, 64, y + 33, small, text);
+                paint.Color = text;
+                canvas.DrawText(SettingsControls.InactivityValue(i, settings.Inactivity), 660, y + 33, SKTextAlign.Center, small, paint);
+            }
+            Text("Stays open while either hand uses the keyboard or its controls.", 64, 764, small, accent);
+            Text("Closing the dashboard also hides the tab.", 64, 793, small, accent);
+        }
+        else if (choosingPreset)
         {
             Text($"Choose a preset · Key {keyNumber}", 64, 151, label, text);
             var name = shortcut.LabelFor(layout);
@@ -114,7 +136,7 @@ internal static class SettingsPanel
         Text(autostart.Status, 64, 815, small, autostart.Error == null ? accent : colors.Error);
         }
         if (error != null)
-            Text("Settings unavailable · Last working values kept", 64, choosingPreset ? 806 : choosingKey ? 834 : effectsPage || shortcutsPage ? 760 : 860, small, colors.Error);
+            Text("Settings unavailable · Last working values kept", 64, inactivityPage ? 890 : choosingPreset ? 806 : choosingKey ? 834 : effectsPage || shortcutsPage ? 760 : 860, small, colors.Error);
         foreach (var c in SettingsControls.ForPage(pointers?.Page ?? SettingsPage.General, settings, layout, slot))
         {
             var preset = SettingsControls.SoundFor(c.Action);
@@ -123,7 +145,12 @@ internal static class SettingsPanel
                 c.Action == SettingsAction.ToggleNumpadButton && settings.NumpadButtonEnabled ||
                 c.Action == SettingsAction.SteamSoft && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamSoft ||
                 c.Action == SettingsAction.SteamFlat && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamFlat ||
-                c.Action == SettingsAction.GeneralTab && !effectsPage && !shortcutsPage || c.Action == SettingsAction.EffectsTab && effectsPage ||
+                c.Action == SettingsAction.GeneralTab && !effectsPage && !shortcutsPage && !inactivityPage || c.Action == SettingsAction.EffectsTab && effectsPage ||
+                c.Action == SettingsAction.InactivityTab && inactivityPage ||
+                c.Action == SettingsAction.IdleOff && settings.Inactivity.Mode == InactivityMode.Off ||
+                c.Action == SettingsAction.IdleHide && settings.Inactivity.Mode == InactivityMode.Hide ||
+                c.Action == SettingsAction.IdleMinimize && settings.Inactivity.Mode == InactivityMode.Minimize ||
+                c.Action == SettingsAction.IdleTransparent && settings.Inactivity.Mode == InactivityMode.Transparent ||
                 c.Action == SettingsAction.ShortcutsTab && shortcutsPage ||
                 c.Action == SettingsAction.ToggleShortcuts && settings.ProgrammableKeys.Enabled ||
                 c.Action == SettingsControls.SlotAction(slot) ||
@@ -193,7 +220,7 @@ internal static class SettingsPanel
             if (c.Action == SettingsAction.ChooseShortcutKey) title = ProgrammableKeys.KeyName(shortcut.Scan, layout, shortcut.Shift) + "   ›";
             if (c.Action == SettingsAction.Geometry) title = settings.Geometry switch
             { KeyboardGeometry.Ansi => "ANSI", KeyboardGeometry.Iso => "ISO", _ => "Auto" };
-            var font = preset.HasValue || effectsPage || shortcutsPage || c.Action is SettingsAction.Autostart or SettingsAction.Defaults or SettingsAction.ResetPosition or SettingsAction.GeneralTab or SettingsAction.EffectsTab or SettingsAction.ShortcutsTab ? small : label;
+            var font = preset.HasValue || effectsPage || shortcutsPage || inactivityPage || c.Action is SettingsAction.InactivityTab or SettingsAction.Autostart or SettingsAction.Defaults or SettingsAction.ResetPosition or SettingsAction.GeneralTab or SettingsAction.EffectsTab or SettingsAction.ShortcutsTab ? small : label;
             using var fitted = new SKFont(face, Math.Min(font.Size, font.Size * (rect.Width - 12) / Math.Max(1, font.MeasureText(title))));
             font = fitted;
             var baseline = rect.MidY - (font.Metrics.Ascent + font.Metrics.Descent) / 2;

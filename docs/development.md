@@ -16,6 +16,23 @@ If another GoBoard process still has the selected launcher build loaded, the lau
 
 Production logs live under `%LOCALAPPDATA%\GoBoard\runtime`; a session-local named event provides graceful shutdown through `stop-goboard.ps1` even when SteamVR starts GoBoard directly. See [SteamVR autostart](steamvr-autostart.md) for registration commands and acceptance checks.
 
+## Keyboard inactivity
+
+**Settings → Inactivity** offers Off (the default), Hide, Minimize, and Transparent. All three idle modes retain the small hover tab below the keyboard. Hide fades the keyboard away, Minimize shrinks it toward its lower edge, and Transparent leaves a full-size image at the selected opacity. Point at the tab to restore the keyboard instantly after the reveal delay. Its saved size and dashboard-relative placement do not change. Closing the dashboard or opening SteamVR's native keyboard also hides the tab. Returning preserves the keyboard's previous open or idle state: an idle keyboard stays hidden, minimized, or transparent until revealed. Any outgoing transition finishes while hidden, and pending reveal hover is discarded. An open keyboard returns open with a fresh inactivity delay. This state is remembered for the running session; changing inactivity settings still reopens the keyboard.
+
+The panel exposes the delay after both pointers leave (0.25–30 seconds, in 0.25-second steps), reveal hover delay (0–2000 ms, in 50 ms steps), hide/shrink/fade duration (0–2000 ms, in 50 ms steps), transparent opacity (0–80%), and minimized size (10–50%). Timing changes take effect live and reopen the keyboard. Hovering without moving counts as use. Keyboard keys, floating controls, the shortcut palette, moving, and resizing keep it open while either hand is engaged. Interrupting reveal hover resets its dwell timer.
+
+`KeyboardInactivity` in Core owns timing and visual progress. In VR, idle transitions cancel input and disable the keyboard's input method and intersection mask before changing its presentation; attached controls and shortcuts hide. Only the fixed grab/reveal surface remains interactive. Reopening rejects queued input from the old geometry. The desktop debug host uses the same state with a passive layered image and a separate non-activating reveal surface. Inactivity settings merge per field through the existing mutex and atomic settings writes.
+
+```powershell
+dotnet run --project src/GoBoard.App -c Release -- --render-settings .runtime/inactivity-vr.png --settings-page Inactivity
+dotnet run --project src/GoBoard.App -c Release -- --render-desktop-settings .runtime/inactivity-desktop.png --settings-page Inactivity
+dotnet run --project src/GoBoard.App -c Release -- --desktop-inactivity-check
+dotnet run --project src/GoBoard.App -c Release -- --inactivity-overlay-check
+```
+
+The desktop native check uses disposable windows and settings, briefly moves the mouse, restores its position/focus, and never injects keys. It covers all three modes, reveal delay, stationary hover, input pass-through, position restoration, and Off. The SteamVR check creates an isolated transparent overlay outside the play space; it checks input suppression/restoration across geometry changes as well as texture/geometry stability. Pure tests cover timing boundaries, interrupted hover, visibility/settings changes, tracking loss, normalization, and settings merges. Actual controller pass-through, accidental reveals, two-hand transitions between separate overlays, and comfortable timings still need headset acceptance.
+
 ## Native SteamVR keyboard visibility
 
 In VR, GoBoard hides its keyboard, move/resize handles, shortcut launcher, and expanded shortcut palette while SteamVR's native keyboard is visible. It returns when the native keyboard closes, provided the dashboard and its anchor are available. Dashboard-relative placement and the palette's expanded/collapsed state are retained. Hiding cancels typing, repeat, modifiers, grabs, and pending resize changes through the existing hidden-state path; queued input is discarded before interaction resumes. The GoBoard Settings dashboard tab remains independent. Desktop mode is unchanged.

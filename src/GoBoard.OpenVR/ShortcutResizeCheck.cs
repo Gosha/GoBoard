@@ -12,7 +12,7 @@ namespace GoBoard.Vr;
 // or input events. Kept out of the headset-independent regression test suite.
 internal static class ShortcutResizeCheck
 {
-    public static int Run(bool numpad = false)
+    public static int Run(bool numpad = false, bool verifyInactivity = false)
     {
         var error = EVRInitError.None;
         var system = OpenVR.Init(ref error, EVRApplicationType.VRApplication_Overlay);
@@ -52,6 +52,7 @@ internal static class ShortcutResizeCheck
                     foreach (var message in new[] { null, "Input blocked", null })
                         Verify(settings with { Theme = theme, ProgrammableKeys = new() { Enabled = true, Columns = grid.Columns, Rows = grid.Rows } }, message);
             Console.WriteLine($"SteamVR {(numpad ? "numpad" : "shortcut")} resize check passed: {updates} updates, both themes, texture readback, physical dimensions, pointer scale, ray hitboxes and UV orientation at 50/100/150% scale. No input or user settings changed.");
+            if (verifyInactivity) Console.WriteLine("SteamVR inactivity input check passed: empty intersection masks accepted; mouse input disabled while idle, including geometry edits, and restored on reveal. Controller pass-through still requires headset acceptance.");
             return 0;
 
             void Verify(BoardSettings next, string message = null)
@@ -157,6 +158,23 @@ internal static class ShortcutResizeCheck
                 if (lastIdentity.HasValue && lastIdentity != identity)
                     Require(lastFingerprint != fingerprint, "Panel image did not update");
                 lastIdentity = identity; lastFingerprint = fingerprint;
+                if (verifyInactivity)
+                {
+                    var method = VROverlayInputMethod.Mouse;
+                    keyboard.SuppressInput(true);
+                    keyboard.BeginFrame(false);
+                    Check(overlay.GetOverlayInputMethod(handle, ref method));
+                    Require(method == VROverlayInputMethod.None, "Idle keyboard retained mouse input");
+                    keyboard.ApplySettings(next with { NumpadEnabled = !next.NumpadEnabled }, resized: true);
+                    Check(overlay.GetOverlayInputMethod(handle, ref method));
+                    Require(method == VROverlayInputMethod.None, "Geometry edit enabled idle input");
+                    keyboard.ApplySettings(next, resized: true);
+                    keyboard.SuppressInput(false);
+                    Check(overlay.GetOverlayInputMethod(handle, ref method));
+                    Require(method == VROverlayInputMethod.Mouse, "Reveal failed to restore mouse input");
+                    // The isolated check overlay itself must never receive input.
+                    Check(overlay.SetOverlayInputMethod(handle, VROverlayInputMethod.None));
+                }
                 if (Environment.GetEnvironmentVariable("GOBOARD_SHORTCUT_ARTIFACTS") is { Length: > 0 } directory &&
                     (identity.Columns, identity.Rows) is (1, 1) or (4, 5))
                 {

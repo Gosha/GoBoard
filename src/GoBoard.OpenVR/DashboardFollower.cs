@@ -13,6 +13,9 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
     // Movement and reset use the main-key center; only the raster has an extra right-side offset.
     private readonly RelativePose pose = new();
     private bool visible;
+    private bool panelVisible, handleVisible, resizeVisible;
+    private float idleScale = 1, idleOpacity = 1, appliedOpacity = 1;
+    private bool awake = true;
     private bool warned;
     private ulong previousAnchor;
     private GrabPose boundGrab;
@@ -34,7 +37,7 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
     {
         // The main texture includes right-side transparent padding without the
         // numpad. Its physical size must stay independent of that toggle.
-        var width = OverlayGeometry.WidthInMeters(true) * scale;
+        var width = OverlayGeometry.WidthInMeters(true) * scale * idleScale;
         if (panelWidth == width && panelScale == scale) return;
         Check(overlay.SetOverlayWidthInMeters(panel, width), "Resize keyboard");
         panelWidth = width;
@@ -51,8 +54,13 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         pose.Reset();
     }
 
-    public bool Update(bool externalGrab = false, bool nativeKeyboardVisible = false)
+    public bool Update(bool externalGrab = false, bool nativeKeyboardVisible = false, KeyboardInactivity inactivity = null)
     {
+        var nextScale = inactivity?.Scale ?? 1;
+        if (idleScale != nextScale) sizeChanged = true;
+        idleScale = nextScale;
+        idleOpacity = inactivity?.Opacity ?? 1;
+        awake = inactivity?.Dormant != true;
         ulong anchor = 0;
         var scale = new HmdVector2_t();
         var rawParent = new HmdMatrix34_t();
@@ -84,22 +92,25 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         var update = pose.Update(parent);
         // An existing resize owns the interaction. For simultaneous fresh presses,
         // moving wins this frame and the resize queue is drained without capture.
-        var dragged = grab.Update(true, update.World, interactive: !resize.Active && !externalGrab);
+        var dragged = grab.Update(true, update.World, interactive: !resize.Active && !externalGrab, dormant: !awake);
         if (dragged.HasValue)
         {
             pose.SetWorld(parent, dragged.Value);
             var dragUpdate = pose.Update(parent);
             update = (dragUpdate.World, update.Write || dragUpdate.Write);
         }
-        resize.Update(true, update.World, canStart: grab.ActiveGrab == null && !externalGrab);
+        resize.Update(awake, update.World, canStart: grab.ActiveGrab == null && !externalGrab);
         SetScale(resize.Scale);
+        // Shrink toward the lower edge, keeping the reveal handle and saved pose fixed.
+        var mainOffset = OverlayGeometry.TextureFromPanel(panelScale * idleScale) *
+            Matrix4x4.CreateTranslation(0, -OverlayGeometry.PanelHeightInMeters * panelScale * (1 - idleScale) / 2, 0);
         if (grab.ActiveGrab != null)
         {
             // Bind once per grab. SteamVR now tracks the controller at compositor
             // rate instead of displaying app-polled absolute poses a frame late.
             if (boundGrab != grab.ActiveGrab || sizeChanged)
             {
-                var relative = OpenVrPose.ToOpenVr(OverlayGeometry.TextureFromPanel(panelScale) * grab.ActiveGrab.ControllerOffset);
+                var relative = OpenVrPose.ToOpenVr(mainOffset * grab.ActiveGrab.ControllerOffset);
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(panel, grab.Controller, ref relative), "Attach panel to controller");
                 var barRelative = OpenVrPose.ToOpenVr(OverlayGeometry.GrabFromScaledPanel(panelScale) * grab.ActiveGrab.ControllerOffset);
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(handle, grab.Controller, ref barRelative), "Attach handle to controller");
@@ -111,7 +122,7 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         }
         else if (boundGrab != null || update.Write || !visible || sizeChanged)
         {
-            var raw = OpenVrPose.ToOpenVr(OverlayGeometry.TextureFromPanel(panelScale) * update.World);
+            var raw = OpenVrPose.ToOpenVr(mainOffset * update.World);
             Check(overlay.SetOverlayTransformAbsolute(panel, Origin, ref raw), "Follow dashboard pose");
             var bar = OpenVrPose.ToOpenVr(OverlayGeometry.GrabFromScaledPanel(panelScale) * update.World);
             Check(overlay.SetOverlayTransformAbsolute(handle, Origin, ref bar), "Place grab handle");
@@ -126,12 +137,23 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
 
     private void SetVisible(bool value)
     {
-        if (value == visible) return;
-        Check(value ? overlay.ShowOverlay(panel) : overlay.HideOverlay(panel), "Set panel visibility");
-        Check(value ? overlay.ShowOverlay(handle) : overlay.HideOverlay(handle), "Set grab handle visibility");
-        Check(value ? overlay.ShowOverlay(resize.Handle) : overlay.HideOverlay(resize.Handle), "Set resize handle visibility");
+        SetSurfaceVisible(panel, value && idleOpacity > 0, ref panelVisible);
+        SetSurfaceVisible(handle, value, ref handleVisible);
+        SetSurfaceVisible(resize.Handle, value && awake, ref resizeVisible);
+        if (appliedOpacity != idleOpacity)
+        {
+            Check(overlay.SetOverlayAlpha(panel, idleOpacity), "Set idle keyboard opacity");
+            appliedOpacity = idleOpacity;
+        }
+        if (value != visible) Console.WriteLine($"Separate panel visible: {value}.");
         visible = value;
-        Console.WriteLine($"Separate panel visible: {value}.");
+    }
+
+    private void SetSurfaceVisible(ulong surface, bool show, ref bool previous)
+    {
+        if (show == previous) return;
+        Check(show ? overlay.ShowOverlay(surface) : overlay.HideOverlay(surface), "Set keyboard surface visibility");
+        previous = show;
     }
 
     private static void Check(EVROverlayError error, string operation)

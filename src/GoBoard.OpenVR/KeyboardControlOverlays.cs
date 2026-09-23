@@ -33,6 +33,7 @@ internal sealed class KeyboardControlOverlays : IDisposable
     private InputTarget target;
     private float scale;
     private bool visible;
+    public bool Engaged => buttons.Any(b => b.Visible && (b.Input.Hovered || b.Input.Pressed));
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
 
     public KeyboardControlOverlays(CVRSystem system, CVROverlay overlay, OverlayGraphics graphics, ulong main, Action<KeyboardAction> activate)
@@ -84,7 +85,7 @@ internal sealed class KeyboardControlOverlays : IDisposable
         if (interactive) system.GetDeviceToAbsoluteTrackingPose(ETrackingUniverseOrigin.TrackingUniverseStanding, 0, devices);
         foreach (var b in buttons)
         {
-            if (b.Input.CapturedDevice is { } owner && !Tracked(owner)) b.Input.Reset(Now);
+            b.Input.RemoveUntracked(Tracked, Now);
             var e = new VREvent_t();
             while (overlay.PollNextOverlayEvent(b.Handle, ref e, (uint)Marshal.SizeOf<VREvent_t>()))
             {

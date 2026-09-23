@@ -10,6 +10,8 @@ namespace GoBoard.App;
 // Non-activating, per-pixel-alpha windows keep the arrow background transparent.
 internal sealed class DesktopKeyboardControls : IDisposable
 {
+    public bool Engaged => buttons.Any(b => b.Window.Visible && (b.Window.Bounds.Contains(Cursor.Position) || b.Input.Pressed));
+    public bool Pressed => buttons.Any(b => b.Input.Pressed);
     private sealed class ButtonWindow : Form
     {
         private DesktopFrame frame;

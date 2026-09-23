@@ -28,6 +28,24 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private readonly ulong left = SourcePath("/user/hand/left"), right = SourcePath("/user/hand/right");
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     internal KeyboardState State => keyboard ??= new KeyboardState(output, shortcutsOnly);
+    public bool Engaged => enabled && (State.FocusedDevices.Any() || State.HasHeldKeys);
+    private bool inputSuppressed;
+
+    public void SuppressInput(bool suppress)
+    {
+        if (inputSuppressed == suppress) return;
+        inputSuppressed = suppress;
+        Cancel(); acceptAfter = Now;
+        var inputResult = overlay.SetOverlayInputMethod(handle, suppress ? VROverlayInputMethod.None : VROverlayInputMethod.Mouse);
+        if (inputResult != EVROverlayError.None) throw new InvalidOperationException($"Idle keyboard input method: {inputResult}");
+        if (!suppress) { ApplyGeometry(); return; }
+        // Alpha is only a visual property. Empty intersection geometry also
+        // makes the idle surface pass through rays to the user's other overlay.
+        var empty = new VROverlayIntersectionMaskPrimitive_t
+        { m_nPrimitiveType = EVROverlayIntersectionMaskPrimitiveType.OverlayIntersectionPrimitiveType_Rectangle };
+        var result = overlay.SetOverlayIntersectionMask(handle, ref empty, 1, (uint)Marshal.SizeOf<VROverlayIntersectionMaskPrimitive_t>());
+        if (result != EVROverlayError.None) throw new InvalidOperationException($"Suppress idle keyboard input: {result}");
+    }
     private double acceptAfter;
     // SteamVR's OpenGL sharing keeps the first submitted texture dimensions.
     // Keep the palette raster fixed and use texel aspect to display its logical
@@ -85,7 +103,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         // scale's aspect too. Match the fixed raster here, then convert
         // event coordinates to the current logical grid in Process.
         var scale = new HmdVector2_t { v0 = TextureInfo.Width, v1 = TextureInfo.Height };
-        var bounds = shortcutsOnly ? new[] { new KeyBounds(0, 0, scale.v0, scale.v1) } :
+        var bounds = inputSuppressed ? new[] { new KeyBounds(0, 0, 0, 0) } : shortcutsOnly ? new[] { new KeyBounds(0, 0, scale.v0, scale.v1) } :
             MainKeyboardControls.KeyboardInputBounds(State.NumpadEnabled).Select(b =>
                 new KeyBounds(b.X * Panel.RasterScale, b.Y * Panel.RasterScale,
                     b.Width * Panel.RasterScale, b.Height * Panel.RasterScale)).ToArray();
@@ -216,7 +234,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
             {
                 // Focus can change between event draining and key-repeat processing.
                 if (WindowsKeyboard.Foreground() != output.Target) Cancel(clearFocus: false);
-                if (State.HasHeldKeys)
+                if (State.FocusedDevices.Any() || State.HasHeldKeys)
                 {
                     system.GetDeviceToAbsoluteTrackingPose(ETrackingUniverseOrigin.TrackingUniverseStanding, 0, devices);
                     foreach (var device in State.FocusedDevices)
