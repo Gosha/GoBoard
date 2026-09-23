@@ -8,6 +8,7 @@ namespace GoBoard.App;
 // Explicit native check: disposable windows/settings, no keyboard injection.
 internal static class DesktopInactivityCheck
 {
+    private const int SW_SHOW = 5;
     public static int Run()
     {
         ApplicationConfiguration.Initialize();
@@ -19,7 +20,7 @@ internal static class DesktopInactivityCheck
             using var target = new Form { Text = "GoBoard disposable inactivity check", StartPosition = FormStartPosition.Manual,
                 Bounds = Screen.FromPoint(cursor).WorkingArea };
             target.Show();
-            ShowWindow(target.Handle, 5); // Consume a launcher's initial SW_HIDE hint.
+            ShowWindow(target.Handle, SW_SHOW); // Consume a launcher's initial SW_HIDE hint.
             var foregroundThread = GetWindowThreadProcessId(WindowsKeyboard.Foreground().Window, out _);
             var currentThread = GetCurrentThreadId();
             var attached = foregroundThread != 0 && foregroundThread != currentThread && AttachThreadInput(currentThread, foregroundThread, true);
@@ -48,7 +49,7 @@ internal static class DesktopInactivityCheck
                 keyboard.RefreshSettings();
                 Pump(500);
                 Require(keyboard.Inactivity.Dormant && !keyboard.Visible, $"{mode} failed to become idle.");
-                Require(keyboard.Inactivity.RevealWindow.Visible, $"{mode} hid the reveal tab.");
+                Require(keyboard.Inactivity.RevealWindow.Visible, $"{mode} hid the reveal prompt.");
                 Require(!keyboard.HasOwnedKeys && !keyboard.State.HasHeldKeys, "Idle keyboard retained owned input.");
                 Require(keyboard.FloatingControls.Windows.All(w => !w.Visible), "Idle keyboard retained floating controls.");
                 var image = keyboard.Inactivity.IdleWindow;
@@ -62,16 +63,16 @@ internal static class DesktopInactivityCheck
                     if (mode == InactivityMode.Minimize) Require(image.Width < original.Width / 2, "Minimize did not shrink the keyboard.");
                     else Require(image.Opacity is > .14 and < .16, "Transparent mode did not apply idle opacity.");
                 }
-                var tab = keyboard.Inactivity.RevealWindow;
+                var prompt = keyboard.Inactivity.RevealWindow;
                 if (Environment.GetEnvironmentVariable("GOBOARD_INACTIVITY_ARTIFACTS") is { Length: > 0 } directory)
                 {
                     Directory.CreateDirectory(directory);
-                    var bounds = Rectangle.Union(original, tab.Bounds);
+                    var bounds = Rectangle.Union(original, prompt.Bounds);
                     using var bitmap = new Bitmap(bounds.Width, bounds.Height);
                     using (var graphics = Graphics.FromImage(bitmap))
                     {
                         graphics.Clear(Color.FromArgb(28, 30, 34));
-                        foreach (var surface in new[] { image, tab }.Where(w => w.Visible))
+                        foreach (var surface in new[] { image, prompt }.Where(w => w.Visible))
                         {
                             using var rendered = new Bitmap(surface.Width, surface.Height);
                             surface.DrawToBitmap(rendered, new Rectangle(Point.Empty, rendered.Size));
@@ -83,7 +84,18 @@ internal static class DesktopInactivityCheck
                     }
                     bitmap.Save(Path.Combine(directory, $"inactivity-{mode.ToString().ToLowerInvariant()}.png"), System.Drawing.Imaging.ImageFormat.Png);
                 }
-                var revealPoint = new Point(tab.Left + tab.Width / 2, tab.Top + tab.Height / 2);
+                // Hover the actual miniature, away from the floating prompt.
+                // Full-size transparent keyboards must stay passive at this point.
+                var imageCenter = new Point(image.Left + image.Width / 2, image.Top + image.Height / 2);
+                if (mode == InactivityMode.Transparent)
+                {
+                    Cursor.Position = imageCenter;
+                    Pump(350);
+                    Require(keyboard.Inactivity.Dormant, "Transparent keyboard incorrectly revealed on image hover.");
+                }
+                var revealPoint = mode == InactivityMode.Minimize ? imageCenter :
+                    new Point(prompt.Left + prompt.Width / 2, prompt.Top + prompt.Height / 2);
+                if (mode == InactivityMode.Minimize) Require(!prompt.Bounds.Contains(revealPoint), "Miniature check overlaps the prompt.");
                 Cursor.Position = revealPoint;
                 Pump(60);
                 Require(keyboard.Inactivity.Dormant, "Reveal ignored its hover delay.");
@@ -91,7 +103,7 @@ internal static class DesktopInactivityCheck
                 while (keyboard.Inactivity.Dormant || !keyboard.Visible)
                 {
                     Pump(20);
-                    Require(Cursor.Position == revealPoint, "Mouse moved away from the disposable reveal tab; check stopped.");
+                    Require(Cursor.Position == revealPoint, "Mouse moved away from the disposable reveal target; check stopped.");
                     Require(revealWait.ElapsedMilliseconds < 1500,
                         $"{mode} failed to reveal: idle={keyboard.Inactivity.Dormant}, visible={keyboard.Visible}.");
                 }
@@ -103,7 +115,7 @@ internal static class DesktopInactivityCheck
             keyboard.RefreshSettings(); Pump(80);
             Require(!keyboard.Inactivity.RevealWindow.Visible && keyboard.Visible, "Off did not restore ordinary visibility.");
             keyboard.Close();
-            Console.WriteLine("Desktop inactivity check passed: Hide, Minimize and Transparent; hover delay, stationary hover, click-through, controls, position restoration, focus preservation and Off. No keys injected or user settings changed.");
+            Console.WriteLine("Desktop inactivity check passed: Hide, Minimize and Transparent; miniature hover reveal, passive transparent image, prompt hover, reveal delay, stationary hover, click-through, controls, position restoration, focus preservation and Off. No keys injected or user settings changed.");
             return 0;
         }
         finally

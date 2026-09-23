@@ -243,7 +243,7 @@ public static int Run(string[] args)
             }
             // Use the ordinary hidden path for input, grabs, resize and shortcuts.
             // Settings remains independently accessible in the dashboard.
-            keyboard.SuppressInput(inactivity.Dormant);
+            keyboard.SuppressInput(inactivity.Dormant, inactivity.CanRevealFromKeyboard);
             var visible = follower.Update(shortcuts.GrabOwner.HasValue,
                 nativeKeyboardVisible: nativeKeyboard.IsVisible(), inactivity: inactivity);
             var interactive = visible && !inactivity.Dormant && !cancel.IsCancellationRequested;
@@ -268,7 +268,7 @@ public static int Run(string[] args)
             keyboard.EndFrame();
             inactivity.Update(appliedSettings.Inactivity, timer.Elapsed.TotalSeconds, visible,
                 keyboard.Engaged || controls.Engaged || shortcuts.Engaged || resize.Hovered,
-                grab.Hovered, grab.ActiveGrab != null || resize.Active || shortcuts.GrabOwner.HasValue);
+                grab.Hovered || keyboard.RevealHovered, grab.ActiveGrab != null || resize.Active || shortcuts.GrabOwner.HasValue);
             graphics.Timings.End("loop.work", loopStarted);
             // Synchronize input/following with SteamVR instead of adding a fixed
             // sleep after each update. Held transforms are tracked by SteamVR.

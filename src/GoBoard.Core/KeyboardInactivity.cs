@@ -30,6 +30,9 @@ internal sealed class KeyboardInactivity
     private double idleSince = double.NaN, revealSince = double.NaN, transitionAt;
     public bool Dormant { get; private set; }
     public float Progress { get; private set; }
+    // Only the settled miniature is a reveal target. A shrinking full-size
+    // keyboard must not reopen as its moving edge crosses a controller ray.
+    public bool CanRevealFromKeyboard => available && Dormant && Progress == 1 && settings?.Mode == InactivityMode.Minimize;
     public float Opacity => settings?.Mode switch
     {
         InactivityMode.Hide => 1 - Progress,

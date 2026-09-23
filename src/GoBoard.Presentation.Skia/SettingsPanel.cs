@@ -45,24 +45,25 @@ internal static class SettingsPanel
         Text(inactivityPage ? "Inactivity" : shortcutsPage ? "Shortcuts" : effectsPage ? "Effects" : "Settings", 64, 110, small, accent);
         if (inactivityPage)
         {
-            Text("When the keyboard is idle", 64, 149, small, accent);
+            const float left = InactivitySettingsLayout.ContentLeft;
+            Text("When the keyboard is idle", left, InactivitySettingsLayout.ModeHeadingBaseline, small, accent);
             Text(settings.Inactivity.Mode switch
             {
-                InactivityMode.Hide => "Hide the keyboard; keep the hover tab.",
-                InactivityMode.Minimize => "Shrink the keyboard above the hover tab.",
+                InactivityMode.Hide => "Hide the keyboard; keep the Show keyboard prompt.",
+                InactivityMode.Minimize => "Hover the minimized keyboard to expand it.",
                 InactivityMode.Transparent => "Fade the keyboard; point through it to other overlays.",
                 _ => "Keep the keyboard open."
-            }, 64, 267, small, text);
-            Text("Hover the tab below the keyboard to restore it.", 64, 300, small, accent);
+            }, left, InactivitySettingsLayout.DescriptionBaseline, small, text);
+            Text("Hover Show keyboard to restore it in any mode.", left, InactivitySettingsLayout.RevealHintBaseline, small, accent);
             for (var i = 0; i < SettingsControls.InactivityParameters.Length; i++)
             {
-                var y = 344 + i * 80;
-                Text(SettingsControls.InactivityParameters[i].Label, 64, y + 33, small, text);
+                var baseline = InactivitySettingsLayout.ParameterBaseline(i);
+                Text(SettingsControls.InactivityParameters[i].Label, left, baseline, small, text);
                 paint.Color = text;
-                canvas.DrawText(SettingsControls.InactivityValue(i, settings.Inactivity), 660, y + 33, SKTextAlign.Center, small, paint);
+                canvas.DrawText(SettingsControls.InactivityValue(i, settings.Inactivity), InactivitySettingsLayout.ValueCenter, baseline, SKTextAlign.Center, small, paint);
             }
-            Text("Stays open while either hand uses the keyboard or its controls.", 64, 764, small, accent);
-            Text("Closing the dashboard also hides the tab.", 64, 793, small, accent);
+            Text("Stays open while either hand uses the keyboard or its controls.", left, InactivitySettingsLayout.ActivityHintBaseline, small, accent);
+            Text("Closing the dashboard also hides the prompt.", left, InactivitySettingsLayout.DashboardHintBaseline, small, accent);
         }
         else if (choosingPreset)
         {
@@ -136,7 +137,7 @@ internal static class SettingsPanel
         Text(autostart.Status, 64, 815, small, autostart.Error == null ? accent : colors.Error);
         }
         if (error != null)
-            Text("Settings unavailable · Last working values kept", 64, inactivityPage ? 890 : choosingPreset ? 806 : choosingKey ? 834 : effectsPage || shortcutsPage ? 760 : 860, small, colors.Error);
+            Text("Settings unavailable · Last working values kept", 64, inactivityPage ? InactivitySettingsLayout.ErrorBaseline : choosingPreset ? 806 : choosingKey ? 834 : effectsPage || shortcutsPage ? 760 : 860, small, colors.Error);
         foreach (var c in SettingsControls.ForPage(pointers?.Page ?? SettingsPage.General, settings, layout, slot))
         {
             var preset = SettingsControls.SoundFor(c.Action);

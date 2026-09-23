@@ -170,6 +170,46 @@ public sealed class InactivityTests
         Assert.False(state.Dormant);
     }
 
+    [Theory]
+    [InlineData("Hide", false)]
+    [InlineData("Minimize", true)]
+    [InlineData("Transparent", false)]
+    public void OnlySettledVisibleMiniatureAcceptsKeyboardHover(string mode, bool acceptsHover)
+    {
+        var settings = Hide with { Mode = Enum.Parse<InactivityMode>(mode), TransitionMs = 400 };
+        var state = new KeyboardInactivity();
+        state.Update(settings, 0, true, false, false);
+        Assert.False(state.CanRevealFromKeyboard);
+        state.Update(settings, 1, true, false, false);
+        state.Update(settings, 1.2, true, false, false);
+        Assert.False(state.CanRevealFromKeyboard);
+        state.Update(settings, 1.4, true, false, false);
+        Assert.Equal(acceptsHover, state.CanRevealFromKeyboard);
+        state.Update(settings, 2, false, false, false);
+        Assert.False(state.CanRevealFromKeyboard);
+        state.Update(settings, 3, true, false, false);
+        Assert.Equal(acceptsHover, state.CanRevealFromKeyboard);
+        state.Wake();
+        Assert.False(state.CanRevealFromKeyboard);
+    }
+
+    [Fact]
+    public void MiniatureHoverUsesRevealDelayAndDoesNotLeaveAnActiveRevealTarget()
+    {
+        var settings = Hide with { Mode = InactivityMode.Minimize, TransitionMs = 0 };
+        var state = new KeyboardInactivity();
+        state.Update(settings, 0, true, false, false);
+        state.Update(settings, 1, true, false, false);
+        Assert.True(state.CanRevealFromKeyboard);
+        state.Update(settings, 2, true, false, state.CanRevealFromKeyboard);
+        state.Update(settings, 2.19, true, false, state.CanRevealFromKeyboard);
+        Assert.True(state.Dormant);
+        state.Update(settings, 2.2, true, false, state.CanRevealFromKeyboard);
+        Assert.False(state.Dormant);
+        Assert.False(state.CanRevealFromKeyboard);
+        Assert.Equal(1, state.Scale);
+    }
+
     [Fact]
     public void LosingOneHandRetainsTheOtherAndTrackingLossClearsHover()
     {

@@ -82,14 +82,14 @@ internal static class SettingsControls
     ];
     public static readonly SettingsControl[] Inactivity =
     [
-        new(SettingsAction.IdleOff, "Off", new(64, 164, 173, 64)),
-        new(SettingsAction.IdleHide, "Hide", new(253, 164, 173, 64)),
-        new(SettingsAction.IdleMinimize, "Minimize", new(442, 164, 173, 64)),
-        new(SettingsAction.IdleTransparent, "Transparent", new(631, 164, 173, 64)),
+        new(SettingsAction.IdleOff, "Off", InactivitySettingsLayout.ModeBounds(0)),
+        new(SettingsAction.IdleHide, "Hide", InactivitySettingsLayout.ModeBounds(1)),
+        new(SettingsAction.IdleMinimize, "Minimize", InactivitySettingsLayout.ModeBounds(2)),
+        new(SettingsAction.IdleTransparent, "Transparent", InactivitySettingsLayout.ModeBounds(3)),
         .. InactivityParameters.SelectMany((p, i) => new[] {
-            new SettingsControl(p.Less, "−", new(516, 344 + i * 80, 64, 52)),
-            new SettingsControl(p.More, "+", new(740, 344 + i * 80, 64, 52)) }),
-        new(SettingsAction.ResetInactivity, "Reset inactivity", new(588, 812, 216, 48))
+            new SettingsControl(p.Less, "−", InactivitySettingsLayout.DecreaseBounds(i)),
+            new SettingsControl(p.More, "+", InactivitySettingsLayout.IncreaseBounds(i)) }),
+        new(SettingsAction.ResetInactivity, "Reset inactivity", InactivitySettingsLayout.ResetBounds)
     ];
     public static string InactivityValue(int index, InactivitySettings s) => index switch
     {
