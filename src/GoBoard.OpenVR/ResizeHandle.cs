@@ -26,6 +26,7 @@ internal sealed class ResizeHandle : IDisposable
     private ulong handle = OpenVR.k_ulOverlayHandleInvalid;
     public ulong Handle => handle;
     public bool Active => session.Active;
+    public bool Hovered => input.HasFocus;
     public float Scale => session.Scale;
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
 
@@ -119,6 +120,7 @@ internal sealed class ResizeHandle : IDisposable
             }
         }
 
+        input.RemoveUntracked(device => TryPose(device, out _), Now);
         if (Active)
         {
             // Tracking loss cancels, whereas a verified owner release commits.

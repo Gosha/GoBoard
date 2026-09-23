@@ -16,6 +16,16 @@ internal sealed class GrabInput(float width = OverlayGeometry.GrabWidth,
     private readonly Dictionary<uint, Pointer> pointers = new();
     public Press Active { get; private set; }
     public bool HasFocus => pointers.Values.Any(p => p.Focused);
+    public IEnumerable<uint> FocusedDevices => pointers.Values.Where(p => p.Focused && p.Device.HasValue).Select(p => p.Device.Value).Distinct().ToArray();
+    public void RemoveUntracked(Func<uint, bool> tracked, double now)
+    {
+        foreach (var (cursor, p) in pointers)
+            if (p.Device is { } device && !tracked(device))
+            {
+                Leave(cursor, device, now);
+                if (Active?.Cursor == cursor) Cancel();
+            }
+    }
 
     public void Enter(uint cursor, uint? device, double time)
     {

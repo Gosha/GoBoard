@@ -29,6 +29,8 @@ internal sealed class DesktopKeyboardForm : Form
     private DesktopFrame frame;
     private readonly DesktopShortcuts shortcuts;
     private readonly DesktopKeyboardControls controls;
+    private readonly DesktopInactivity inactivity;
+    private bool dragging;
     internal DesktopShortcuts Shortcuts => shortcuts;
     internal DesktopKeyboardControls FloatingControls => controls;
     internal void ObserveControlTarget() => RefreshTarget();
@@ -40,6 +42,15 @@ internal sealed class DesktopKeyboardForm : Form
     private DesktopGeometry Geometry => new(ClientSize.Width, ClientSize.Height, HeaderHeight, keyboard.Width);
     internal KeyboardState State => keyboard;
     internal bool HasOwnedKeys => output.HasOwnedKeys;
+    internal DesktopInactivity Inactivity => inactivity;
+    internal Rectangle KeyboardScreenBounds => new(Left, Top + HeaderHeight, ClientSize.Width, ClientSize.Height - HeaderHeight);
+    internal Bitmap IdleSnapshot()
+    {
+        var bitmap = new Bitmap(ClientSize.Width, ClientSize.Height - HeaderHeight);
+        using var graphics = Graphics.FromImage(bitmap);
+        frame?.Draw(graphics, new Rectangle(Point.Empty, bitmap.Size));
+        return bitmap;
+    }
     internal Point SettingsPoint => new(SettingsButton.Left + SettingsButton.Width / 2, SettingsButton.Top + SettingsButton.Height / 2);
     internal Point KeyPoint(string id)
     {
@@ -73,9 +84,11 @@ internal sealed class DesktopKeyboardForm : Form
         ResetPosition();
         shortcuts = new(this, output, previewOnly);
         controls = new(this, previewOnly, MainAction);
+        if (!previewOnly) inactivity = new(this);
         timer.Tick += (_, _) => Frame();
         Shown += (_, _) => { ApplySize(); Frame(); timer.Start(); };
-        ResizeBegin += (_, _) => Cancel();
+        ResizeBegin += (_, _) => { dragging = true; Cancel(); };
+        ResizeEnd += (_, _) => dragging = false;
         DpiChanged += (_, _) => { Cancel(); ApplySize(); };
         LocationChanged += (_, _) => controls?.Update(applied, Visible && !closing);
         VisibleChanged += (_, _) => { if (!Visible) { Cancel(); shortcuts?.Update(applied, false); controls?.Update(applied, false); } };
@@ -186,12 +199,15 @@ internal sealed class DesktopKeyboardForm : Form
         RenderFrame();
         shortcuts.Update(applied, Visible && !closing);
         controls.Update(applied, Visible && !closing);
+        inactivity?.Update(applied, Now,
+            Visible && Bounds.Contains(Cursor.Position) || controls.Engaged || shortcuts.Engaged,
+            dragging || keyCapture || headerCapture != 0 || shortcuts.Manipulating || controls.Pressed);
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        if (previewOnly) return;
+        if (previewOnly || inactivity?.Dormant == true) return;
         var now = Now;
         var point = Geometry.ToKeyboard(e.X, e.Y);
         keyboard.Enter(0, 0, now);
@@ -207,7 +223,7 @@ internal sealed class DesktopKeyboardForm : Form
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
-        if (previewOnly || e.Button != MouseButtons.Left) return;
+        if (previewOnly || inactivity?.Dormant == true || e.Button != MouseButtons.Left) return;
         headerCapture = SettingsButton.Contains(e.Location) ? 1 : CloseButton.Contains(e.Location) ? 2 : 0;
         if (headerCapture != 0) { CancelKeyboard(); Capture = true; return; }
         if (!RefreshTarget()) return;
@@ -337,6 +353,7 @@ internal sealed class DesktopKeyboardForm : Form
             frame?.Dispose();
             shortcuts?.Dispose();
             controls?.Dispose();
+            inactivity?.Dispose();
             renderer.Dispose();
             output.Dispose();
             audio.Dispose();

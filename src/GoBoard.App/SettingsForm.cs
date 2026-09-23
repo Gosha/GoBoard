@@ -47,12 +47,13 @@ internal sealed class SettingsForm : Form
     private static extern bool ShowWindow(nint window, int command);
 
     public SettingsForm(bool previewOnly = false, bool desktopMode = false, SettingsStore store = null,
-        string autostartExecutable = null, AutostartController autostart = null)
+        string autostartExecutable = null, AutostartController autostart = null, SettingsPage previewPage = SettingsPage.General)
     {
         this.previewOnly = previewOnly;
         this.desktopMode = desktopMode;
         this.store = store ?? new SettingsStore();
         editor = new(this.store, geometry => WindowsLayoutProvider.Get(WindowsKeyboard.Foreground().Layout, geometry));
+        if (previewOnly) editor.Pointers.SelectPage(previewPage);
         this.autostart = previewOnly ? null : autostart ?? new AutostartController(autostartExecutable);
         Text = "GoBoard Settings";
         using (var stream = typeof(SettingsForm).Assembly.GetManifestResourceStream("GoBoard.Icon.ico"))

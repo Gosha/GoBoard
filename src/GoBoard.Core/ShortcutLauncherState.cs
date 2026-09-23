@@ -7,6 +7,12 @@ internal sealed class ShortcutLauncherState
     private double acceptAfter = double.NegativeInfinity;
     public bool Expanded { get; private set; }
     public bool Hovered => input.HasFocus;
+    public void RemoveUntracked(Func<uint, bool> tracked, double now)
+    {
+        var before = (Hovered, CapturedDevice);
+        input.RemoveUntracked(tracked, now);
+        if (before != (Hovered, CapturedDevice)) Revision++;
+    }
     public uint? CapturedDevice => input.Active?.Device;
     public int Revision { get; private set; }
     public void Reset(double now, bool collapse = false)

@@ -31,8 +31,10 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
     private readonly bool traceGrab = Environment.GetEnvironmentVariable("GOBOARD_TRACE_GRAB") == "1";
     public GrabPose ActiveGrab => grab;
     public uint Controller => owner;
+    public bool Hovered => input.HasFocus;
+    private bool drawnDormant;
 
-    public Matrix4x4? Update(bool visible, Matrix4x4 panel, bool interactive = true)
+    public Matrix4x4? Update(bool visible, Matrix4x4 panel, bool interactive = true, bool dormant = false)
     {
         interactive &= visible;
         if (interactive != interactiveLastFrame)
@@ -98,6 +100,7 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
             }
         }
 
+        input.RemoveUntracked(device => TryPose(device, out _), Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency);
         // Controller-specific enter/motion/leave/up events own focus. The
         // overlay-wide hover query can change when the OTHER hand types and
         // must not clear this hand's focus or cancel its captured grab.
@@ -133,11 +136,12 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
             }
         }
         var state = grab != null ? 2 : input.HasFocus && interactive ? 1 : 0;
-        if (drawnState != state)
+        if (drawnState != state || drawnDormant != dormant)
         {
-            using var bitmap = GrabHandleRenderer.Render(state, layoutWidth);
+            using var bitmap = GrabHandleRenderer.Render(state, layoutWidth, dormant);
             graphics.Upload(overlay, handle, bitmap);
             drawnState = state;
+            drawnDormant = dormant;
         }
         if (visible) displayedPanel = result ?? panel;
         return result;

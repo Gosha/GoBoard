@@ -6,6 +6,12 @@ internal sealed class FloatingButtonState
     private readonly GrabInput input = new(MainKeyboardControls.Size, MainKeyboardControls.Size);
     private double acceptAfter = double.NegativeInfinity;
     public bool Hovered => input.HasFocus;
+    public void RemoveUntracked(Func<uint, bool> tracked, double now)
+    {
+        var before = (Hovered, Pressed);
+        input.RemoveUntracked(tracked, now);
+        if (before != (Hovered, Pressed)) Revision++;
+    }
     public bool Pressed => input.Active != null;
     public uint? CapturedDevice => input.Active?.Device;
     public int Revision { get; private set; }

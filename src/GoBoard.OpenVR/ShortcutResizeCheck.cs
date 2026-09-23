@@ -12,7 +12,7 @@ namespace GoBoard.Vr;
 // or input events. Kept out of the headset-independent regression test suite.
 internal static class ShortcutResizeCheck
 {
-    public static int Run(bool numpad = false)
+    public static int Run(bool numpad = false, bool verifyInactivity = false)
     {
         var error = EVRInitError.None;
         var system = OpenVR.Init(ref error, EVRApplicationType.VRApplication_Overlay);
@@ -52,6 +52,7 @@ internal static class ShortcutResizeCheck
                     foreach (var message in new[] { null, "Input blocked", null })
                         Verify(settings with { Theme = theme, ProgrammableKeys = new() { Enabled = true, Columns = grid.Columns, Rows = grid.Rows } }, message);
             Console.WriteLine($"SteamVR {(numpad ? "numpad" : "shortcut")} resize check passed: {updates} updates, both themes, texture readback, physical dimensions, pointer scale, ray hitboxes and UV orientation at 50/100/150% scale. No input or user settings changed.");
+            if (verifyInactivity) Console.WriteLine("SteamVR inactivity input check passed: hidden/faded surfaces disable mouse input; miniature hover enables mouse input without typing, including geometry edits; reveal restores keyboard input. Controller interaction still requires headset acceptance.");
             return 0;
 
             void Verify(BoardSettings next, string message = null)
@@ -157,6 +158,35 @@ internal static class ShortcutResizeCheck
                 if (lastIdentity.HasValue && lastIdentity != identity)
                     Require(lastFingerprint != fingerprint, "Panel image did not update");
                 lastIdentity = identity; lastFingerprint = fingerprint;
+                if (verifyInactivity)
+                {
+                    var method = VROverlayInputMethod.Mouse;
+                    keyboard.SuppressInput(true);
+                    keyboard.BeginFrame(false);
+                    Check(overlay.GetOverlayInputMethod(handle, ref method));
+                    Require(method == VROverlayInputMethod.None, "Idle keyboard retained mouse input");
+                    keyboard.ApplySettings(next with { NumpadEnabled = !next.NumpadEnabled }, resized: true);
+                    Check(overlay.GetOverlayInputMethod(handle, ref method));
+                    Require(method == VROverlayInputMethod.None, "Geometry edit enabled idle input");
+                    keyboard.SuppressInput(true, revealOnHover: true);
+                    keyboard.BeginFrame(true); // Suppression must win over host activation.
+                    Check(overlay.GetOverlayInputMethod(handle, ref method));
+                    Require(method == VROverlayInputMethod.Mouse && !keyboard.AcceptsKeyInput,
+                        "Miniature must accept hover without accepting key presses");
+                    keyboard.ApplySettings(next, resized: true);
+                    Check(overlay.GetOverlayInputMethod(handle, ref method));
+                    Require(method == VROverlayInputMethod.Mouse && !keyboard.AcceptsKeyInput,
+                        "Geometry edit changed miniature hover/input policy");
+                    keyboard.SuppressInput(true);
+                    Check(overlay.GetOverlayInputMethod(handle, ref method));
+                    Require(method == VROverlayInputMethod.None, "Leaving miniature hover did not restore pass-through");
+                    keyboard.SuppressInput(false);
+                    keyboard.BeginFrame(true);
+                    Check(overlay.GetOverlayInputMethod(handle, ref method));
+                    Require(method == VROverlayInputMethod.Mouse && keyboard.AcceptsKeyInput, "Reveal failed to restore keyboard input");
+                    // The isolated check overlay itself must never receive input.
+                    Check(overlay.SetOverlayInputMethod(handle, VROverlayInputMethod.None));
+                }
                 if (Environment.GetEnvironmentVariable("GOBOARD_SHORTCUT_ARTIFACTS") is { Length: > 0 } directory &&
                     (identity.Columns, identity.Rows) is (1, 1) or (4, 5))
                 {

@@ -30,6 +30,7 @@ public static int Run(string[] args)
         if (args is ["--gpu-overlay-check"]) return GpuOverlayCheck.Run();
         if (args is ["--shortcut-resize-check"]) return ShortcutResizeCheck.Run();
         if (args is ["--numpad-resize-check"]) return ShortcutResizeCheck.Run(numpad: true);
+        if (args is ["--inactivity-overlay-check"]) return ShortcutResizeCheck.Run(numpad: true, verifyInactivity: true);
         if (args.Length == 1 && args[0] == "--input-check") { KeyboardInputCheck.Run(); return 0; }
         if (args.Length == 1 && args[0] == "--shell-check") { KeyboardInputCheck.Run(shell: true); return 0; }
         if (args.Length == 1 && args[0] == "--layout-check") { KeyboardInputCheck.Run(layouts: true); return 0; }
@@ -44,6 +45,7 @@ public static int Run(string[] args)
         bool previewControls = false;
         bool shortcutsSettings = false;
         bool shortcutPresets = false;
+        SettingsPage? previewPage = null;
         string stopFile = null;
         double seconds = double.PositiveInfinity;
         for (var i = 0; i < args.Length; i++)
@@ -52,6 +54,8 @@ public static int Run(string[] args)
             {
                 case "--render" when i + 1 < args.Length: renderPath = args[++i]; break;
                 case "--render-settings" when i + 1 < args.Length: settingsRenderPath = args[++i]; break;
+                case "--settings-page" when i + 1 < args.Length:
+                    previewPage = Enum.Parse<SettingsPage>(args[++i], ignoreCase: true); break;
                 case "--shortcuts": previewShortcuts = true; break;
                 case "--numpad": previewNumpad = true; break;
                 case "--controls": previewControls = true; break;
@@ -74,6 +78,7 @@ public static int Run(string[] args)
         }
 
         if (settingsRenderPath != null && (renderPath != null || previewOptions)) throw new ArgumentException("--render-settings cannot be combined with keyboard preview options.");
+        if (previewPage.HasValue && settingsRenderPath == null) throw new ArgumentException("--settings-page requires --render-settings.");
         if (previewOptions && renderPath == null) throw new ArgumentException("--layout, --state and --theme require --render; live layouts follow Windows automatically; use Settings for live theme selection.");
         if (previewShortcuts && renderPath == null) throw new ArgumentException("--shortcuts requires --render.");
         if (previewControls && (renderPath == null || previewShortcuts)) throw new ArgumentException("--controls requires a main keyboard --render preview.");
@@ -97,6 +102,7 @@ public static int Run(string[] args)
             settingsPointers.Process(0, b.X + 10, b.Y + 10, 1.3, 1.3, up: true);
             settingsPointers.Reset();
         }
+        if (previewPage.HasValue) settingsPointers.SelectPage(previewPage.Value);
         using var panel = settingsRenderPath != null ? SettingsPanel.Render(new BoardSettings(), settingsPointers) :
             renderPath == null ? PanelPreview.Render("us", "idle", numpad: true) : previewLayout == "ja" ? PanelPreview.Render("ja", previewState, previewTheme, shortcuts: previewShortcuts, numpad: previewNumpad) :
             PanelPreview.Render(WindowsLayoutProvider.FromKlid(0, previewId), previewState, previewTheme, shortcuts: previewShortcuts, numpad: previewNumpad);
@@ -173,6 +179,7 @@ public static int Run(string[] args)
         var nativeKeyboard = new NativeKeyboardVisibility(overlay);
         using var output = new WindowsKeyboard();
         using var keyboard = new KeyboardOverlay(system, overlay, handle, graphics, sharedOutput: output);
+        var inactivity = new KeyboardInactivity();
         using var shortcuts = new ShortcutOverlays(system, overlay, graphics, handle, output);
         using var controls = new KeyboardControlOverlays(system, overlay, graphics, handle, action =>
         {
@@ -226,6 +233,7 @@ public static int Run(string[] args)
             if (settingsOverlay.CloseRequested) break;
             if (appliedSettings != settings.Current)
             {
+                inactivity.Wake();
                 var resetPosition = appliedSettings.PositionResetId != settings.Current.PositionResetId;
                 if (resetPosition) follower.ResetPosition();
                 follower.SetNumpad(settings.Current.NumpadEnabled);
@@ -235,12 +243,14 @@ public static int Run(string[] args)
             }
             // Use the ordinary hidden path for input, grabs, resize and shortcuts.
             // Settings remains independently accessible in the dashboard.
+            keyboard.SuppressInput(inactivity.Dormant, inactivity.CanRevealFromKeyboard);
             var visible = follower.Update(shortcuts.GrabOwner.HasValue,
-                nativeKeyboardVisible: nativeKeyboard.IsVisible());
-            shortcuts.Update(visible && !cancel.IsCancellationRequested, resize.Scale, grab.ActiveGrab != null ? grab.Controller : null, resize.Active);
-            keyboard.BeginFrame(visible && !cancel.IsCancellationRequested,
+                nativeKeyboardVisible: nativeKeyboard.IsVisible(), inactivity: inactivity);
+            var interactive = visible && !inactivity.Dormant && !cancel.IsCancellationRequested;
+            shortcuts.Update(interactive, resize.Scale, grab.ActiveGrab != null ? grab.Controller : null, resize.Active);
+            keyboard.BeginFrame(interactive,
                 grab.ActiveGrab != null ? grab.Controller : shortcuts.GrabOwner, resize.Active);
-            controls.Update(appliedSettings, visible && !cancel.IsCancellationRequested,
+            controls.Update(appliedSettings, interactive,
                 grab.ActiveGrab == null && !shortcuts.GrabOwner.HasValue && !resize.Active, resize.Scale);
             while (overlay.PollNextOverlayEvent(handle, ref vrEvent, eventSize))
             {
@@ -256,6 +266,9 @@ public static int Run(string[] args)
             }
             if (cancel.IsCancellationRequested) break;
             keyboard.EndFrame();
+            inactivity.Update(appliedSettings.Inactivity, timer.Elapsed.TotalSeconds, visible,
+                keyboard.Engaged || controls.Engaged || shortcuts.Engaged || resize.Hovered,
+                grab.Hovered || keyboard.RevealHovered, grab.ActiveGrab != null || resize.Active || shortcuts.GrabOwner.HasValue);
             graphics.Timings.End("loop.work", loopStarted);
             // Synchronize input/following with SteamVR instead of adding a fixed
             // sleep after each update. Held transforms are tracked by SteamVR.

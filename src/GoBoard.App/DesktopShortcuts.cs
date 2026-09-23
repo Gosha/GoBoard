@@ -82,6 +82,10 @@ internal sealed class DesktopShortcuts : IDisposable
     internal Form PanelWindow => panel;
     internal KeyboardState State => keyboard;
     internal bool Expanded => toggle.Expanded;
+    private bool dragging;
+    public bool Manipulating => dragging || launcher.Capture || panel.Capture || keyboard.HasHeldKeys;
+    public bool Engaged => visible && (launcher.Visible && launcher.Bounds.Contains(Cursor.Position) ||
+        panel.Visible && panel.Bounds.Contains(Cursor.Position) || Manipulating);
 
     public DesktopShortcuts(DesktopKeyboardForm owner, WindowsKeyboard output, bool preview)
     {
@@ -98,7 +102,10 @@ internal sealed class DesktopShortcuts : IDisposable
         launcher.MouseCaptureChanged += (_, _) => { if (!releasingCapture && !launcher.Capture) toggle.Reset(Now); };
         launcher.Move += (_, _) => { if (positioned && !placing) PlacePanel(); };
         panel.Move += (_, _) => { if (positioned && !placing) panelOffset = new(panel.Left - launcher.Left, panel.Top - launcher.Top); };
-        panel.ResizeBegin += (_, _) => Cancel();
+        panel.ResizeBegin += (_, _) => { dragging = true; Cancel(); };
+        panel.ResizeEnd += (_, _) => dragging = false;
+        launcher.ResizeBegin += (_, _) => dragging = true;
+        launcher.ResizeEnd += (_, _) => dragging = false;
         panel.MouseMove += (_, e) => { if (!preview) { var p = ToPanel(e.Location); keyboard.Enter(0, 0, Now); keyboard.Move(0, 0, p.X, p.Y); } };
         panel.MouseLeave += (_, _) => { keyboard.Leave(0, 0, Now); audio.Cancel(); };
         panel.MouseDown += (_, e) => Press(e);

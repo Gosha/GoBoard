@@ -28,6 +28,22 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private readonly ulong left = SourcePath("/user/hand/left"), right = SourcePath("/user/hand/right");
     private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     internal KeyboardState State => keyboard ??= new KeyboardState(output, shortcutsOnly);
+    public bool Engaged => enabled && (State.FocusedDevices.Any() || State.HasHeldKeys);
+    private bool inputSuppressed, hoverReveal;
+    public bool RevealHovered => hoverReveal && State.FocusedDevices.Any();
+    internal bool AcceptsKeyInput => enabled;
+
+    public void SuppressInput(bool suppress, bool revealOnHover = false)
+    {
+        revealOnHover &= suppress;
+        if (inputSuppressed == suppress && hoverReveal == revealOnHover) return;
+        inputSuppressed = suppress;
+        hoverReveal = revealOnHover;
+        Cancel(); acceptAfter = Now;
+        var inputResult = overlay.SetOverlayInputMethod(handle, suppress && !hoverReveal ? VROverlayInputMethod.None : VROverlayInputMethod.Mouse);
+        if (inputResult != EVROverlayError.None) throw new InvalidOperationException($"Idle keyboard input method: {inputResult}");
+        ApplyGeometry();
+    }
     private double acceptAfter;
     // SteamVR's OpenGL sharing keeps the first submitted texture dimensions.
     // Keep the palette raster fixed and use texel aspect to display its logical
@@ -85,7 +101,12 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
         // scale's aspect too. Match the fixed raster here, then convert
         // event coordinates to the current logical grid in Process.
         var scale = new HmdVector2_t { v0 = TextureInfo.Width, v1 = TextureInfo.Height };
-        var bounds = shortcutsOnly ? new[] { new KeyBounds(0, 0, scale.v0, scale.v1) } :
+        // Hidden/faded keyboards pass through rays. A settled miniature accepts
+        // hover over its visible content (excluding fixed-raster padding), but
+        // BeginFrame still blocks typing until the keyboard is restored.
+        var bounds = inputSuppressed ? new[] { hoverReveal
+            ? new KeyBounds(0, 0, shortcutsOnly ? scale.v0 : State.Width * Panel.RasterScale, scale.v1)
+            : new KeyBounds(0, 0, 0, 0) } : shortcutsOnly ? new[] { new KeyBounds(0, 0, scale.v0, scale.v1) } :
             MainKeyboardControls.KeyboardInputBounds(State.NumpadEnabled).Select(b =>
                 new KeyBounds(b.X * Panel.RasterScale, b.Y * Panel.RasterScale,
                     b.Width * Panel.RasterScale, b.Height * Panel.RasterScale)).ToArray();
@@ -125,6 +146,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
 
     public void BeginFrame(bool active, uint? grabbingController = null, bool isResizing = false)
     {
+        active &= !inputSuppressed;
         if (resizing != isResizing)
         {
             resizing = isResizing;
@@ -191,7 +213,7 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
                 case EVREventType.VREvent_MouseMove when e.eventAgeSeconds <= 0.20f:
                     // This controller-identified event was delivered to this
                     // overlay. The global hover query cannot identify its hand.
-                    State.ObserveMotion(pointer.Value, device.Value, x, y, time, now, enabled);
+                    State.ObserveMotion(pointer.Value, device.Value, x, y, time, now, enabled || hoverReveal);
                     break;
                 case EVREventType.VREvent_MouseButtonDown when enabled && !faulted && e.data.mouse.button == (uint)EVRMouseButton.Left:
                     if (!State.Press(pointer.Value, device, x, y, time, now))
@@ -209,24 +231,25 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
 
     public void EndFrame()
     {
-        if (!enabled) return;
+        if (!enabled && !hoverReveal) return;
         if (!faulted)
         {
             try
             {
                 // Focus can change between event draining and key-repeat processing.
                 if (WindowsKeyboard.Foreground() != output.Target) Cancel(clearFocus: false);
-                if (State.HasHeldKeys)
+                if (State.FocusedDevices.Any() || State.HasHeldKeys)
                 {
                     system.GetDeviceToAbsoluteTrackingPose(ETrackingUniverseOrigin.TrackingUniverseStanding, 0, devices);
                     foreach (var device in State.FocusedDevices)
                         if (device >= devices.Length || !devices[device].bDeviceIsConnected || !devices[device].bPoseIsValid)
                         { State.LoseDevice(device, Now); audio.Cancel(device); }
-                    State.Tick(Now);
+                    if (enabled) State.Tick(Now);
                 }
             }
             catch (Exception ex) { Failed(ex); }
         }
+        if (!enabled) return;
         var shift = State.Shift || WindowsKeyboard.PhysicalShift;
         var altGr = State.AltGr || WindowsKeyboard.PhysicalAltGr ||
             (State.Mode(0x1d) != ModifierMode.Idle && State.Mode(0x38) != ModifierMode.Idle);
