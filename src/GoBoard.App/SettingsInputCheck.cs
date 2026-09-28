@@ -126,6 +126,15 @@ internal static class SettingsInputCheck
                 Require(desktop.Location == moved, "Position reset is consumed once");
                 var general = store.Current;
                 Click(SettingsAction.InactivityTab);
+                Click(SettingsAction.ToggleKeepVisibleAtDefaultPosition);
+                Require(store.Current.Inactivity.KeepVisibleAtDefaultPosition && !store.Current.RememberPosition,
+                    "Default-position exemption is independent of position memory");
+                Click(SettingsAction.ToggleRememberPosition);
+                Require(store.Current.RememberPosition && store.Current.Inactivity.KeepVisibleAtDefaultPosition,
+                    "Position memory preserves the default-position exemption");
+                Require(new SettingsStore(path).Current == store.Current, "Position preferences persist");
+                Click(SettingsAction.ToggleRememberPosition);
+                Click(SettingsAction.ToggleKeepVisibleAtDefaultPosition);
                 foreach (var (action, mode) in new[] { (SettingsAction.IdleHide, InactivityMode.Hide),
                     (SettingsAction.IdleMinimize, InactivityMode.Minimize), (SettingsAction.IdleTransparent, InactivityMode.Transparent) })
                 {

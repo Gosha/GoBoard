@@ -62,8 +62,10 @@ internal static class SettingsPanel
                 paint.Color = text;
                 canvas.DrawText(SettingsControls.InactivityValue(i, settings.Inactivity), InactivitySettingsLayout.ValueCenter, baseline, SKTextAlign.Center, small, paint);
             }
-            Text("Stays open while either hand uses the keyboard or its controls.", left, InactivitySettingsLayout.ActivityHintBaseline, small, accent);
-            Text("Closing the dashboard also hides the prompt.", left, InactivitySettingsLayout.DashboardHintBaseline, small, accent);
+            Text("Keep visible at default position", left, InactivitySettingsLayout.KeepVisibleBaseline, small, text);
+            Text("When on, inactivity applies only after moving the keyboard.", left, InactivitySettingsLayout.KeepVisibleHintBaseline, small, accent);
+            Text("Remember position", left, InactivitySettingsLayout.RememberPositionBaseline, small, text);
+            Text("Restore the keyboard's position on startup.", left, InactivitySettingsLayout.RememberPositionHintBaseline, small, accent);
         }
         else if (choosingPreset)
         {
@@ -143,6 +145,8 @@ internal static class SettingsPanel
             var preset = SettingsControls.SoundFor(c.Action);
             var selected = preset == KeySounds.Canonical(settings.Sound) ||
                 c.Action == SettingsAction.ToggleSound && settings.SoundEnabled ||
+                c.Action == SettingsAction.ToggleKeepVisibleAtDefaultPosition && settings.Inactivity.KeepVisibleAtDefaultPosition ||
+                c.Action == SettingsAction.ToggleRememberPosition && settings.RememberPosition ||
                 c.Action == SettingsAction.ToggleNumpadButton && settings.NumpadButtonEnabled ||
                 c.Action == SettingsAction.SteamSoft && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamSoft ||
                 c.Action == SettingsAction.SteamFlat && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamFlat ||
@@ -214,6 +218,8 @@ internal static class SettingsPanel
             paint.Color = !enabled ? colors.TextDisabled : selected ? colors.TextOnAccent : text;
             if (softTheme) paint.Color = selected ? KeyboardStyle.Soft.Colors.KeyLabelAccent : KeyboardStyle.Soft.Colors.KeyLabel;
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
+            if (c.Action == SettingsAction.ToggleKeepVisibleAtDefaultPosition) title = settings.Inactivity.KeepVisibleAtDefaultPosition ? "On" : "Off";
+            if (c.Action == SettingsAction.ToggleRememberPosition) title = settings.RememberPosition ? "On" : "Off";
             if (c.Action == SettingsAction.ToggleNumpadButton) title = settings.NumpadButtonEnabled ? "Numpad button: Shown" : "Numpad button: Hidden";
             if (c.Action == SettingsAction.Autostart) title = autostart.ButtonLabel;
             if (c.Action == SettingsAction.ToggleShortcuts) title = settings.ProgrammableKeys.Enabled ? "Shown" : "Hidden";

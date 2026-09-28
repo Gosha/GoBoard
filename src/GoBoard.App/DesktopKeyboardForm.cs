@@ -13,6 +13,7 @@ internal sealed class DesktopKeyboardForm : Form
     private readonly AnimatedKeyboardRenderer renderer = new();
     private readonly KeyboardState keyboard;
     private readonly SettingsStore settings;
+    private readonly PositionMemory<DesktopKeyboardPosition> positionMemory;
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 16 };
     private readonly bool previewOnly;
     private readonly bool fixedPreview;
@@ -43,6 +44,7 @@ internal sealed class DesktopKeyboardForm : Form
     internal KeyboardState State => keyboard;
     internal bool HasOwnedKeys => output.HasOwnedKeys;
     internal DesktopInactivity Inactivity => inactivity;
+    internal bool AtDefaultPosition => Location == DefaultLocation(Screen.FromControl(this).WorkingArea);
     internal Rectangle KeyboardScreenBounds => new(Left, Top + HeaderHeight, ClientSize.Width, ClientSize.Height - HeaderHeight);
     internal Bitmap IdleSnapshot()
     {
@@ -65,6 +67,7 @@ internal sealed class DesktopKeyboardForm : Form
         this.stopRequested = stopRequested;
         fixedPreview = previewOnly && store == null;
         settings = store ?? new SettingsStore();
+        positionMemory = new(settings, s => s.DesktopPosition, (s, position) => s with { DesktopPosition = position });
         keyboard = new KeyboardState(output);
         Text = "GoBoard Desktop";
         FormBorderStyle = FormBorderStyle.None;
@@ -82,6 +85,11 @@ internal sealed class DesktopKeyboardForm : Form
         keyboard.SetNumpad(applied.NumpadEnabled, Now);
         audio.Apply(applied);
         ResetPosition();
+        if (!fixedPreview && applied.RememberPosition && applied.DesktopPosition is { } saved)
+        {
+            Location = new(saved.X, saved.Y);
+            ApplySize(); // Fit the nearest monitor if displays changed since saving.
+        }
         shortcuts = new(this, output, previewOnly);
         controls = new(this, previewOnly, MainAction);
         if (!previewOnly) inactivity = new(this);
@@ -121,12 +129,15 @@ internal sealed class DesktopKeyboardForm : Form
         Cancel();
         var area = Screen.FromPoint(Cursor.Position).WorkingArea;
         ApplySize(area);
-        Location = new(area.Left + (area.Width - Width) / 2, Math.Max(area.Top, area.Bottom - Height - 24));
+        Location = DefaultLocation(area);
     }
+
+    private Point DefaultLocation(Rectangle area) => new(area.Left + (area.Width - Width) / 2, Math.Max(area.Top, area.Bottom - Height - 24));
 
     private void ApplySize(Rectangle? workingArea = null)
     {
         var area = workingArea ?? Screen.FromControl(this).WorkingArea;
+        var wasDefault = AtDefaultPosition;
         var availableWidth = (area.Width - 16f) * keyboard.Width / (keyboard.Width + 2f * (MainKeyboardControls.Size + MainKeyboardControls.Gap));
         var geometry = DesktopGeometry.Create(applied.Scale, DeviceDpi / 96f, availableWidth, area.Height - 16, keyboard.Width);
         ClientSize = new((int)Math.Round(geometry.Width), (int)Math.Round(geometry.Height));
@@ -134,6 +145,7 @@ internal sealed class DesktopKeyboardForm : Form
         var topMargin = Math.Max(0, (int)Math.Ceiling((MainKeyboardControls.Size * ClientSize.Width / (float)keyboard.Width - HeaderHeight) / 2));
         Location = new(Math.Clamp(Left, area.Left + margin, Math.Max(area.Left + margin, area.Right - Width - margin)),
             Math.Clamp(Top, area.Top + topMargin, Math.Max(area.Top + topMargin, area.Bottom - Height)));
+        if (wasDefault) Location = DefaultLocation(area);
         Invalidate();
     }
 
@@ -197,11 +209,23 @@ internal sealed class DesktopKeyboardForm : Form
         }
         catch (Exception ex) { Failed(ex); }
         RenderFrame();
+        SavePosition(dragging);
         shortcuts.Update(applied, Visible && !closing);
         controls.Update(applied, Visible && !closing);
         inactivity?.Update(applied, Now,
             Visible && Bounds.Contains(Cursor.Position) || controls.Engaged || shortcuts.Engaged,
             dragging || keyCapture || headerCapture != 0 || shortcuts.Manipulating || controls.Pressed);
+    }
+
+    private void SavePosition(bool moving = false)
+    {
+        if (previewOnly) return;
+        if (!positionMemory.Update(AtDefaultPosition ? null : new(Left, Top), moving, applied))
+        {
+            error = settings.Error;
+            errorUntil = Now + 4;
+            Console.Error.WriteLine(error);
+        }
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -341,6 +365,7 @@ internal sealed class DesktopKeyboardForm : Form
         Cancel();
         shortcuts.Update(applied, false);
         controls.Update(applied, false);
+        SavePosition();
         settingsForm?.Close();
         base.OnFormClosing(e);
     }

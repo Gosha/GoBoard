@@ -83,7 +83,8 @@ internal sealed class DesktopInactivity(DesktopKeyboardForm owner) : IDisposable
         if (!enabled && prompt.Visible) prompt.Hide();
         var miniatureHovered = state.CanRevealFromKeyboard && image.Visible && image.Bounds.Contains(Cursor.Position);
         state.Update(settings.Inactivity, now, available, engaged,
-            enabled && (prompt.Bounds.Contains(Cursor.Position) || miniatureHovered), manipulating);
+            enabled && (prompt.Bounds.Contains(Cursor.Position) || miniatureHovered), manipulating,
+            atDefaultPosition: owner.AtDefaultPosition);
         if (state.Dormant != dormant)
         {
             dormant = state.Dormant;

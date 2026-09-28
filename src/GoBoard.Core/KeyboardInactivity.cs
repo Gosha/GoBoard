@@ -5,6 +5,7 @@ internal enum InactivityMode { Off, Hide, Minimize, Transparent }
 internal sealed record InactivitySettings
 {
     public InactivityMode Mode { get; init; }
+    public bool KeepVisibleAtDefaultPosition { get; init; }
     public int DelayMs { get; init; } = 1000;
     public int RevealMs { get; init; } = 200;
     public int TransitionMs { get; init; } = 200;
@@ -42,7 +43,7 @@ internal sealed class KeyboardInactivity
     public float Scale => settings?.Mode == InactivityMode.Minimize
         ? 1 - Progress * (1 - settings.SizePercent / 100f) : 1;
 
-    public void Update(InactivitySettings next, double now, bool visible, bool engaged, bool revealHovered, bool manipulating = false)
+    public void Update(InactivitySettings next, double now, bool visible, bool engaged, bool revealHovered, bool manipulating = false, bool atDefaultPosition = false)
     {
         if (!double.IsFinite(now)) return;
         if (next != settings)
@@ -57,7 +58,7 @@ internal sealed class KeyboardInactivity
             // preserves whether the user had left the keyboard idle.
             idleSince = revealSince = double.NaN;
         }
-        if (next.Mode == InactivityMode.Off) { Wake(); return; }
+        if (next.Mode == InactivityMode.Off || next.KeepVisibleAtDefaultPosition && atDefaultPosition) { Wake(); return; }
         if (!visible)
         {
             // Finish an outgoing animation while hidden so reopening cannot

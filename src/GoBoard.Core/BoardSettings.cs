@@ -22,6 +22,9 @@ internal sealed record BoardSettings
     public ProgrammableKeySettings ProgrammableKeys { get; init; } = new();
     // A new request is observed once by each running host through the shared settings file.
     public Guid PositionResetId { get; init; }
+    public bool RememberPosition { get; init; }
+    public VrKeyboardPosition VrPosition { get; init; }
+    public DesktopKeyboardPosition DesktopPosition { get; init; }
     public float Scale => SizePercent / 100f;
 
     public BoardSettings Normalize() => this with
@@ -33,7 +36,9 @@ internal sealed record BoardSettings
         Theme = BoardThemes.Normalize(Theme),
         Effects = (Effects ?? new()).Normalize(),
         Inactivity = (Inactivity ?? new()).Normalize(),
-        ProgrammableKeys = (ProgrammableKeys ?? new()).Normalize()
+        ProgrammableKeys = (ProgrammableKeys ?? new()).Normalize(),
+        VrPosition = VrPosition?.Normalize(),
+        DesktopPosition = DesktopPosition?.Normalize()
     };
 
     public static BoardSettings Defaults => new();
