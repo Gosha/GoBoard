@@ -12,6 +12,9 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
     private const ETrackingUniverseOrigin Origin = ETrackingUniverseOrigin.TrackingUniverseStanding;
     // Movement and reset use the main-key center; only the raster has an extra right-side offset.
     private readonly RelativePose pose = new();
+    public bool AtDefaultPosition => pose.AtDefaultPosition;
+    public VrKeyboardPosition SavedPosition => pose.AtDefaultPosition ? null : VrKeyboardPosition.FromMatrix(pose.Local);
+    public void RestorePosition(VrKeyboardPosition saved) => pose.Restore(saved);
     private bool visible;
     private bool panelVisible, handleVisible, resizeVisible;
     private float idleScale = 1, idleOpacity = 1, appliedOpacity = 1;

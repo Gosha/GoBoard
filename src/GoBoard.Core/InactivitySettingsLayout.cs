@@ -8,14 +8,17 @@ internal static class InactivitySettingsLayout
     private const int ModeCount = 4;
     private const float ModeTop = 164, ModeHeight = 64, ModeGap = 16;
     private const float ModeWidth = (ContentRight - ContentLeft - ModeGap * (ModeCount - 1)) / ModeCount;
-    private const float ParameterTop = 344, ParameterRowSpacing = 80;
+    private const float ParameterTop = 324, ParameterRowSpacing = 64;
     private const float StepperWidth = 64, StepperHeight = 52, ValueWidth = 160;
     private const float IncreaseLeft = ContentRight - StepperWidth;
     private const float DecreaseLeft = IncreaseLeft - ValueWidth - StepperWidth;
     private const float ParameterBaselineOffset = 33;
-    private const float ResetTop = 812, ResetWidth = 216, ResetHeight = 48;
+    private const float ResetTop = 828, ResetWidth = 216, ResetHeight = 48;
     public const float ModeHeadingBaseline = 149, DescriptionBaseline = 267, RevealHintBaseline = 300;
-    public const float ActivityHintBaseline = 764, DashboardHintBaseline = 793, ErrorBaseline = 890;
+    public const float KeepVisibleBaseline = 689, KeepVisibleHintBaseline = 728;
+    public const float RememberPositionBaseline = 769, RememberPositionHintBaseline = 808, ErrorBaseline = 890;
+    public static KeyBounds KeepVisibleBounds => new(588, 658, 216, 48);
+    public static KeyBounds RememberPositionBounds => new(588, 738, 216, 48);
     public const float ValueCenter = IncreaseLeft - ValueWidth / 2;
 
     public static KeyBounds ModeBounds(int column) => new(

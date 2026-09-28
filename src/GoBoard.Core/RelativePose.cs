@@ -8,7 +8,14 @@ internal sealed class RelativePose
     private static readonly Matrix4x4 DefaultLocal = Matrix4x4.CreateTranslation(0, -0.30f, 0.10f);
     private Matrix4x4 local = DefaultLocal;
     private Matrix4x4? lastWorld;
+    public Matrix4x4 Local => local;
+    public bool AtDefaultPosition => Near(local, DefaultLocal);
 
+    public void Restore(VrKeyboardPosition saved)
+    {
+        local = saved?.Normalize()?.ToMatrix() ?? DefaultLocal;
+        lastWorld = null;
+    }
 
     public void Reset()
     {

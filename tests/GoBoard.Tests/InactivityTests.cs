@@ -8,6 +8,34 @@ public sealed class InactivityTests
 {
     private static readonly InactivitySettings Hide = new() { Mode = InactivityMode.Hide };
 
+    [Theory]
+    [InlineData("Hide")]
+    [InlineData("Minimize")]
+    [InlineData("Transparent")]
+    public void DefaultPositionExemptionWakesAndMovingStartsFreshDelay(string mode)
+    {
+        var settings = Hide with { Mode = Enum.Parse<InactivityMode>(mode), KeepVisibleAtDefaultPosition = true };
+        var state = new KeyboardInactivity();
+        state.Update(settings, 0, true, false, false, atDefaultPosition: true);
+        state.Update(settings, 60, true, false, false, atDefaultPosition: true);
+        Assert.False(state.Dormant);
+        state.Update(settings, 61, true, false, false);
+        state.Update(settings, 61.99, true, false, false);
+        Assert.False(state.Dormant);
+        state.Update(settings, 62, true, false, false);
+        Assert.True(state.Dormant);
+        state.Update(settings, 62.1, false, false, false, atDefaultPosition: true);
+        state.Update(settings, 63, true, false, false, atDefaultPosition: true);
+        Assert.False(state.Dormant);
+        Assert.Equal(1, state.Opacity);
+        Assert.Equal(1, state.Scale);
+        // The preference is opt-in, including at the default location.
+        settings = settings with { KeepVisibleAtDefaultPosition = false };
+        state.Update(settings, 64, true, false, false, atDefaultPosition: true);
+        state.Update(settings, 65, true, false, false, atDefaultPosition: true);
+        Assert.True(state.Dormant);
+    }
+
     [Fact]
     public void IdleStartsOnLeaveAndStationaryHoverKeepsKeyboardOpen()
     {

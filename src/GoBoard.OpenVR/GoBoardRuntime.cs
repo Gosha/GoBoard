@@ -176,6 +176,9 @@ public static int Run(string[] args)
         var settings = new SettingsStore();
         using var resize = new ResizeHandle(system, overlay, graphics, settings);
         var follower = new DashboardFollower(overlay, handle, grabHandle, grab, resize);
+        if (settings.Current.RememberPosition) follower.RestorePosition(settings.Current.VrPosition);
+        var positionMemory = new PositionMemory<VrKeyboardPosition>(settings, s => s.VrPosition,
+            (s, position) => s with { VrPosition = position });
         var nativeKeyboard = new NativeKeyboardVisibility(overlay);
         using var output = new WindowsKeyboard();
         using var keyboard = new KeyboardOverlay(system, overlay, handle, graphics, sharedOutput: output);
@@ -268,7 +271,13 @@ public static int Run(string[] args)
             keyboard.EndFrame();
             inactivity.Update(appliedSettings.Inactivity, timer.Elapsed.TotalSeconds, visible,
                 keyboard.Engaged || controls.Engaged || shortcuts.Engaged || resize.Hovered,
-                grab.Hovered || keyboard.RevealHovered, grab.ActiveGrab != null || resize.Active || shortcuts.GrabOwner.HasValue);
+                grab.Hovered || keyboard.RevealHovered, grab.ActiveGrab != null || resize.Active || shortcuts.GrabOwner.HasValue,
+                atDefaultPosition: follower.AtDefaultPosition);
+            if (!positionMemory.Update(follower.SavedPosition, grab.ActiveGrab != null, appliedSettings))
+            {
+                keyboard.ReportError(settings.Error);
+                Console.Error.WriteLine(settings.Error);
+            }
             graphics.Timings.End("loop.work", loopStarted);
             // Synchronize input/following with SteamVR instead of adding a fixed
             // sleep after each update. Held transforms are tracked by SteamVR.
@@ -283,6 +292,10 @@ public static int Run(string[] args)
             graphics.Timings.End("loop.total", loopStarted);
             graphics.Timings.Report();
         }
+        // Release shared native input before a shutdown save can wait on storage.
+        keyboard.CancelPending();
+        if (!positionMemory.Update(follower.SavedPosition, false, appliedSettings))
+            Console.Error.WriteLine(settings.Error);
         return 0;
     }
     catch (Exception ex)

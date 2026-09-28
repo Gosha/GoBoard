@@ -17,6 +17,7 @@ internal enum SettingsAction
     InactivityTab = 500, IdleOff, IdleHide, IdleMinimize, IdleTransparent,
     IdleSooner, IdleLater, RevealSooner, RevealLater, FadeFaster, FadeSlower,
     IdleOpacityLess, IdleOpacityMore, IdleSizeLess, IdleSizeMore, ResetInactivity,
+    ToggleKeepVisibleAtDefaultPosition, ToggleRememberPosition,
     KeyChoiceFirst = 1000
 }
 internal sealed record SettingsControl(SettingsAction Action, string Label, KeyBounds Bounds,
@@ -89,7 +90,9 @@ internal static class SettingsControls
         .. InactivityParameters.SelectMany((p, i) => new[] {
             new SettingsControl(p.Less, "−", InactivitySettingsLayout.DecreaseBounds(i)),
             new SettingsControl(p.More, "+", InactivitySettingsLayout.IncreaseBounds(i)) }),
-        new(SettingsAction.ResetInactivity, "Reset inactivity", InactivitySettingsLayout.ResetBounds)
+        new(SettingsAction.ResetInactivity, "Reset inactivity", InactivitySettingsLayout.ResetBounds),
+        new(SettingsAction.ToggleKeepVisibleAtDefaultPosition, "", InactivitySettingsLayout.KeepVisibleBounds),
+        new(SettingsAction.ToggleRememberPosition, "", InactivitySettingsLayout.RememberPositionBounds)
     ];
     public static string InactivityValue(int index, InactivitySettings s) => index switch
     {
@@ -263,6 +266,8 @@ internal static class SettingsControls
         SettingsAction.IdleSizeLess => s with { Inactivity = s.Inactivity with { SizePercent = s.Inactivity.SizePercent - 5 } },
         SettingsAction.IdleSizeMore => s with { Inactivity = s.Inactivity with { SizePercent = s.Inactivity.SizePercent + 5 } },
         SettingsAction.ResetInactivity => s with { Inactivity = new() },
+        SettingsAction.ToggleKeepVisibleAtDefaultPosition => s with { Inactivity = s.Inactivity with { KeepVisibleAtDefaultPosition = !s.Inactivity.KeepVisibleAtDefaultPosition } },
+        SettingsAction.ToggleRememberPosition => s with { RememberPosition = !s.RememberPosition, VrPosition = null, DesktopPosition = null },
         SettingsAction.ToggleNumpad => s with { NumpadEnabled = !s.NumpadEnabled },
         SettingsAction.ToggleNumpadButton => s with { NumpadButtonEnabled = !s.NumpadButtonEnabled },
         SettingsAction.ToggleShortcuts => s with { ProgrammableKeys = s.ProgrammableKeys with { Enabled = !s.ProgrammableKeys.Enabled } },
@@ -285,7 +290,7 @@ internal static class SettingsControls
         SettingsAction.Louder => s with { VolumePercent = s.VolumePercent + 10 },
         SettingsAction.SteamSoft => s with { Theme = BoardThemes.SteamSoft },
         SettingsAction.SteamFlat => s with { Theme = BoardThemes.SteamFlat },
-        SettingsAction.ResetPosition => s with { PositionResetId = Guid.NewGuid() },
+        SettingsAction.ResetPosition => s with { PositionResetId = Guid.NewGuid(), VrPosition = null, DesktopPosition = null },
         SettingsAction.Defaults => new BoardSettings { PositionResetId = s.PositionResetId },
         SettingsAction.Geometry => s with { Geometry = (KeyboardGeometry)(((int)s.Geometry + 1) % 3) },
         SettingsAction.ResetEffects => s with { Effects = new() },

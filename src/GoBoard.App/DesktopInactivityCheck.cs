@@ -114,8 +114,51 @@ internal static class DesktopInactivityCheck
             Require(store.Update(s => s with { Inactivity = new() }), "Could not reset disposable settings.");
             keyboard.RefreshSettings(); Pump(80);
             Require(!keyboard.Inactivity.RevealWindow.Visible && keyboard.Visible, "Off did not restore ordinary visibility.");
+            Cursor.Position = new(target.Left + 20, target.Top + 50);
+            Require(store.Update(s => s with { Inactivity = new() { Mode = InactivityMode.Hide,
+                DelayMs = 250, TransitionMs = 0, KeepVisibleAtDefaultPosition = true } }), "Enable default-position exemption.");
+            keyboard.RefreshSettings(); Pump(500);
+            Require(keyboard.AtDefaultPosition && keyboard.Visible && !keyboard.Inactivity.Dormant,
+                "Default-position exemption did not keep the keyboard open.");
+            Require(store.Update(s => s with { SizePercent = 95, NumpadEnabled = true }), "Resize at default position.");
+            keyboard.RefreshSettings(); Pump(500);
+            Require(keyboard.AtDefaultPosition && keyboard.Visible, "Resizing or adding numpad lost default placement.");
+            keyboard.Location = new(keyboard.Left, keyboard.Top - 100);
+            Pump(500);
+            Require(!keyboard.AtDefaultPosition && keyboard.Inactivity.Dormant, "Moved keyboard did not become idle.");
+            Require(store.Update(s => SettingsControls.Apply(SettingsAction.ResetPosition, s)), "Reset idle keyboard position.");
+            keyboard.RefreshSettings(); Pump(80);
+            Require(keyboard.AtDefaultPosition && keyboard.Visible && !keyboard.Inactivity.Dormant,
+                "Reset did not reveal the default-position keyboard.");
+            Require(store.Update(s => s with { RememberPosition = true, Inactivity = new() }), "Enable position memory.");
+            keyboard.RefreshSettings();
+            keyboard.Location = new(keyboard.Left - 60, keyboard.Top - 80);
+            Pump(80);
+            var remembered = keyboard.Location;
+            Require(new SettingsStore(path).Current.DesktopPosition == new DesktopKeyboardPosition(remembered.X, remembered.Y),
+                "Settled desktop placement was not saved.");
             keyboard.Close();
-            Console.WriteLine("Desktop inactivity check passed: Hide, Minimize and Transparent; miniature hover reveal, passive transparent image, prompt hover, reveal delay, stationary hover, click-through, controls, position restoration, focus preservation and Off. No keys injected or user settings changed.");
+            using (var restored = new DesktopKeyboardForm(store: new SettingsStore(path)))
+            {
+                restored.Show(); Pump(80);
+                Require(restored.Location == remembered && !restored.AtDefaultPosition, "Startup did not restore desktop placement.");
+                restored.Close();
+            }
+            Require(store.Update(s => SettingsControls.Apply(SettingsAction.ToggleRememberPosition, s)), "Disable position memory.");
+            using (var fresh = new DesktopKeyboardForm(store: new SettingsStore(path)))
+            {
+                fresh.Show(); Pump(80);
+                Require(fresh.AtDefaultPosition, "Disabled position memory restored an old placement.");
+                fresh.Close();
+            }
+            Require(store.Update(s => s with { RememberPosition = true, DesktopPosition = new(-900000, -900000) }), "Save unavailable monitor position.");
+            using (var fitted = new DesktopKeyboardForm(store: new SettingsStore(path)))
+            {
+                fitted.Show(); Pump(80);
+                Require(Screen.FromControl(fitted).WorkingArea.Contains(fitted.Bounds), "Restored keyboard remained off-screen.");
+                fitted.Close();
+            }
+            Console.WriteLine("Desktop inactivity check passed: Hide, Minimize and Transparent; hover reveal, click-through, focus preservation, default-position exemption, resize/numpad, reset, saved startup placement, disabled memory and off-screen recovery. No keys injected or user settings changed.");
             return 0;
         }
         finally
