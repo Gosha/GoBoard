@@ -109,8 +109,9 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
             Matrix4x4.CreateTranslation(0, -OverlayGeometry.PanelHeightInMeters * panelScale * (1 - idleScale) / 2, 0);
         if (grab.ActiveGrab != null)
         {
-            // Bind once per grab. SteamVR now tracks the controller at compositor
-            // rate instead of displaying app-polled absolute poses a frame late.
+            // Bind once per grab, and again when the thumbstick changes its distance.
+            // SteamVR tracks the controller at compositor rate instead of
+            // displaying app-polled absolute poses a frame late.
             if (boundGrab != grab.ActiveGrab || sizeChanged)
             {
                 var relative = OpenVrPose.ToOpenVr(mainOffset * grab.ActiveGrab.ControllerOffset);
@@ -119,8 +120,8 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(handle, grab.Controller, ref barRelative), "Attach handle to controller");
                 var resizeRelative = OpenVrPose.ToOpenVr(OverlayGeometry.ResizeFromScaledPanel(panelScale, numpad) * grab.ActiveGrab.ControllerOffset);
                 Check(overlay.SetOverlayTransformTrackedDeviceRelative(resize.Handle, grab.Controller, ref resizeRelative), "Attach resize handle to controller");
+                if (boundGrab == null) Console.WriteLine($"SteamVR now tracks the held panel directly on controller {grab.Controller}; no app smoothing.");
                 boundGrab = grab.ActiveGrab;
-                Console.WriteLine($"SteamVR now tracks the held panel directly on controller {grab.Controller}; no app smoothing.");
             }
         }
         else if (boundGrab != null || update.Write || !visible || sizeChanged)

@@ -182,6 +182,7 @@ public static int Run(string[] args)
         var nativeKeyboard = new NativeKeyboardVisibility(overlay);
         using var output = new WindowsKeyboard();
         using var keyboard = new KeyboardOverlay(system, overlay, handle, graphics, sharedOutput: output);
+        grab.GripTargets = () => keyboard.GripTargets;
         var inactivity = new KeyboardInactivity();
         using var shortcuts = new ShortcutOverlays(system, overlay, graphics, handle, output);
         using var controls = new KeyboardControlOverlays(system, overlay, graphics, handle, action =>
@@ -194,6 +195,7 @@ public static int Run(string[] args)
         follower.SetNumpad(appliedSettings.NumpadEnabled);
         follower.SetScale(appliedSettings.Scale);
         keyboard.ApplySettings(appliedSettings, false);
+        grab.ApplySettings(appliedSettings);
         shortcuts.ApplySettings(appliedSettings);
         using var settingsOverlay = new SettingsOverlay(system, overlay, graphics, settings, keyboard.PreviewSound);
         Console.WriteLine($"Independent overlay: {transformType}; 15 cm grab line with an 18 x 6 cm hover target. Controller-relative movement; no smoothing.");
@@ -241,6 +243,7 @@ public static int Run(string[] args)
                 if (resetPosition) follower.ResetPosition();
                 follower.SetNumpad(settings.Current.NumpadEnabled);
                 keyboard.ApplySettings(settings.Current, appliedSettings.SizePercent != settings.Current.SizePercent || resetPosition);
+                grab.ApplySettings(settings.Current);
                 shortcuts.ApplySettings(settings.Current);
                 appliedSettings = settings.Current;
             }

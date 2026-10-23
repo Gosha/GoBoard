@@ -20,7 +20,10 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
     private readonly ulong rightPath = InputPath("/user/hand/right");
     private GrabPose grab;
     private uint owner;
-    private bool watchTrigger;
+    private bool watchTrigger, gripping, gripGrab, stickDistance;
+    private readonly GripPresses grips = new();
+    private int stickAxis = -1;
+    private double lastUpdate = double.NaN;
     private int drawnState = -1;
     private readonly Dictionary<(uint Slot, uint Device), double> lastMotionLog = new();
     private Matrix4x4? displayedPanel;
@@ -33,6 +36,14 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
     public uint Controller => owner;
     public bool Hovered => input.HasFocus;
     private bool drawnDormant;
+    // Controllers pointing at the grabbed surface (besides this handle) can start a grip grab.
+    public Func<IEnumerable<uint>> GripTargets { get; set; }
+
+    public void ApplySettings(BoardSettings settings)
+    {
+        gripGrab = settings.GripGrabEnabled;
+        stickDistance = settings.StickDistanceEnabled;
+    }
 
     public Matrix4x4? Update(bool visible, Matrix4x4 panel, bool interactive = true, bool dormant = false)
     {
@@ -43,6 +54,9 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
             interactiveLastFrame = interactive;
         }
         if (!interactive) { End("input suspended"); input.Reset(); }
+        var clock = Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
+        var elapsed = double.IsNaN(lastUpdate) ? 0 : clock - lastUpdate;
+        lastUpdate = clock;
         if (visible) system.GetDeviceToAbsoluteTrackingPose(ETrackingUniverseOrigin.TrackingUniverseStanding, PredictionSeconds(), devices);
         else { End("dashboard hidden"); input.Reset(); displayedPanel = null; }
 
@@ -101,11 +115,17 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
         }
 
         input.RemoveUntracked(device => TryPose(device, out _), Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency);
+        // Poll every frame so a grip already held when pointing begins is not a press.
+        var gripPress = grips.Update(Grips(), interactive && gripGrab
+            ? input.FocusedDevices.Concat(GripTargets?.Invoke() ?? []).ToHashSet() : []);
+        if (gripping && !gripGrab) End("grip grab disabled");
         // Controller-specific enter/motion/leave/up events own focus. The
         // overlay-wide hover query can change when the OTHER hand types and
         // must not clear this hand's focus or cancel its captured grab.
         // Drain the whole queue first so a queued owner leave/release wins.
-        if (input.Active == null) End("pointer released or focus lost");
+        // A grip grab ignores handle trigger presses until the grip is released.
+        if (gripping) input.Cancel();
+        else if (input.Active == null) End("pointer released or focus lost");
         else if (committedPress != input.Active)
         {
             var press = input.Active;
@@ -117,13 +137,27 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
                 committedPress = press;
                 grab = new GrabPose(result ?? displayedPanel ?? panel, hand);
                 watchTrigger = Trigger(owner, out held) && held;
+                stickAxis = JoystickAxis(owner);
                 Console.WriteLine($"Grab started: controller {owner}, cursor {press.Cursor}, verified handle focus, trigger polling {watchTrigger}.");
             }
+        }
+        if (grab == null && gripPress is { } gripOwner && TryPose(gripOwner, out var gripHand))
+        {
+            owner = gripOwner;
+            gripping = true;
+            grab = new GrabPose(result ?? displayedPanel ?? panel, gripHand);
+            stickAxis = JoystickAxis(owner);
+            Console.WriteLine($"Grab started: controller {owner}, grip pressed while pointing at the keyboard.");
         }
 
         if (grab != null)
         {
             if (!TryPose(owner, out var hand)) End("controller tracking lost");
+            else if (gripping)
+            {
+                if (!Pressed(owner, EVRButtonId.k_EButton_Grip, out var held) || !held) End("grip released or unavailable");
+                else Hold(hand);
+            }
             else
             {
                 var valid = Trigger(owner, out var held);
@@ -131,7 +165,7 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
                 else
                 {
                     watchTrigger |= valid && held;
-                    result = grab.Update(hand);
+                    Hold(hand);
                 }
             }
         }
@@ -145,7 +179,39 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
         }
         if (visible) displayedPanel = result ?? panel;
         return result;
+
+        void Hold(Matrix4x4 hand)
+        {
+            if (stickDistance && stickAxis >= 0 && ReadState(owner, out var state))
+                grab = grab.WithStick(AxisY(state, stickAxis), (float)elapsed);
+            result = grab.Update(hand);
+        }
     }
+
+    private IEnumerable<(uint, bool)> Grips()
+    {
+        foreach (var role in new[] { ETrackedControllerRole.LeftHand, ETrackedControllerRole.RightHand })
+        {
+            var device = system.GetTrackedDeviceIndexForControllerRole(role);
+            if (IsController(device)) yield return (device, Pressed(device, EVRButtonId.k_EButton_Grip, out var held) && held);
+        }
+    }
+
+    private int JoystickAxis(uint device)
+    {
+        for (var axis = 0; axis < 5; axis++)
+        {
+            var error = ETrackedPropertyError.TrackedProp_Success;
+            var type = system.GetInt32TrackedDeviceProperty(device, ETrackedDeviceProperty.Prop_Axis0Type_Int32 + axis, ref error);
+            if (error == ETrackedPropertyError.TrackedProp_Success && type == (int)EVRControllerAxisType.k_eControllerAxis_Joystick) return axis;
+        }
+        return -1;
+    }
+
+    private static float AxisY(VRControllerState_t state, int axis) => axis switch
+    {
+        0 => state.rAxis0.y, 1 => state.rAxis1.y, 2 => state.rAxis2.y, 3 => state.rAxis3.y, 4 => state.rAxis4.y, _ => 0
+    };
 
     private uint? EventDevice(VREvent_t e) => IsController(e.trackedDeviceIndex) ? e.trackedDeviceIndex : null;
 
@@ -191,12 +257,19 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
             OpenVrPose.TryRigid(devices[device].mDeviceToAbsoluteTracking, out pose);
     }
 
-    private bool Trigger(uint device, out bool held)
+    private bool Trigger(uint device, out bool held) => Pressed(device, EVRButtonId.k_EButton_SteamVR_Trigger, out held);
+
+    private bool Pressed(uint device, EVRButtonId button, out bool held)
     {
-        var state = new VRControllerState_t();
-        var valid = system.GetControllerState(device, ref state, (uint)Marshal.SizeOf<VRControllerState_t>());
-        held = (state.ulButtonPressed & (1UL << (int)EVRButtonId.k_EButton_SteamVR_Trigger)) != 0;
+        var valid = ReadState(device, out var state);
+        held = (state.ulButtonPressed & (1UL << (int)button)) != 0;
         return valid;
+    }
+
+    private bool ReadState(uint device, out VRControllerState_t state)
+    {
+        state = new VRControllerState_t();
+        return system.GetControllerState(device, ref state, (uint)Marshal.SizeOf<VRControllerState_t>());
     }
 
     private void End(string reason)
@@ -206,6 +279,8 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
         committedPress = null;
         input.Cancel();
         watchTrigger = false;
+        gripping = false;
+        stickAxis = -1;
     }
 
     private static void Check(EVROverlayError error, string operation)

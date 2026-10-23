@@ -32,6 +32,8 @@ internal sealed class KeyboardOverlay(CVRSystem system, CVROverlay overlay, ulon
     private bool inputSuppressed, hoverReveal;
     public bool RevealHovered => hoverReveal && State.FocusedDevices.Any();
     internal bool AcceptsKeyInput => enabled;
+    // Controllers pointing at keys that accept input; a dormant keyboard cannot be grip-grabbed.
+    public IEnumerable<uint> GripTargets => enabled ? State.FocusedDevices : [];
 
     public void SuppressInput(bool suppress, bool revealOnHover = false)
     {

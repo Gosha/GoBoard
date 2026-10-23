@@ -23,6 +23,9 @@ internal sealed record BoardSettings
     // A new request is observed once by each running host through the shared settings file.
     public Guid PositionResetId { get; init; }
     public bool RememberPosition { get; init; }
+    // VR grab options; both are opt-in.
+    public bool GripGrabEnabled { get; init; }
+    public bool StickDistanceEnabled { get; init; }
     public VrKeyboardPosition VrPosition { get; init; }
     public DesktopKeyboardPosition DesktopPosition { get; init; }
     public float Scale => SizePercent / 100f;

@@ -54,7 +54,7 @@ internal sealed class ShortcutOverlays : IDisposable
             Create("goboard.app.shortcuts.grab", "GoBoard shortcuts grab", OverlayGeometry.ShortcutGrabWidth,
                 GrabHandle.LayoutHeight, OverlayGeometry.ShortcutGrabWidthInMeters, ref grip);
             keyboard = new(system, overlay, panel, graphics, shortcutsOnly: true, sharedOutput: output);
-            grab = new(system, overlay, grip, graphics, OverlayGeometry.ShortcutGrabWidth);
+            grab = new(system, overlay, grip, graphics, OverlayGeometry.ShortcutGrabWidth) { GripTargets = () => keyboard.GripTargets };
             grab.Update(false, default);
         }
         catch { Dispose(); throw; }
@@ -77,6 +77,7 @@ internal sealed class ShortcutOverlays : IDisposable
         if (settings == null || settings.ProgrammableKeys != next.ProgrammableKeys || settings.SizePercent != next.SizePercent || settings.NumpadEnabled != next.NumpadEnabled || reset)
         { grab.Update(false, default); toggle.Reset(Now, collapse: !next.ProgrammableKeys.Enabled); }
         settings = next; scale = next.Scale;
+        grab.ApplySettings(next);
         keyboard.ApplySettings(next, resized: true);
         if (reset) placed = false;
         drawnToggle = -1;
