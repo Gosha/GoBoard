@@ -3,12 +3,38 @@ using System.Numerics;
 namespace GoBoard.Core;
 
 // Capture the whole pose, rather than snapping the panel center to the pointer.
-internal sealed class GrabPose(Matrix4x4 panel, Matrix4x4 controller)
+internal sealed class GrabPose
 {
-    private readonly Matrix4x4 offset = Capture(panel, controller);
+    public const float StickDeadzone = .2f, MinDistance = .15f, MaxDistance = 3;
+    // Full deflection changes the distance threefold per second.
+    private static readonly float StickRate = MathF.Log(3);
+    private readonly Matrix4x4 offset;
     public Matrix4x4 ControllerOffset => offset;
 
+    public GrabPose(Matrix4x4 panel, Matrix4x4 controller) => offset = Capture(panel, controller);
+    private GrabPose(Matrix4x4 offset) => this.offset = offset;
+
     public Matrix4x4 Update(Matrix4x4 controller) => offset * controller;
+
+    // Push or pull along the controller-to-panel line, keeping orientation.
+    // Pulling the stick down brings the panel closer. A changed distance returns
+    // a new capture so hosts rebind their controller-relative transforms.
+    public GrabPose WithStick(float stick, float seconds)
+    {
+        var magnitude = MathF.Abs(stick);
+        if (!float.IsFinite(stick) || !float.IsFinite(seconds) || seconds <= 0 || magnitude <= StickDeadzone) return this;
+        var position = offset.Translation;
+        var distance = position.Length();
+        if (!float.IsFinite(distance) || distance < .001f) return this;
+        var speed = MathF.Sign(stick) * Math.Min(1, (magnitude - StickDeadzone) / (1 - StickDeadzone));
+        var next = distance * MathF.Exp(StickRate * speed * Math.Min(seconds, .1f));
+        // Never pull past the limits, but do not snap a capture already outside them.
+        next = speed < 0 ? Math.Max(next, Math.Min(distance, MinDistance)) : Math.Min(next, Math.Max(distance, MaxDistance));
+        if (next == distance) return this;
+        var moved = offset;
+        moved.Translation = position * (next / distance);
+        return new(moved);
+    }
 
     private static Matrix4x4 Capture(Matrix4x4 panel, Matrix4x4 controller)
     {

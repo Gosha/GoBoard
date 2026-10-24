@@ -20,7 +20,9 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
     private readonly ulong rightPath = InputPath("/user/hand/right");
     private GrabPose grab;
     private uint owner;
-    private bool watchTrigger;
+    private bool watchTrigger, stickDistance;
+    private readonly ScrollStick stick = new();
+    private double lastUpdate = double.NaN;
     private int drawnState = -1;
     private readonly Dictionary<(uint Slot, uint Device), double> lastMotionLog = new();
     private Matrix4x4? displayedPanel;
@@ -34,6 +36,14 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
     public bool Hovered => input.HasFocus;
     private bool drawnDormant;
 
+    public void ApplySettings(BoardSettings settings)
+    {
+        if (stickDistance == settings.StickDistanceEnabled) return;
+        stickDistance = settings.StickDistanceEnabled;
+        stick.Reset();
+        Check(overlay.SetOverlayFlag(handle, VROverlayFlags.SendVRSmoothScrollEvents, stickDistance), "Grab thumbstick events");
+    }
+
     public Matrix4x4? Update(bool visible, Matrix4x4 panel, bool interactive = true, bool dormant = false)
     {
         interactive &= visible;
@@ -43,6 +53,9 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
             interactiveLastFrame = interactive;
         }
         if (!interactive) { End("input suspended"); input.Reset(); }
+        var clock = Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
+        var elapsed = double.IsNaN(lastUpdate) ? 0 : clock - lastUpdate;
+        lastUpdate = clock;
         if (visible) system.GetDeviceToAbsoluteTrackingPose(ETrackingUniverseOrigin.TrackingUniverseStanding, PredictionSeconds(), devices);
         else { End("dashboard hidden"); input.Reset(); displayedPanel = null; }
 
@@ -53,6 +66,13 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
             var type = (EVREventType)e.eventType;
             if (type == EVREventType.VREvent_ImageFailed) throw new InvalidOperationException("SteamVR failed to load the grab handle.");
             if (!interactive) continue;
+            if (type == EVREventType.VREvent_ScrollSmooth)
+            {
+                // The held handle stays under the owner's pointer, so its stick arrives here.
+                if (grab != null && e.trackedDeviceIndex == owner)
+                    stick.Observe(e.data.scroll.ydelta, Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency - e.eventAgeSeconds);
+                continue;
+            }
             if (type is not (EVREventType.VREvent_FocusEnter or EVREventType.VREvent_FocusLeave or
                 EVREventType.VREvent_MouseMove or EVREventType.VREvent_MouseButtonDown or EVREventType.VREvent_MouseButtonUp)) continue;
             var now = Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
@@ -131,6 +151,7 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
                 else
                 {
                     watchTrigger |= valid && held;
+                    if (stickDistance) grab = grab.WithStick(stick.Read(clock), (float)elapsed);
                     result = grab.Update(hand);
                 }
             }
@@ -206,6 +227,7 @@ internal sealed class GrabHandle(CVRSystem system, CVROverlay overlay, ulong han
         committedPress = null;
         input.Cancel();
         watchTrigger = false;
+        stick.Reset();
     }
 
     private static void Check(EVROverlayError error, string operation)
