@@ -182,7 +182,6 @@ public static int Run(string[] args)
         var nativeKeyboard = new NativeKeyboardVisibility(overlay);
         using var output = new WindowsKeyboard();
         using var keyboard = new KeyboardOverlay(system, overlay, handle, graphics, sharedOutput: output);
-        grab.GripTargets = () => keyboard.GripTargets;
         var inactivity = new KeyboardInactivity();
         using var shortcuts = new ShortcutOverlays(system, overlay, graphics, handle, output);
         using var controls = new KeyboardControlOverlays(system, overlay, graphics, handle, action =>

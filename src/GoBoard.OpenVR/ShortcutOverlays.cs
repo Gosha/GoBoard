@@ -54,7 +54,7 @@ internal sealed class ShortcutOverlays : IDisposable
             Create("goboard.app.shortcuts.grab", "GoBoard shortcuts grab", OverlayGeometry.ShortcutGrabWidth,
                 GrabHandle.LayoutHeight, OverlayGeometry.ShortcutGrabWidthInMeters, ref grip);
             keyboard = new(system, overlay, panel, graphics, shortcutsOnly: true, sharedOutput: output);
-            grab = new(system, overlay, grip, graphics, OverlayGeometry.ShortcutGrabWidth) { GripTargets = () => keyboard.GripTargets };
+            grab = new(system, overlay, grip, graphics, OverlayGeometry.ShortcutGrabWidth);
             grab.Update(false, default);
         }
         catch { Dispose(); throw; }

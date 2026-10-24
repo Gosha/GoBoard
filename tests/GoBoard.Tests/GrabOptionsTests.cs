@@ -72,38 +72,37 @@ public sealed class GrabOptionsTests : IDisposable
     }
 
     [Fact]
-    public void GripStartsOnlyOnAFreshPressWhilePointingAtTheKeyboard()
+    public void ScrollEventsActAsAHeldStickUntilTheyStop()
     {
-        var grips = new GripPresses();
-        uint[] none = [], left = [3];
-        Assert.Null(grips.Update([(3, false), (4, false)], left));
-        // Holding the grip while moving onto the keyboard never starts a grab.
-        Assert.Null(grips.Update([(3, true), (4, false)], none));
-        Assert.Null(grips.Update([(3, true), (4, false)], left));
-        Assert.Null(grips.Update([(3, false), (4, false)], left));
-        Assert.Equal(3u, grips.Update([(3, true), (4, false)], left));
-        Assert.Null(grips.Update([(3, true), (4, false)], left));
-        // The other hand's press elsewhere is ignored; its own press on the keyboard starts.
-        Assert.Null(grips.Update([(3, true), (4, true)], left));
-        Assert.Null(grips.Update([(3, true), (4, false)], new uint[] { 4 }));
-        Assert.Equal(4u, grips.Update([(3, true), (4, true)], new uint[] { 3, 4 }));
+        var stick = new ScrollStick();
+        Assert.Equal(0, stick.Read(1));
+        stick.Observe(-ScrollStick.FullDeflection, 1);
+        Assert.Equal(-1, stick.Read(1.05));
+        stick.Observe(ScrollStick.FullDeflection / 2, 1.1);
+        Assert.Equal(.5f, stick.Read(1.1), 4);
+        // Larger deltas saturate; stale, invalid, and out-of-order events are ignored.
+        stick.Observe(1, 1.2);
+        Assert.Equal(1, stick.Read(1.2));
+        stick.Observe(float.NaN, 1.25);
+        stick.Observe(-1, 1.15);
+        Assert.Equal(1, stick.Read(1.25));
+        Assert.Equal(0, stick.Read(1.2 + ScrollStick.HoldSeconds + .01));
+        stick.Observe(-1, 2);
+        stick.Reset();
+        Assert.Equal(0, stick.Read(2));
     }
 
     [Fact]
-    public void GrabOptionsAreOptInTogglesThatPersist()
+    public void StickDistanceIsAnOptInToggleThatPersists()
     {
         var path = Path.Combine(directory, "settings.json");
-        Assert.False(BoardSettings.Defaults.GripGrabEnabled);
         Assert.False(BoardSettings.Defaults.StickDistanceEnabled);
         var editor = new SettingsStore(path);
-        Assert.True(editor.Update(s => SettingsControls.Apply(SettingsAction.ToggleGripGrab, s)));
         Assert.True(editor.Update(s => SettingsControls.Apply(SettingsAction.ToggleStickDistance, s)));
         var host = new SettingsStore(path);
-        Assert.True(host.Current.GripGrabEnabled);
         Assert.True(host.Current.StickDistanceEnabled);
-        Assert.False(SettingsControls.Apply(SettingsAction.ToggleGripGrab, host.Current).GripGrabEnabled);
-        var reset = SettingsControls.Apply(SettingsAction.Defaults, host.Current);
-        Assert.False(reset.GripGrabEnabled || reset.StickDistanceEnabled);
+        Assert.False(SettingsControls.Apply(SettingsAction.ToggleStickDistance, host.Current).StickDistanceEnabled);
+        Assert.False(SettingsControls.Apply(SettingsAction.Defaults, host.Current).StickDistanceEnabled);
     }
 
     [Fact]

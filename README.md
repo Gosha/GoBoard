@@ -33,7 +33,7 @@ Launch **GoBoard VR** or **GoBoard Settings** from the Start menu.
 
 ![Keyboard inactivity modes and timings](docs/images/goboard-inactivity-settings.png)
 
-![Grip grabbing and thumbstick distance options](docs/images/goboard-grab-settings.png)
+![Thumbstick grab distance option](docs/images/goboard-grab-settings.png)
 
 ![Shortcut presets and custom shortcut editor](docs/images/goboard-shortcut-settings.png)
 

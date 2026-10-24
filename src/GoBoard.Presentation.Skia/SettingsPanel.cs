@@ -70,11 +70,9 @@ internal static class SettingsPanel
         }
         else if (grabPage)
         {
-            Text("Grip to grab", 64, SettingsControls.GripGrabBaseline, small, text);
-            Text("Squeeze the grip while pointing at the keyboard to move it.", 64, SettingsControls.GripGrabHintBaseline, small, accent);
             Text("Thumbstick distance", 64, SettingsControls.StickDistanceBaseline, small, text);
             Text("While moving, pull the thumbstick down to bring the keyboard closer.", 64, SettingsControls.StickDistanceHintBaseline, small, accent);
-            Text("These options apply in VR.", 64, SettingsControls.GrabNoteBaseline, small, colors.TextMuted);
+            Text("This option applies in VR.", 64, SettingsControls.GrabNoteBaseline, small, colors.TextMuted);
         }
         else if (choosingPreset)
         {
@@ -156,7 +154,6 @@ internal static class SettingsPanel
                 c.Action == SettingsAction.ToggleSound && settings.SoundEnabled ||
                 c.Action == SettingsAction.ToggleKeepVisibleAtDefaultPosition && settings.Inactivity.KeepVisibleAtDefaultPosition ||
                 c.Action == SettingsAction.ToggleRememberPosition && settings.RememberPosition ||
-                c.Action == SettingsAction.ToggleGripGrab && settings.GripGrabEnabled ||
                 c.Action == SettingsAction.ToggleStickDistance && settings.StickDistanceEnabled ||
                 c.Action == SettingsAction.ToggleNumpadButton && settings.NumpadButtonEnabled ||
                 c.Action == SettingsAction.SteamSoft && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamSoft ||
@@ -232,7 +229,6 @@ internal static class SettingsPanel
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
             if (c.Action == SettingsAction.ToggleKeepVisibleAtDefaultPosition) title = settings.Inactivity.KeepVisibleAtDefaultPosition ? "On" : "Off";
             if (c.Action == SettingsAction.ToggleRememberPosition) title = settings.RememberPosition ? "On" : "Off";
-            if (c.Action == SettingsAction.ToggleGripGrab) title = settings.GripGrabEnabled ? "On" : "Off";
             if (c.Action == SettingsAction.ToggleStickDistance) title = settings.StickDistanceEnabled ? "On" : "Off";
             if (c.Action == SettingsAction.ToggleNumpadButton) title = settings.NumpadButtonEnabled ? "Numpad button: Shown" : "Numpad button: Hidden";
             if (c.Action == SettingsAction.Autostart) title = autostart.ButtonLabel;

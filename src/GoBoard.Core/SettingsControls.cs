@@ -18,7 +18,7 @@ internal enum SettingsAction
     IdleSooner, IdleLater, RevealSooner, RevealLater, FadeFaster, FadeSlower,
     IdleOpacityLess, IdleOpacityMore, IdleSizeLess, IdleSizeMore, ResetInactivity,
     ToggleKeepVisibleAtDefaultPosition, ToggleRememberPosition,
-    GrabTab = 600, ToggleGripGrab, ToggleStickDistance,
+    GrabTab = 600, ToggleStickDistance,
     KeyChoiceFirst = 1000
 }
 internal sealed record SettingsControl(SettingsAction Action, string Label, KeyBounds Bounds,
@@ -75,12 +75,10 @@ internal static class SettingsControls
      new(SettingsAction.InactivityTab, "Inactivity", new(586, 32, 104, 54)),
      new(SettingsAction.GrabTab, "Grab", new(700, 32, 104, 54))];
 
-    public const float GripGrabBaseline = 189, GripGrabHintBaseline = 228;
-    public const float StickDistanceBaseline = 299, StickDistanceHintBaseline = 338, GrabNoteBaseline = 408;
+    public const float StickDistanceBaseline = 189, StickDistanceHintBaseline = 228, GrabNoteBaseline = 298;
     public static readonly SettingsControl[] Grab =
     [
-        new(SettingsAction.ToggleGripGrab, "", new(588, 158, 216, 48)),
-        new(SettingsAction.ToggleStickDistance, "", new(588, 268, 216, 48))
+        new(SettingsAction.ToggleStickDistance, "", new(588, 158, 216, 48))
     ];
 
     public static readonly (string Label, SettingsAction Less, SettingsAction More)[] InactivityParameters =
@@ -279,7 +277,6 @@ internal static class SettingsControls
         SettingsAction.ResetInactivity => s with { Inactivity = new() },
         SettingsAction.ToggleKeepVisibleAtDefaultPosition => s with { Inactivity = s.Inactivity with { KeepVisibleAtDefaultPosition = !s.Inactivity.KeepVisibleAtDefaultPosition } },
         SettingsAction.ToggleRememberPosition => s with { RememberPosition = !s.RememberPosition, VrPosition = null, DesktopPosition = null },
-        SettingsAction.ToggleGripGrab => s with { GripGrabEnabled = !s.GripGrabEnabled },
         SettingsAction.ToggleStickDistance => s with { StickDistanceEnabled = !s.StickDistanceEnabled },
         SettingsAction.ToggleNumpad => s with { NumpadEnabled = !s.NumpadEnabled },
         SettingsAction.ToggleNumpadButton => s with { NumpadButtonEnabled = !s.NumpadButtonEnabled },
