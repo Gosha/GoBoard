@@ -28,7 +28,7 @@ Desktop mode uses a topmost, non-activating Windows Forms surface. Both hosts us
 
 ## Dashboard placement and controller ownership
 
-`DashboardFollower` resolves SteamVR's menu bar through `FindOverlay("valve.steam.gamepadui.bar")` and reads its pose in standing space. This internal overlay name is a compatibility dependency. Missing or invalid anchors hide the panel and produce a diagnostic.
+`DashboardFollower` resolves SteamVR's menu bar through `FindOverlay("valve.steam.gamepadui.bar")` and reads its pose in standing space. This internal overlay name is a compatibility dependency. Missing or invalid anchors hide the panel and produce a diagnostic. `DashboardAnchor` checks the bar against the headset pose when the dashboard opens. If the bar is not within 2.5 m and in front of the headset for 0.5 s (seen while streaming to a Steam Frame, where the dashboard is drawn on the headset and the PC-reported bar can sit behind and below the user), the keyboard is placed in front of the headset and stays there until the dashboard closes. This fallback does not follow dashboard moves. Dashboard openings log the bar and headset poses, the bar transform, and the headset's tracking system for diagnosis.
 
 The keyboard and its handles follow a stored dashboard-relative pose. Dashboard scale does not resize the keyboard, and GoBoard never modifies the dashboard transform. A grab captures the panel-to-controller transform and uses `SetOverlayTransformTrackedDeviceRelative` for movement. Display-predicted controller poses supply the retained offset on release. Runtime transform readbacks are not treated as independent dragging.
 

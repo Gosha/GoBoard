@@ -1,10 +1,13 @@
+using System.Diagnostics;
+using System.Globalization;
 using System.Numerics;
+using System.Text;
 using GoBoard.Core;
 using Valve.VR;
 
 namespace GoBoard.Vr;
 
-internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong handle, GrabHandle grab, ResizeHandle resize)
+internal sealed class DashboardFollower(CVRSystem system, CVROverlay overlay, ulong panel, ulong handle, GrabHandle grab, ResizeHandle resize)
 {
     // SteamVR's dashboard bar overlay key is not a public SDK contract. Keep this
     // compatibility dependency in one place; fail visibly if it disappears.
@@ -12,6 +15,13 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
     private const ETrackingUniverseOrigin Origin = ETrackingUniverseOrigin.TrackingUniverseStanding;
     // Movement and reset use the main-key center; only the raster has an extra right-side offset.
     private readonly RelativePose pose = new();
+    private readonly DashboardAnchor anchorChoice = new();
+    private readonly TrackedDevicePose_t[] devices = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
+    private DashboardAnchorMode loggedMode;
+    private Vector3? loggedBar;
+    private double nextBarLog;
+    private int barLogs;
+    private bool loggedHeadset;
     public bool AtDefaultPosition => pose.AtDefaultPosition;
     public VrKeyboardPosition SavedPosition => pose.AtDefaultPosition ? null : VrKeyboardPosition.FromMatrix(pose.Local);
     public void RestorePosition(VrKeyboardPosition saved) => pose.Restore(saved);
@@ -67,7 +77,10 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         ulong anchor = 0;
         var scale = new HmdVector2_t();
         var rawParent = new HmdMatrix34_t();
-        if (nativeKeyboardVisible || !overlay.IsDashboardVisible())
+        var dashboardVisible = overlay.IsDashboardVisible();
+        if (!dashboardVisible && anchorChoice.Mode != DashboardAnchorMode.Pending) Console.WriteLine("Dashboard closed.");
+        if (!dashboardVisible) { anchorChoice.Close(); loggedMode = DashboardAnchorMode.Pending; loggedBar = null; barLogs = 0; }
+        if (nativeKeyboardVisible || !dashboardVisible)
         {
             grab.Update(false, default); resize.Update(false, default);
             SetScale(resize.Scale); SetVisible(false); return false;
@@ -92,6 +105,17 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
             previousAnchor = anchor;
         }
 
+        var now = Stopwatch.GetElapsedTime(0).TotalSeconds;
+        var head = HeadPose();
+        var chosen = anchorChoice.Resolve(now, parent, head);
+        LogAnchor(anchor, parent, head, now);
+        if (!chosen.HasValue)
+        {
+            // Briefly undecided after opening: the bar is not near the headset yet.
+            grab.Update(false, default); resize.Update(false, default);
+            SetScale(resize.Scale); SetVisible(false); return false;
+        }
+        parent = chosen.Value;
         var update = pose.Update(parent);
         // An existing resize owns the interaction. For simultaneous fresh presses,
         // moving wins this frame and the resize queue is drained without capture.
@@ -137,6 +161,65 @@ internal sealed class DashboardFollower(CVROverlay overlay, ulong panel, ulong h
         sizeChanged = false;
         return true;
     }
+
+    private Matrix4x4? HeadPose()
+    {
+        system.GetDeviceToAbsoluteTrackingPose(Origin, 0, devices);
+        var hmd = devices[OpenVR.k_unTrackedDeviceIndex_Hmd];
+        return hmd.bPoseIsValid && OpenVrPose.TryRigid(hmd.mDeviceToAbsoluteTracking, out var head) ? head : null;
+    }
+
+    // Placement diagnostics for headsets/streaming setups where the dashboard
+    // appears somewhere other than the PC-reported bar. Logs poses only.
+    private void LogAnchor(ulong anchor, Matrix4x4 bar, Matrix4x4? head, double now)
+    {
+        if (!loggedHeadset)
+        {
+            loggedHeadset = true;
+            Console.WriteLine($"Headset: {Property(ETrackedDeviceProperty.Prop_ManufacturerName_String)} {Property(ETrackedDeviceProperty.Prop_ModelNumber_String)}, " +
+                $"tracking system {Property(ETrackedDeviceProperty.Prop_TrackingSystemName_String)}, driver {Property(ETrackedDeviceProperty.Prop_DriverVersion_String)}.");
+        }
+        var headText = head.HasValue ? $"headset {Format(head.Value.Translation)} facing {Format(DashboardAnchor.Forward(head.Value))}" : "headset pose invalid";
+        var distance = head.HasValue ? $", {Vector3.Distance(bar.Translation, head.Value.Translation).ToString("F2", CultureInfo.InvariantCulture)} m away" : "";
+        if (!loggedBar.HasValue)
+        {
+            var type = VROverlayTransformType.VROverlayTransform_Invalid;
+            overlay.GetOverlayTransformType(anchor, ref type);
+            var origin = ETrackingUniverseOrigin.TrackingUniverseStanding;
+            var raw = new HmdMatrix34_t();
+            var rawText = type == VROverlayTransformType.VROverlayTransform_Absolute &&
+                overlay.GetOverlayTransformAbsolute(anchor, ref origin, ref raw) == EVROverlayError.None
+                ? $", absolute in {origin} at {Format(OpenVrPose.FromOpenVr(raw).Translation)}" : "";
+            var zero = OpenVrPose.FromOpenVr(system.GetRawZeroPoseToStandingAbsoluteTrackingPose()).Translation;
+            Console.WriteLine($"Dashboard opened: bar {Format(bar.Translation)} facing {Format(-new Vector3(bar.M31, bar.M32, bar.M33))}{distance}; " +
+                $"bar transform {type}{rawText}; {headText}; raw zero to standing {Format(zero)}.");
+            loggedBar = bar.Translation;
+            nextBarLog = now + 1;
+        }
+        else if (loggedBar.HasValue && barLogs < 20 && now >= nextBarLog && Vector3.Distance(loggedBar.Value, bar.Translation) > 0.05f)
+        {
+            // Shows whether the PC bar follows dashboard moves made in the headset.
+            Console.WriteLine($"Dashboard bar moved: {Format(bar.Translation)}{distance}; {headText}.");
+            loggedBar = bar.Translation;
+            nextBarLog = now + 1;
+            barLogs++;
+        }
+        if (anchorChoice.Mode == loggedMode) return;
+        loggedMode = anchorChoice.Mode;
+        Console.WriteLine(anchorChoice.Mode == DashboardAnchorMode.Headset
+            ? $"Dashboard bar is not near and in front of the headset; placing GoBoard in front of the headset until the dashboard closes ({headText})."
+            : "GoBoard follows the dashboard bar.");
+    }
+
+    private string Property(ETrackedDeviceProperty property)
+    {
+        var error = ETrackedPropertyError.TrackedProp_Success;
+        var text = new StringBuilder(256);
+        system.GetStringTrackedDeviceProperty(OpenVR.k_unTrackedDeviceIndex_Hmd, property, text, (uint)text.Capacity, ref error);
+        return error == ETrackedPropertyError.TrackedProp_Success ? text.ToString() : $"<{error}>";
+    }
+
+    private static string Format(Vector3 v) => string.Create(CultureInfo.InvariantCulture, $"({v.X:F2}, {v.Y:F2}, {v.Z:F2})");
 
     private void SetVisible(bool value)
     {
