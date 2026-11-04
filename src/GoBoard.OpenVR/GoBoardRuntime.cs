@@ -175,7 +175,7 @@ public static int Run(string[] args)
         grab.Update(false, default);
         var settings = new SettingsStore();
         using var resize = new ResizeHandle(system, overlay, graphics, settings);
-        var follower = new DashboardFollower(overlay, handle, grabHandle, grab, resize);
+        var follower = new DashboardFollower(system, overlay, handle, grabHandle, grab, resize);
         if (settings.Current.RememberPosition) follower.RestorePosition(settings.Current.VrPosition);
         var positionMemory = new PositionMemory<VrKeyboardPosition>(settings, s => s.VrPosition,
             (s, position) => s with { VrPosition = position });
