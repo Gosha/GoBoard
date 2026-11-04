@@ -1,6 +1,6 @@
 namespace GoBoard.Core;
 
-internal enum SettingsPage { General, Effects, Shortcuts, ShortcutKey, ShortcutPreset, Inactivity }
+internal enum SettingsPage { General, Effects, Shortcuts, ShortcutKey, ShortcutPreset, Inactivity, Grab }
 internal enum SettingsAction
 {
     Smaller, Larger, ToggleSound, Wood, Thud, Quieter, Louder, Defaults, Geometry, SteamSoft, SteamFlat,
@@ -18,6 +18,7 @@ internal enum SettingsAction
     IdleSooner, IdleLater, RevealSooner, RevealLater, FadeFaster, FadeSlower,
     IdleOpacityLess, IdleOpacityMore, IdleSizeLess, IdleSizeMore, ResetInactivity,
     ToggleKeepVisibleAtDefaultPosition, ToggleRememberPosition,
+    GrabTab = 600, ToggleStickDistance,
     KeyChoiceFirst = 1000
 }
 internal sealed record SettingsControl(SettingsAction Action, string Label, KeyBounds Bounds,
@@ -68,10 +69,17 @@ internal static class SettingsControls
     ];
 
     public static readonly SettingsControl[] Tabs =
-    [new(SettingsAction.GeneralTab, "General", new(284, 32, 120, 54)),
-     new(SettingsAction.EffectsTab, "Effects", new(416, 32, 120, 54)),
-     new(SettingsAction.ShortcutsTab, "Shortcuts", new(548, 32, 120, 54)),
-     new(SettingsAction.InactivityTab, "Inactivity", new(680, 32, 124, 54))];
+    [new(SettingsAction.GeneralTab, "General", new(244, 32, 104, 54)),
+     new(SettingsAction.EffectsTab, "Effects", new(358, 32, 104, 54)),
+     new(SettingsAction.ShortcutsTab, "Shortcuts", new(472, 32, 104, 54)),
+     new(SettingsAction.InactivityTab, "Inactivity", new(586, 32, 104, 54)),
+     new(SettingsAction.GrabTab, "Grab", new(700, 32, 104, 54))];
+
+    public const float StickDistanceBaseline = 189, StickDistanceHintBaseline = 228, GrabNoteBaseline = 298;
+    public static readonly SettingsControl[] Grab =
+    [
+        new(SettingsAction.ToggleStickDistance, "", new(588, 158, 216, 48))
+    ];
 
     public static readonly (string Label, SettingsAction Less, SettingsAction More)[] InactivityParameters =
     [
@@ -199,6 +207,7 @@ internal static class SettingsControls
     public static IEnumerable<SettingsControl> ForPage(SettingsPage page, BoardSettings settings = null, WindowsLayout layout = null, int slot = 0) => Tabs.Concat(page switch
     { SettingsPage.Effects => Effects,
       SettingsPage.Inactivity => Inactivity,
+      SettingsPage.Grab => Grab,
       SettingsPage.Shortcuts => ShortcutControls(settings?.ProgrammableKeys ?? new()),
       SettingsPage.ShortcutPreset => PresetChoices,
       SettingsPage.ShortcutKey => KeyChoices(layout, settings?.ProgrammableKeys.Get(slot).Shift ?? false), _ => All });
@@ -268,6 +277,7 @@ internal static class SettingsControls
         SettingsAction.ResetInactivity => s with { Inactivity = new() },
         SettingsAction.ToggleKeepVisibleAtDefaultPosition => s with { Inactivity = s.Inactivity with { KeepVisibleAtDefaultPosition = !s.Inactivity.KeepVisibleAtDefaultPosition } },
         SettingsAction.ToggleRememberPosition => s with { RememberPosition = !s.RememberPosition, VrPosition = null, DesktopPosition = null },
+        SettingsAction.ToggleStickDistance => s with { StickDistanceEnabled = !s.StickDistanceEnabled },
         SettingsAction.ToggleNumpad => s with { NumpadEnabled = !s.NumpadEnabled },
         SettingsAction.ToggleNumpadButton => s with { NumpadButtonEnabled = !s.NumpadButtonEnabled },
         SettingsAction.ToggleShortcuts => s with { ProgrammableKeys = s.ProgrammableKeys with { Enabled = !s.ProgrammableKeys.Enabled } },
@@ -378,10 +388,10 @@ internal sealed class SettingsPointerState
             Reset();
             return null;
         }
-        if (clicked is SettingsAction.GeneralTab or SettingsAction.EffectsTab or SettingsAction.InactivityTab or SettingsAction.ShortcutsTab or SettingsAction.ChooseShortcutKey or SettingsAction.ChooseShortcutPreset or SettingsAction.BackToShortcut)
+        if (clicked is SettingsAction.GeneralTab or SettingsAction.EffectsTab or SettingsAction.InactivityTab or SettingsAction.GrabTab or SettingsAction.ShortcutsTab or SettingsAction.ChooseShortcutKey or SettingsAction.ChooseShortcutPreset or SettingsAction.BackToShortcut)
         {
             Page = clicked switch { SettingsAction.GeneralTab => SettingsPage.General, SettingsAction.EffectsTab => SettingsPage.Effects,
-                SettingsAction.InactivityTab => SettingsPage.Inactivity,
+                SettingsAction.InactivityTab => SettingsPage.Inactivity, SettingsAction.GrabTab => SettingsPage.Grab,
                 SettingsAction.ChooseShortcutKey => SettingsPage.ShortcutKey, SettingsAction.ChooseShortcutPreset => SettingsPage.ShortcutPreset, _ => SettingsPage.Shortcuts };
             Reset(); // Both hands lose captures from the old page.
             return null;

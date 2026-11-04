@@ -35,6 +35,7 @@ internal static class SettingsPanel
         Text(VersionLabel, 64, 904, version, colors.TextMuted);
         var effectsPage = pointers?.Page == SettingsPage.Effects;
         var inactivityPage = pointers?.Page == SettingsPage.Inactivity;
+        var grabPage = pointers?.Page == SettingsPage.Grab;
         var shortcutsPage = pointers?.Page is SettingsPage.Shortcuts or SettingsPage.ShortcutKey or SettingsPage.ShortcutPreset;
         var choosingPreset = pointers?.Page == SettingsPage.ShortcutPreset;
         var choosingKey = pointers?.Page == SettingsPage.ShortcutKey;
@@ -42,7 +43,7 @@ internal static class SettingsPanel
         var shortcut = settings.ProgrammableKeys.Get(slot);
         var keyNumber = settings.ProgrammableKeys.NumberFor(slot);
         var layout = pointers?.Layout ?? new WindowsLayout((nint)WindowsLayout.UsHandle);
-        Text(inactivityPage ? "Inactivity" : shortcutsPage ? "Shortcuts" : effectsPage ? "Effects" : "Settings", 64, 110, small, accent);
+        Text(grabPage ? "Grab" : inactivityPage ? "Inactivity" : shortcutsPage ? "Shortcuts" : effectsPage ? "Effects" : "Settings", 64, 110, small, accent);
         if (inactivityPage)
         {
             const float left = InactivitySettingsLayout.ContentLeft;
@@ -66,6 +67,12 @@ internal static class SettingsPanel
             Text("When on, inactivity applies only after moving the keyboard.", left, InactivitySettingsLayout.KeepVisibleHintBaseline, small, accent);
             Text("Remember position", left, InactivitySettingsLayout.RememberPositionBaseline, small, text);
             Text("Restore the keyboard's position on startup.", left, InactivitySettingsLayout.RememberPositionHintBaseline, small, accent);
+        }
+        else if (grabPage)
+        {
+            Text("Thumbstick distance", 64, SettingsControls.StickDistanceBaseline, small, text);
+            Text("While moving, pull the thumbstick down to bring the keyboard closer.", 64, SettingsControls.StickDistanceHintBaseline, small, accent);
+            Text("This option applies in VR.", 64, SettingsControls.GrabNoteBaseline, small, colors.TextMuted);
         }
         else if (choosingPreset)
         {
@@ -147,11 +154,13 @@ internal static class SettingsPanel
                 c.Action == SettingsAction.ToggleSound && settings.SoundEnabled ||
                 c.Action == SettingsAction.ToggleKeepVisibleAtDefaultPosition && settings.Inactivity.KeepVisibleAtDefaultPosition ||
                 c.Action == SettingsAction.ToggleRememberPosition && settings.RememberPosition ||
+                c.Action == SettingsAction.ToggleStickDistance && settings.StickDistanceEnabled ||
                 c.Action == SettingsAction.ToggleNumpadButton && settings.NumpadButtonEnabled ||
                 c.Action == SettingsAction.SteamSoft && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamSoft ||
                 c.Action == SettingsAction.SteamFlat && BoardThemes.Normalize(settings.Theme) == BoardThemes.SteamFlat ||
-                c.Action == SettingsAction.GeneralTab && !effectsPage && !shortcutsPage && !inactivityPage || c.Action == SettingsAction.EffectsTab && effectsPage ||
+                c.Action == SettingsAction.GeneralTab && !effectsPage && !shortcutsPage && !inactivityPage && !grabPage || c.Action == SettingsAction.EffectsTab && effectsPage ||
                 c.Action == SettingsAction.InactivityTab && inactivityPage ||
+                c.Action == SettingsAction.GrabTab && grabPage ||
                 c.Action == SettingsAction.IdleOff && settings.Inactivity.Mode == InactivityMode.Off ||
                 c.Action == SettingsAction.IdleHide && settings.Inactivity.Mode == InactivityMode.Hide ||
                 c.Action == SettingsAction.IdleMinimize && settings.Inactivity.Mode == InactivityMode.Minimize ||
@@ -220,6 +229,7 @@ internal static class SettingsPanel
             var title = c.Action == SettingsAction.ToggleSound ? settings.SoundEnabled ? "On" : "Off" : c.Label;
             if (c.Action == SettingsAction.ToggleKeepVisibleAtDefaultPosition) title = settings.Inactivity.KeepVisibleAtDefaultPosition ? "On" : "Off";
             if (c.Action == SettingsAction.ToggleRememberPosition) title = settings.RememberPosition ? "On" : "Off";
+            if (c.Action == SettingsAction.ToggleStickDistance) title = settings.StickDistanceEnabled ? "On" : "Off";
             if (c.Action == SettingsAction.ToggleNumpadButton) title = settings.NumpadButtonEnabled ? "Numpad button: Shown" : "Numpad button: Hidden";
             if (c.Action == SettingsAction.Autostart) title = autostart.ButtonLabel;
             if (c.Action == SettingsAction.ToggleShortcuts) title = settings.ProgrammableKeys.Enabled ? "Shown" : "Hidden";
@@ -227,7 +237,7 @@ internal static class SettingsPanel
             if (c.Action == SettingsAction.ChooseShortcutKey) title = ProgrammableKeys.KeyName(shortcut.Scan, layout, shortcut.Shift) + "   ›";
             if (c.Action == SettingsAction.Geometry) title = settings.Geometry switch
             { KeyboardGeometry.Ansi => "ANSI", KeyboardGeometry.Iso => "ISO", _ => "Auto" };
-            var font = preset.HasValue || effectsPage || shortcutsPage || inactivityPage || c.Action is SettingsAction.InactivityTab or SettingsAction.Autostart or SettingsAction.Defaults or SettingsAction.ResetPosition or SettingsAction.GeneralTab or SettingsAction.EffectsTab or SettingsAction.ShortcutsTab ? small : label;
+            var font = preset.HasValue || effectsPage || shortcutsPage || inactivityPage || grabPage || c.Action is SettingsAction.InactivityTab or SettingsAction.GrabTab or SettingsAction.Autostart or SettingsAction.Defaults or SettingsAction.ResetPosition or SettingsAction.GeneralTab or SettingsAction.EffectsTab or SettingsAction.ShortcutsTab ? small : label;
             using var fitted = new SKFont(face, Math.Min(font.Size, font.Size * (rect.Width - 12) / Math.Max(1, font.MeasureText(title))));
             font = fitted;
             var baseline = rect.MidY - (font.Metrics.Ascent + font.Metrics.Descent) / 2;

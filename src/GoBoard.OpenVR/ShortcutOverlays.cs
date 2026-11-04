@@ -77,6 +77,7 @@ internal sealed class ShortcutOverlays : IDisposable
         if (settings == null || settings.ProgrammableKeys != next.ProgrammableKeys || settings.SizePercent != next.SizePercent || settings.NumpadEnabled != next.NumpadEnabled || reset)
         { grab.Update(false, default); toggle.Reset(Now, collapse: !next.ProgrammableKeys.Enabled); }
         settings = next; scale = next.Scale;
+        grab.ApplySettings(next);
         keyboard.ApplySettings(next, resized: true);
         if (reset) placed = false;
         drawnToggle = -1;
